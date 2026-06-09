@@ -207,8 +207,8 @@ function addVeneerConfig(){
   const cfg = {
     id, orientation:'Horizontal', species:'', core:'Fire Rated MDF',
     grade:'timber',
-    panelW:12, panelL:96, slatW:3.25, slatL:96, slatsPerPanel:4,
-    bracketsPerPanel:8, ebSides:4, assembly:true, satinFinish:true, notes:'',
+    panelW:0, panelL:0, slatW:0, slatL:0, slatsPerPanel:0,
+    bracketsPerPanel:0, ebSides:4, assembly:true, satinFinish:true, notes:'',
     calcMode:'sqft', manualQty:0,
   };
   veneerConfigs.push(cfg);
@@ -293,27 +293,27 @@ function renderVeneerConfigs(){
         <div class="config-grid">
           <div>
             <label class="field-label">Panel Width</label>
-            <input type="number" id="v-panelW-${cfg.id}" value="${cfg.panelW}" step="0.25" min="1" oninput="vUpdate(${cfg.id})">
+            <input type="number" id="v-panelW-${cfg.id}" value="${cfg.panelW||''}" step="0.25" min="1" placeholder="e.g. 12" oninput="vUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Panel Length</label>
-            <input type="number" id="v-panelL-${cfg.id}" value="${cfg.panelL}" step="0.25" min="1" oninput="vUpdate(${cfg.id})">
+            <input type="number" id="v-panelL-${cfg.id}" value="${cfg.panelL||''}" step="0.25" min="1" placeholder="e.g. 96" oninput="vUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Slat Width</label>
-            <input type="number" id="v-slatW-${cfg.id}" value="${cfg.slatW}" step="0.0625" min="0.5" oninput="vUpdate(${cfg.id})">
+            <input type="number" id="v-slatW-${cfg.id}" value="${cfg.slatW||''}" step="0.0625" min="0.5" placeholder="e.g. 3.25" oninput="vUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Slat Length</label>
-            <input type="number" id="v-slatL-${cfg.id}" value="${cfg.slatL}" step="0.25" min="1" oninput="vUpdate(${cfg.id})">
+            <input type="number" id="v-slatL-${cfg.id}" value="${cfg.slatL||''}" step="0.25" min="1" placeholder="e.g. 96" oninput="vUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Slats / Panel</label>
-            <input type="number" id="v-slats-${cfg.id}" value="${cfg.slatsPerPanel}" step="1" min="1" oninput="vUpdate(${cfg.id})">
+            <input type="number" id="v-slats-${cfg.id}" value="${cfg.slatsPerPanel||''}" step="1" min="1" placeholder="e.g. 4" oninput="vUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Brackets / Panel</label>
-            <input type="number" id="v-brackets-${cfg.id}" value="${cfg.bracketsPerPanel}" step="1" min="0" oninput="vUpdate(${cfg.id})">
+            <input type="number" id="v-brackets-${cfg.id}" value="${cfg.bracketsPerPanel||''}" step="1" min="0" placeholder="e.g. 8" oninput="vUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Edge Band Sides</label>
@@ -391,6 +391,7 @@ function vUpdate(id){
 
 // --- VENEER QUANTITY HELPERS ------------------------------------------
 function resolveVeneerQty(cfg, totalSqft){
+  if(!cfg.panelW || !cfg.panelL || !cfg.slatW || !cfg.slatL || !cfg.slatsPerPanel) return null;
   const sqftPerPanel = (cfg.panelW * cfg.panelL) / 144;
   if(cfg.calcMode === 'sqft'){
     if(!totalSqft) return null;
@@ -503,8 +504,8 @@ function calcVeneerCost(cfg, totalSqft){
 function addLumberConfig(){
   const id = ++lumberCounter;
   const cfg = {
-    id, species:'', thickness:0.75, slatW:3.25, slatL:96,
-    slatsPerPanel:4, panelW:12, panelL:96, bracketsPerPanel:8,
+    id, species:'', thickness:0.75, slatW:0, slatL:0,
+    slatsPerPanel:0, panelW:0, panelL:0, bracketsPerPanel:0,
     sanding:false, cutToLength:true, assembly:true, orientation:'Horizontal', notes:'',
     calcMode:'sqft', manualQty:0,
     roughThick:getSuggestedRoughThick(0.75), safetyBuffer:false,
@@ -632,28 +633,28 @@ function renderLumberConfigs(){
           </div>
           <div>
             <label class="field-label">Finished Width</label>
-            <input type="number" id="l-slatW-${cfg.id}" value="${cfg.slatW}" step="0.0625" min="0.5" oninput="lUpdate(${cfg.id})">
+            <input type="number" id="l-slatW-${cfg.id}" value="${cfg.slatW||''}" step="0.0625" min="0.5" placeholder="e.g. 3.25" oninput="lUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Finished Length</label>
-            <input type="number" id="l-slatL-${cfg.id}" value="${cfg.slatL}" step="0.25" min="1" oninput="lUpdate(${cfg.id})">
-            <span class="stock-tag" id="l-stock-${cfg.id}">📏 ${stockFt}' stock · ${pcsPerLen} pc/length</span>
+            <input type="number" id="l-slatL-${cfg.id}" value="${cfg.slatL||''}" step="0.25" min="1" placeholder="e.g. 96" oninput="lUpdate(${cfg.id})">
+            ${cfg.slatL ? `<span class="stock-tag" id="l-stock-${cfg.id}">📏 ${stockFt}' stock · ${pcsPerLen} pc/length</span>` : `<span class="stock-tag" id="l-stock-${cfg.id}" style="display:none"></span>`}
           </div>
           <div>
             <label class="field-label">Slats / Panel</label>
-            <input type="number" id="l-slats-${cfg.id}" value="${cfg.slatsPerPanel}" step="1" min="1" oninput="lUpdate(${cfg.id})">
+            <input type="number" id="l-slats-${cfg.id}" value="${cfg.slatsPerPanel||''}" step="1" min="1" placeholder="e.g. 4" oninput="lUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Panel Width</label>
-            <input type="number" id="l-panelW-${cfg.id}" value="${cfg.panelW}" step="0.25" min="1" oninput="lUpdate(${cfg.id})">
+            <input type="number" id="l-panelW-${cfg.id}" value="${cfg.panelW||''}" step="0.25" min="1" placeholder="e.g. 12" oninput="lUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Panel Length</label>
-            <input type="number" id="l-panelL-${cfg.id}" value="${cfg.panelL}" step="0.25" min="1" oninput="lUpdate(${cfg.id})">
+            <input type="number" id="l-panelL-${cfg.id}" value="${cfg.panelL||''}" step="0.25" min="1" placeholder="e.g. 96" oninput="lUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Brackets / Panel</label>
-            <input type="number" id="l-brackets-${cfg.id}" value="${cfg.bracketsPerPanel}" step="1" min="0" oninput="lUpdate(${cfg.id})">
+            <input type="number" id="l-brackets-${cfg.id}" value="${cfg.bracketsPerPanel||''}" step="1" min="0" placeholder="e.g. 8" oninput="lUpdate(${cfg.id})">
           </div>
         </div>
         <hr class="config-divider">
@@ -712,10 +713,17 @@ function lUpdate(id){
   const titleEl = document.getElementById('ltitle-'+id);
   if(titleEl) titleEl.textContent = cfg.species || 'New Configuration';
 
-  const millStockIn   = getMillStockLength(cfg.slatL);
-  const millPcsPerLen = cfg.slatL >= 72 ? 1 : Math.max(1, Math.floor((millStockIn - END_TRIM) / cfg.slatL));
-  const stockTag      = document.getElementById('l-stock-'+id);
-  if(stockTag) stockTag.textContent = `📏 ${millStockIn/12}' stock · ${millPcsPerLen} pc/length`;
+  const stockTag = document.getElementById('l-stock-'+id);
+  if(stockTag){
+    if(cfg.slatL > 0){
+      const millStockIn   = getMillStockLength(cfg.slatL);
+      const millPcsPerLen = cfg.slatL >= 72 ? 1 : Math.max(1, Math.floor((millStockIn - END_TRIM) / cfg.slatL));
+      stockTag.textContent = `📏 ${millStockIn/12}' stock · ${millPcsPerLen} pc/length`;
+      stockTag.style.display = '';
+    } else {
+      stockTag.style.display = 'none';
+    }
+  }
 
   if(prevMode !== cfg.calcMode) renderLumberConfigs();
 
@@ -725,6 +733,7 @@ function lUpdate(id){
 }
 
 function resolveLumberQty(cfg, totalSqft){
+  if(!cfg.panelW || !cfg.panelL || !cfg.slatW || !cfg.slatL || !cfg.slatsPerPanel) return null;
   const sqftPerPanel = (cfg.panelW * cfg.panelL) / 144;
   if(cfg.calcMode === 'sqft'){
     if(!totalSqft) return null;
