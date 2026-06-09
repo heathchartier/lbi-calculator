@@ -2,7 +2,7 @@
 // --- CONSTANTS -------------------------------------------------------
 const ADMIN_PASSWORD = 'Millwork2024';
 const KERF = 0.125;
-const END_TRIM = 1.0;
+const END_TRIM = 4.0;
 const STOCK_LENGTHS = [96, 120, 144, 168, 192];
 const SHEET_WIDTHS  = { '4x8': 48.5, '4x10': 48.5 };
 const SHEET_LENGTHS = { '4x8': 96.5, '4x10': 120.5 };
@@ -11,6 +11,30 @@ const EB_WASTE_FACTOR = 1.1;
 const SUPPLIER_LABELS = { talbert: 'Talbert (Premium)', timber: 'Timber (Standard)' };
 
 function getLBIPassword(){ return localStorage.getItem('lbiq_lbi_password') || 'lbi2024'; }
+
+// --- MILL LOOKUP TABLES ----------------------------------------------
+// Width waste factor: additional inches lost per rip (includes saw kerf + edge prep)
+// Source: mill production guide
+function getWidthWasteFactor(finishedW){
+  if(finishedW <= 1.000) return 1.000;   // 1/4" – 1"
+  if(finishedW <= 1.500) return 1.125;   // 1-1/8" – 1-1/2"
+  if(finishedW <= 2.375) return 1.375;   // 1-5/8" – 2-3/8"
+  if(finishedW <= 3.375) return 1.625;   // 2-1/2" – 3-3/8"
+  if(finishedW <= 4.375) return 1.750;   // 3-1/2" – 4-3/8"
+  if(finishedW <= 6.375) return 2.000;   // 4-1/2" – 6-3/8"
+  return 2.500;                          // 6-1/2" – 8-3/4"+
+}
+
+// Rough thickness to purchase for a given finished thickness
+// Source: mill thickness chart
+function getSuggestedRoughThick(finishedT){
+  if(finishedT <= 0.8125) return 1.00;   // ≤ 13/16" → 4/4
+  if(finishedT <= 1.0625) return 1.25;   // 7/8" – 1-1/16" → 5/4
+  if(finishedT <= 1.3125) return 1.50;   // 1-1/8" – 1-5/16" → 6/4
+  if(finishedT <= 1.8125) return 2.00;   // 1-3/8" – 1-13/16" → 8/4
+  if(finishedT <= 2.0000) return 2.50;   // 1-7/8" – 2" → 10/4
+  return 3.00;                           // > 2" → 12/4
+}
 
 // --- DEFAULT PRICING -------------------------------------------------
 // veneerSpecies keys: talbert_A3_4x8, talbert_A3_4x10, talbert_AA_4x8, talbert_AA_4x10,
@@ -55,6 +79,7 @@ const DEFAULT_PRICING = {
     ebServicePerFt:0.50, cutServicePerSqft:0.19,
     assemblyLow:2.00, assemblyHigh:3.00, bracketPrice:2.50,
     millingBase:780, sandingOneSide:453.60, sandingTwoSides:604.80, cuttingCharge:630,
+    lumberDefectPct:15,
   },
   markup: {
     panels:0, edgeBand:0, lumber:0, milling:0,
@@ -422,6 +447,7 @@ function addLumberConfig(){
     slatsPerPanel:4, panelW:12, panelL:96, bracketsPerPanel:8,
     sanded:'1-side', cutToLength:true, assembly:true, orientation:'Horizontal', notes:'',
     calcMode:'sqft', manualQty:0,
+    roughThick:getSuggestedRoughThick(0.75), stockWidth:6,
   };
   lumberConfigs.push(cfg);
   renderLumberConfigs();
@@ -445,6 +471,16 @@ function getBestStock(slatL){
   return { stockIn: best||96, piecesPerBoard: bestPieces||1 };
 }
 
+const ROUGH_THICKNESSES = [
+  {val:1.0,   label:'4/4  (1")'},
+  {val:1.25,  label:'5/4  (1-1/4")'},
+  {val:1.5,   label:'6/4  (1-1/2")'},
+  {val:1.75,  label:'7/4  (1-3/4")'},
+  {val:2.0,   label:'8/4  (2")'},
+  {val:2.5,   label:'10/4 (2-1/2")'},
+  {val:3.0,   label:'12/4 (3")'},
+];
+
 function renderLumberConfigs(){
   const cont = document.getElementById('lumberConfigs');
   cont.innerHTML = '';
@@ -457,6 +493,7 @@ function renderLumberConfigs(){
     const stockFt  = stockInfo.stockIn / 12;
     const showQty  = cfg.calcMode !== 'sqft';
     const qtyLabel = cfg.calcMode === 'slats' ? 'Total Slats' : 'Number of Panels';
+    const defectPct = pricing.services.lumberDefectPct || 15;
 
     const div = document.createElement('div');
     div.className = 'config-card';
@@ -469,7 +506,7 @@ function renderLumberConfigs(){
         <button class="btn-danger print-hide" onclick="event.stopPropagation();removeLumberConfig(${cfg.id})" style="margin-left:8px">Remove</button>
       </div>
       <div class="config-body">
-        ${isResaw ? `<div class="note-banner">⚠ Hemlock/Fir: Resaw from 2x6 rough stock — 4 pcs @ 11/16" x 2-1/4" per board. Note to customer: material will be <strong>11/16" thick</strong>.</div>` : ''}
+        ${isResaw ? `<div class="note-banner">⚠ Hemlock/Fir: Resaw from 2×6 rough stock — 4 pcs @ 11/16" × 2-1/4" per board. BF calculated on nominal 2×6.</div>` : ''}
         <div class="config-grid" style="margin-top:${isResaw?'16px':'0'}">
           <div>
             <label class="field-label">Species</label>
@@ -498,22 +535,22 @@ function renderLumberConfigs(){
           </div>` : ''}
         </div>
         <hr class="config-divider">
-        <span class="section-label">Slat Dimensions (inches)</span>
+        <span class="section-label">Finished Slat Dimensions (inches)</span>
         <div class="config-grid">
           <div>
-            <label class="field-label">Thickness</label>
+            <label class="field-label">Finished Thickness</label>
             <select id="l-thick-${cfg.id}" onchange="lUpdate(${cfg.id})">
               ${['0.25','0.4375','0.5','0.625','0.6875','0.75','1','1.25','1.5','1.75'].map(t=>`<option value="${t}" ${Math.abs(cfg.thickness-parseFloat(t))<0.001?'selected':''}>${fractionLabel(t)}</option>`).join('')}
             </select>
           </div>
           <div>
-            <label class="field-label">Width</label>
+            <label class="field-label">Finished Width</label>
             <input type="number" id="l-slatW-${cfg.id}" value="${cfg.slatW}" step="0.0625" min="0.5" oninput="lUpdate(${cfg.id})">
           </div>
           <div>
-            <label class="field-label">Length</label>
+            <label class="field-label">Finished Length</label>
             <input type="number" id="l-slatL-${cfg.id}" value="${cfg.slatL}" step="0.25" min="1" oninput="lUpdate(${cfg.id})">
-            <span class="stock-tag" id="l-stock-${cfg.id}">📏 ${stockFt}' stock · ${stockInfo.piecesPerBoard} pc/board</span>
+            <span class="stock-tag" id="l-stock-${cfg.id}">📏 ${stockFt}' stock · ${stockInfo.piecesPerBoard} pc/length</span>
           </div>
           <div>
             <label class="field-label">Slats / Panel</label>
@@ -531,6 +568,31 @@ function renderLumberConfigs(){
             <label class="field-label">Brackets / Panel</label>
             <input type="number" id="l-brackets-${cfg.id}" value="${cfg.bracketsPerPanel}" step="1" min="0" oninput="lUpdate(${cfg.id})">
           </div>
+        </div>
+        <hr class="config-divider">
+        <span class="section-label">Raw Stock (purchased rough lumber)</span>
+        <div class="config-grid">
+          <div>
+            <label class="field-label">Rough Thickness (auto)</label>
+            <div style="padding:8px 10px;background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--teal);font-weight:600;font-family:var(--font-mono);font-size:14px">
+              ${(()=>{const rt=getSuggestedRoughThick(cfg.thickness);return ROUGH_THICKNESSES.find(r=>Math.abs(r.val-rt)<0.001)?.label||rt+'"';})()}
+            </div>
+            <span style="font-size:11px;color:var(--mid)">From thickness chart</span>
+          </div>
+          ${!isResaw ? `<div>
+            <label class="field-label">Raw Stock Width (in)</label>
+            <input type="number" id="l-stockW-${cfg.id}" value="${cfg.stockWidth||6}" step="0.25" min="2" oninput="lUpdate(${cfg.id})" placeholder="e.g. 6">
+          </div>` : ''}
+          ${!isResaw ? `<div>
+            <label class="field-label">Width Waste Factor (auto)</label>
+            <div style="padding:8px 10px;background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--gold);font-weight:600;font-family:var(--font-mono);font-size:14px">
+              ${getWidthWasteFactor(cfg.slatW)}"
+            </div>
+            <span style="font-size:11px;color:var(--mid)">Per-rip mill allowance</span>
+          </div>` : ''}
+        </div>
+        <div style="font-size:12px;color:var(--mid);margin-top:8px">
+          Grade/defect factor: <strong style="color:var(--teal)">${defectPct}%</strong> — set in Admin → Service Rates
         </div>
         <hr class="config-divider">
         <div style="display:flex;gap:24px;flex-wrap:wrap">
@@ -582,6 +644,8 @@ function lUpdate(id){
   const prevMode   = cfg.calcMode;
   cfg.calcMode     = document.getElementById('l-mode-'+id)?.value || cfg.calcMode;
   cfg.manualQty    = parseInt(document.getElementById('l-manualQty-'+id)?.value) || 0;
+  cfg.roughThick   = getSuggestedRoughThick(cfg.thickness);
+  cfg.stockWidth   = parseFloat(document.getElementById('l-stockW-'+id)?.value) || cfg.stockWidth;
 
   const titleEl = document.getElementById('ltitle-'+id);
   if(titleEl) titleEl.textContent = cfg.species || 'New Configuration';
@@ -617,6 +681,49 @@ function resolveLumberQty(cfg, totalSqft){
   }
 }
 
+function millLumberCalc(cfg, totalSlats){
+  const sData   = pricing.lumberSpecies[cfg.species] || {};
+  const isResaw = sData.resaw || false;
+  const stockInfo = getBestStock(cfg.slatL);
+  const stockIn = stockInfo.stockIn;
+  const stockFt = stockIn / 12;
+  const defectPct = pricing.services.lumberDefectPct || 15;
+
+  let slatsPerBoardWidth, slatsPerBoardLength, slatsPerBoard;
+  let roughT, rawStockW;
+
+  if(isResaw){
+    // 2×6 resaw: fixed 4 pieces per board, nominal 2×6 for BF
+    roughT       = 2.0;
+    rawStockW    = 6.0;
+    slatsPerBoardWidth  = 4;
+    slatsPerBoardLength = stockInfo.piecesPerBoard;
+    slatsPerBoard       = slatsPerBoardWidth * slatsPerBoardLength;
+  } else {
+    roughT    = getSuggestedRoughThick(cfg.thickness);
+    rawStockW = cfg.stockWidth || 6.0;
+    // Width rip yield: each rip consumes (finishedW + wasteFactor) inches of raw board
+    const widthWaste = getWidthWasteFactor(cfg.slatW);
+    slatsPerBoardWidth  = Math.max(1, Math.floor(rawStockW / (cfg.slatW + widthWaste)));
+    slatsPerBoardLength = stockInfo.piecesPerBoard;
+    slatsPerBoard       = slatsPerBoardWidth * slatsPerBoardLength;
+  }
+
+  // Net boards needed based on pure yield
+  const netBoards = Math.ceil(totalSlats / slatsPerBoard);
+  // Gross boards ordered — inflate for grade/defect factor
+  const rawBoards = Math.ceil(netBoards / (1 - defectPct / 100));
+  // Raw BF on purchased rough dimensions
+  const bfPerBoard  = (roughT * rawStockW * stockIn) / 144;
+  const rawBFTotal  = rawBoards * bfPerBoard;
+
+  return {
+    isResaw, stockInfo, stockFt, roughT, rawStockW,
+    slatsPerBoardWidth, slatsPerBoardLength, slatsPerBoard,
+    netBoards, rawBoards, bfPerBoard, rawBFTotal, defectPct,
+  };
+}
+
 function calcLumberPreview(cfg){
   const preview = document.getElementById('l-preview-'+cfg.id);
   if(!preview) return;
@@ -627,27 +734,22 @@ function calcLumberPreview(cfg){
   if(!qty){ preview.innerHTML = ''; return; }
   const { panelQty, totalSlats } = qty;
 
-  const sData    = pricing.lumberSpecies[cfg.species] || {};
-  const isResaw  = sData.resaw || false;
-  const stockInfo = getBestStock(cfg.slatL);
-  const stockFt  = stockInfo.stockIn / 12;
+  const m = millLumberCalc(cfg, totalSlats);
 
-  let boardsNeeded, boardFtTotal;
-  if(isResaw){
-    boardsNeeded = Math.ceil(totalSlats / 4);
-    boardFtTotal = boardsNeeded * (2*6*stockFt/12);
-  } else {
-    boardsNeeded = Math.ceil(totalSlats / stockInfo.piecesPerBoard);
-    boardFtTotal = boardsNeeded * (cfg.thickness * cfg.slatW * stockFt / 12);
-  }
+  const widthTag = m.isResaw ? '4 pcs from 2×6' : `${m.slatsPerBoardWidth} rip${m.slatsPerBoardWidth!==1?'s':''}`;
 
   preview.innerHTML = `
     <div class="calc-preview-item"><div class="calc-preview-label">Panels Needed</div><div class="calc-preview-val">${fmtN(panelQty)}</div></div>
     <div class="calc-preview-item"><div class="calc-preview-label">Total Slats</div><div class="calc-preview-val">${fmtN(totalSlats)}</div></div>
-    <div class="calc-preview-item"><div class="calc-preview-label">Stock Length</div><div class="calc-preview-val">${stockFt}'</div></div>
-    <div class="calc-preview-item"><div class="calc-preview-label">Pcs / Board</div><div class="calc-preview-val">${fmtN(stockInfo.piecesPerBoard)}</div></div>
-    <div class="calc-preview-item"><div class="calc-preview-label">Boards Needed</div><div class="calc-preview-val">${fmtN(boardsNeeded)}</div></div>
-    <div class="calc-preview-item"><div class="calc-preview-label">Board Footage</div><div class="calc-preview-val">${fmtN(boardFtTotal,1)} BF</div></div>
+    <div class="calc-preview-item"><div class="calc-preview-label">Stock Length</div><div class="calc-preview-val">${m.stockFt}'</div></div>
+    <div class="calc-preview-item"><div class="calc-preview-label">Slats/Board (width)</div><div class="calc-preview-val">${widthTag}</div></div>
+    <div class="calc-preview-item"><div class="calc-preview-label">Slats/Board (length)</div><div class="calc-preview-val">${fmtN(m.slatsPerBoardLength)}</div></div>
+    <div class="calc-preview-item"><div class="calc-preview-label">Slats/Board (total)</div><div class="calc-preview-val">${fmtN(m.slatsPerBoard)}</div></div>
+    <div class="calc-preview-item"><div class="calc-preview-label">Net Boards (yield)</div><div class="calc-preview-val">${fmtN(m.netBoards)}</div></div>
+    <div class="calc-preview-item"><div class="calc-preview-label">Defect Factor</div><div class="calc-preview-val">${m.defectPct}%</div></div>
+    <div class="calc-preview-item"><div class="calc-preview-label">Raw Boards to Order</div><div class="calc-preview-val" style="color:var(--teal);font-weight:600">${fmtN(m.rawBoards)}</div></div>
+    <div class="calc-preview-item"><div class="calc-preview-label">BF / Board (rough)</div><div class="calc-preview-val">${fmtN(m.bfPerBoard,2)} BF</div></div>
+    <div class="calc-preview-item"><div class="calc-preview-label">Raw BF to Order</div><div class="calc-preview-val" style="color:var(--teal);font-weight:600">${fmtN(m.rawBFTotal,1)} BF</div></div>
     <div class="calc-preview-item"><div class="calc-preview-label">Brackets</div><div class="calc-preview-val">${fmtN(panelQty * cfg.bracketsPerPanel)}</div></div>
   `;
 }
@@ -661,20 +763,10 @@ function calcLumberCost(cfg, totalSqft){
   if(!qty) return null;
   const { panelQty, totalSlats, effectiveSqft } = qty;
 
-  const isResaw  = sData.resaw || false;
-  const stockInfo = getBestStock(cfg.slatL);
-  const stockFt  = stockInfo.stockIn / 12;
+  const m = millLumberCalc(cfg, totalSlats);
+  const { rawBoards, rawBFTotal, rawStockW, roughT, stockFt, slatsPerBoardWidth, slatsPerBoardLength, slatsPerBoard, netBoards, defectPct } = m;
 
-  let boardsNeeded, boardFtTotal;
-  if(isResaw){
-    boardsNeeded = Math.ceil(totalSlats / 4);
-    boardFtTotal = boardsNeeded * (2*6*stockFt/12);
-  } else {
-    boardsNeeded = Math.ceil(totalSlats / stockInfo.piecesPerBoard);
-    boardFtTotal = boardsNeeded * (cfg.thickness * cfg.slatW * stockFt / 12);
-  }
-
-  const lumberCost   = boardFtTotal * sData.price;
+  const lumberCost   = rawBFTotal * sData.price;
   const millingCost  = pricing.services.millingBase;
   const sandingCost  = cfg.sanded==='1-side' ? pricing.services.sandingOneSide :
                        cfg.sanded==='2-sides' ? pricing.services.sandingTwoSides : 0;
@@ -690,11 +782,12 @@ function calcLumberCost(cfg, totalSqft){
 
   const subtotal = lumberLine + millingLine + asmLine + bktLine;
   return {
-    species:cfg.species, isResaw, stockInfo, boardsNeeded, boardFtTotal,
+    species:cfg.species, isResaw:m.isResaw, rawBoards, rawBFTotal,
     panelQty, totalSlats, effectiveSqft,
     lines:{
-      ['Lumber ('+fmtN(boardFtTotal,1)+' BF @ '+fmt(sData.price)+'/BF)']: lumberLine,
-      'Milling': millingLine,
+      ['Raw Lumber ('+fmtN(rawBFTotal,1)+' BF @ '+fmt(sData.price)+'/BF)']: lumberLine,
+      ['  ↳ '+rawBoards+' boards × '+fmtN(m.bfPerBoard,2)+' BF | '+defectPct+'% defect factor']: 0,
+      'Milling / Machining': millingLine,
       ...(cfg.assembly ? {'Assembly / Packing': asmLine} : {}),
       ['Black Brackets ('+fmtN(panelQty*cfg.bracketsPerPanel)+')']: bktLine,
     },
@@ -951,6 +1044,7 @@ function renderAdminModal(){
     bracketPrice:'Black Bracket ($/ea)', millingBase:'Milling Base ($)',
     sandingOneSide:'Sanding 1-Side ($)', sandingTwoSides:'Sanding 2-Sides ($)',
     cuttingCharge:'Cutting Charge ($)',
+    lumberDefectPct:'Lumber Defect/Waste % (grade)',
   };
   sg.innerHTML = Object.entries(svcLabels).map(([k,lbl]) => `
     <div>
