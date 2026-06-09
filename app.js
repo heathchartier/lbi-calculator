@@ -447,7 +447,7 @@ function addLumberConfig(){
     slatsPerPanel:4, panelW:12, panelL:96, bracketsPerPanel:8,
     sanded:'1-side', cutToLength:true, assembly:true, orientation:'Horizontal', notes:'',
     calcMode:'sqft', manualQty:0,
-    roughThick:getSuggestedRoughThick(0.75), stockWidth:6,
+    roughThick:getSuggestedRoughThick(0.75), stockWidth:6, safetyBuffer:false,
   };
   lumberConfigs.push(cfg);
   renderLumberConfigs();
@@ -629,6 +629,10 @@ function renderLumberConfigs(){
             <label class="toggle"><input type="checkbox" id="l-cut-${cfg.id}" ${cfg.cutToLength?'checked':''} onchange="lUpdate(${cfg.id})"><span class="toggle-slider"></span></label>
             <span class="toggle-label">Cut to length</span>
           </div>
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="l-safety-${cfg.id}" ${cfg.safetyBuffer?'checked':''} onchange="lUpdate(${cfg.id})"><span class="toggle-slider"></span></label>
+            <span class="toggle-label">+10% safety buffer</span>
+          </div>
         </div>
         <div id="l-preview-${cfg.id}" class="calc-preview" style="margin-top:16px"></div>
       </div>
@@ -663,6 +667,7 @@ function lUpdate(id){
   cfg.manualQty    = parseInt(document.getElementById('l-manualQty-'+id)?.value) || 0;
   cfg.roughThick   = getSuggestedRoughThick(cfg.thickness);
   cfg.stockWidth   = parseFloat(document.getElementById('l-stockW-'+id)?.value) || cfg.stockWidth;
+  cfg.safetyBuffer = document.getElementById('l-safety-'+id)?.checked ?? false;
 
   const titleEl = document.getElementById('ltitle-'+id);
   if(titleEl) titleEl.textContent = cfg.species || 'New Configuration';
@@ -725,9 +730,23 @@ function millLumberCalc(cfg, totalSlats){
     pcsWide    = getVGResawPcs(cfg.thickness);
     if(cfg.thickness > 0.6875) vgWarning = true; // suggest 11/16" instead
 
-    // BF per board (nominal 2×6) = 2 × 6 × stockIn / 144
-    // Divided by pieces wide × pieces per length
-    bfPerSlat = (2 * 6 * stockIn / 144) / (pcsWide * piecesPerLen);
+    // Board-based: buy whole 2×6 boards, each yields pcsWide × piecesPerLen slats
+    // You can't buy a fraction of a board so ceil first, then multiply by BF/board
+    const pcsPerBoard  = pcsWide * piecesPerLen;
+    const boardsNeeded = Math.ceil(totalSlats / pcsPerBoard);
+    const bfPerBoard   = (2 * 6 * stockIn) / 144;
+    // Store for return, then override rawBFTotal calculation below
+    bfPerSlat = bfPerBoard / pcsPerBoard; // per-slat rate (for display)
+    const rawBFResaw = boardsNeeded * bfPerBoard;
+    // Apply safety buffer if on
+    const safetyMult = cfg.safetyBuffer ? 1.10 : 1;
+    return {
+      isVGResaw, vgWarning,
+      stockIn, stockFt, piecesPerLen,
+      roughT, widthWaste, pcsWide,
+      boardsNeeded, bfPerBoard, pcsPerBoard,
+      bfPerSlat, rawBFTotal: Math.ceil(rawBFResaw * safetyMult), defectPct:0,
+    };
 
   } else {
     roughT     = getSuggestedRoughThick(cfg.thickness);
@@ -739,15 +758,17 @@ function millLumberCalc(cfg, totalSlats){
     bfPerSlat = roughT * (cfg.slatW + widthWaste) * stockIn / (144 * piecesPerLen);
   }
 
-  // Total BF = BF/slat × count, apply optional defect buffer, round up
-  const rawBFExact = bfPerSlat * totalSlats;
-  const rawBFTotal = Math.ceil(defectPct > 0 ? rawBFExact / (1 - defectPct/100) : rawBFExact);
+  // Total BF = BF/slat × count, apply optional safety buffer, round up
+  const rawBFExact  = bfPerSlat * totalSlats;
+  const safetyMult  = cfg.safetyBuffer ? 1.10 : 1;
+  const rawBFTotal  = Math.ceil(rawBFExact * safetyMult);
 
   return {
     isVGResaw, vgWarning,
     stockIn, stockFt, piecesPerLen,
     roughT, widthWaste, pcsWide,
     bfPerSlat, rawBFTotal, defectPct,
+    safetyBuffer: cfg.safetyBuffer,
   };
 }
 
@@ -781,8 +802,9 @@ function calcLumberPreview(cfg){
     ${m.piecesPerLen > 1 ? `<div class="calc-preview-item"><div class="calc-preview-label">Pcs / Board (length)</div><div class="calc-preview-val">${m.piecesPerLen}</div></div>` : ''}
     <div class="calc-preview-item"><div class="calc-preview-label">Rough Stock</div><div class="calc-preview-val">${roughLabel}</div></div>
     ${m.widthWaste !== null ? `<div class="calc-preview-item"><div class="calc-preview-label">Width Waste Factor</div><div class="calc-preview-val">${m.widthWaste}"</div></div>` : ''}
-    <div class="calc-preview-item"><div class="calc-preview-label">BF / Slat</div><div class="calc-preview-val">${fmtN(m.bfPerSlat,3)} BF</div></div>
-    <div class="calc-preview-item"><div class="calc-preview-label">Raw BF to Order</div><div class="calc-preview-val" style="color:var(--teal);font-weight:700;font-size:16px">${fmtN(m.rawBFTotal,0)} BF</div></div>
+    ${m.boardsNeeded ? `<div class="calc-preview-item"><div class="calc-preview-label">Boards to Buy</div><div class="calc-preview-val">${m.boardsNeeded} × 2×6 (${m.pcsPerBoard} pcs ea)</div></div>` : ''}
+    ${m.boardsNeeded ? `<div class="calc-preview-item"><div class="calc-preview-label">BF / Board</div><div class="calc-preview-val">${fmtN(m.bfPerBoard,0)} BF</div></div>` : `<div class="calc-preview-item"><div class="calc-preview-label">BF / Slat</div><div class="calc-preview-val">${fmtN(m.bfPerSlat,3)} BF</div></div>`}
+    <div class="calc-preview-item"><div class="calc-preview-label">Raw BF to Order${m.safetyBuffer?' (+10%)':''}</div><div class="calc-preview-val" style="color:var(--teal);font-weight:700;font-size:16px">${fmtN(m.rawBFTotal,0)} BF</div></div>
     <div class="calc-preview-item"><div class="calc-preview-label">Brackets</div><div class="calc-preview-val">${fmtN(panelQty * cfg.bracketsPerPanel)}</div></div>
   `;
 }
