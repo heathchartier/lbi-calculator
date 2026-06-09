@@ -102,19 +102,45 @@ let isDirty = false;
 function deepCopy(o){ return JSON.parse(JSON.stringify(o)); }
 
 // --- AUTH -------------------------------------------------------------
+const SESSION_DURATION_MS = 8 * 60 * 60 * 1000; // 8 hours
+
+function saveSession(role){
+  localStorage.setItem('lbiq_session_role',   role);
+  localStorage.setItem('lbiq_session_expiry', Date.now() + SESSION_DURATION_MS);
+}
+
+function clearSession(){
+  localStorage.removeItem('lbiq_session_role');
+  localStorage.removeItem('lbiq_session_expiry');
+}
+
+function getValidSession(){
+  const role   = localStorage.getItem('lbiq_session_role');
+  const expiry = parseInt(localStorage.getItem('lbiq_session_expiry') || '0');
+  if(role && Date.now() < expiry) return role;
+  clearSession();
+  return null;
+}
+
+function activateApp(isAdmin){
+  document.getElementById('lockScreen').style.display = 'none';
+  const app = document.getElementById('app');
+  app.classList.add('visible');
+  document.getElementById('adminBtn').style.display   = isAdmin ? '' : 'none';
+  document.getElementById('logoutBtn').style.display  = '';
+  document.getElementById('jobDate').value = new Date().toISOString().split('T')[0];
+  addVeneerConfig();
+  addLumberConfig();
+  recalcAll();
+}
+
 function unlock(){
   const v = document.getElementById('lockPw').value.trim();
   const isAdmin = (v === ADMIN_PASSWORD);
   const isUser  = (v === getLBIPassword());
   if(isAdmin || isUser){
-    document.getElementById('lockScreen').style.display = 'none';
-    const app = document.getElementById('app');
-    app.classList.add('visible');
-    document.getElementById('jobDate').value = new Date().toISOString().split('T')[0];
-    document.getElementById('adminBtn').style.display = isAdmin ? '' : 'none';
-    addVeneerConfig();
-    addLumberConfig();
-    recalcAll();
+    saveSession(isAdmin ? 'admin' : 'user');
+    activateApp(isAdmin);
   } else {
     document.getElementById('lockErr').textContent = 'Incorrect password. Try again.';
     document.getElementById('lockPw').value = '';
@@ -122,6 +148,26 @@ function unlock(){
   }
 }
 document.getElementById('lockPw').addEventListener('keydown', e => { if(e.key === 'Enter') unlock(); });
+
+function logout(){
+  clearSession();
+  veneerConfigs = []; lumberConfigs = [];
+  veneerCounter = 0;  lumberCounter = 0;
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('lockScreen').style.display = '';
+  document.getElementById('logoutBtn').style.display  = 'none';
+  document.getElementById('lockPw').value = '';
+}
+
+// Auto-restore session on page load
+(function checkSession(){
+  const role = getValidSession();
+  if(role){
+    // Bump expiry on each page load so active users stay logged in
+    saveSession(role);
+    activateApp(role === 'admin');
+  }
+})();
 
 function openAdmin(){
   renderAdminModal();
