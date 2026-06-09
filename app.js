@@ -79,7 +79,7 @@ const DEFAULT_PRICING = {
     ebServicePerFt:0.50, cutServicePerSqft:0.19,
     assemblyLow:2.00, assemblyHigh:3.00, bracketPrice:2.50,
     millingBase:780, sandingOneSide:453.60, sandingTwoSides:604.80, cuttingCharge:630,
-    lumberDefectPct:15,
+    lumberDefectPct:0,
   },
   markup: {
     panels:0, edgeBand:0, lumber:0, milling:0,
@@ -464,12 +464,29 @@ function getBestStock(slatL){
   let best = null, bestPieces = 0;
   for(const stockIn of STOCK_LENGTHS){
     const usable = stockIn - END_TRIM;
-    const pieces = Math.floor((usable + KERF) / (slatL + KERF));
+    const pieces = Math.floor(usable / slatL);
     if(pieces > bestPieces){ bestPieces=pieces; best=stockIn; }
     else if(pieces===bestPieces && pieces>0 && stockIn<best){ best=stockIn; }
   }
-  return { stockIn: best||96, piecesPerBoard: bestPieces||1 };
+  return { stockIn: best||96, piecesPerBoard: Math.max(1,bestPieces) };
 }
+
+// Stock length for a given slat length (Heath's mill rules)
+// 72"+ → use next standard length above slat; <72" → pack multiples (getBestStock)
+function getMillStockLength(slatL){
+  if(slatL >= 72){
+    if(slatL <= 95)  return 96;   // 8'
+    if(slatL <= 119) return 120;  // 10'
+    if(slatL <= 143) return 144;  // 12'
+    if(slatL <= 167) return 168;  // 14'
+    return 192;                   // 16'
+  }
+  return getBestStock(slatL).stockIn; // <72": maximize pieces per board
+}
+
+// VG Fir/Hemlock: pieces per 2×6 board based on finished thickness
+// ≤ 11/16" → 4 pcs (resaw), > 11/16" → 2 pcs (direct cut, more waste)
+function getVGResawPcs(finishedT){ return finishedT <= 0.6875 ? 4 : 2; }
 
 const ROUGH_THICKNESSES = [
   {val:1.0,   label:'4/4  (1")'},
@@ -682,45 +699,55 @@ function resolveLumberQty(cfg, totalSqft){
 }
 
 function millLumberCalc(cfg, totalSlats){
-  const sData   = pricing.lumberSpecies[cfg.species] || {};
-  const isResaw = sData.resaw || false;
-  const stockInfo = getBestStock(cfg.slatL);
-  const stockIn = stockInfo.stockIn;
+  const sData    = pricing.lumberSpecies[cfg.species] || {};
+  const isVGResaw = !!(sData.resaw);
+  const defectPct = pricing.services.lumberDefectPct || 0;
+
+  // --- Stock length ---
+  const stockIn = getMillStockLength(cfg.slatL);
   const stockFt = stockIn / 12;
-  const defectPct = pricing.services.lumberDefectPct || 15;
 
-  let slatsPerBoardWidth, slatsPerBoardLength, slatsPerBoard;
-  let roughT, rawStockW;
-
-  if(isResaw){
-    // 2×6 resaw: fixed 4 pieces per board, nominal 2×6 for BF
-    roughT       = 2.0;
-    rawStockW    = 6.0;
-    slatsPerBoardWidth  = 4;
-    slatsPerBoardLength = stockInfo.piecesPerBoard;
-    slatsPerBoard       = slatsPerBoardWidth * slatsPerBoardLength;
+  // --- Pieces per board in the LENGTH direction (for <72" slats only) ---
+  let piecesPerLen;
+  if(cfg.slatL >= 72){
+    piecesPerLen = 1;
   } else {
-    roughT    = getSuggestedRoughThick(cfg.thickness);
-    rawStockW = cfg.stockWidth || 6.0;
-    // Width rip yield: each rip consumes (finishedW + wasteFactor) inches of raw board
-    const widthWaste = getWidthWasteFactor(cfg.slatW);
-    slatsPerBoardWidth  = Math.max(1, Math.floor(rawStockW / (cfg.slatW + widthWaste)));
-    slatsPerBoardLength = stockInfo.piecesPerBoard;
-    slatsPerBoard       = slatsPerBoardWidth * slatsPerBoardLength;
+    const usable = stockIn - END_TRIM;
+    piecesPerLen = Math.max(1, Math.floor(usable / cfg.slatL));
   }
 
-  // Net boards needed based on pure yield
-  const netBoards = Math.ceil(totalSlats / slatsPerBoard);
-  // Gross boards ordered — inflate for grade/defect factor
-  const rawBoards = Math.ceil(netBoards / (1 - defectPct / 100));
-  // Raw BF on purchased rough dimensions
-  const bfPerBoard  = (roughT * rawStockW * stockIn) / 144;
-  const rawBFTotal  = rawBoards * bfPerBoard;
+  // --- BF per slat ---
+  let roughT, widthWaste, pcsWide, bfPerSlat, vgWarning = false;
+
+  if(isVGResaw){
+    roughT     = 2.0;
+    widthWaste = null;
+    pcsWide    = getVGResawPcs(cfg.thickness);
+    if(cfg.thickness > 0.6875) vgWarning = true; // suggest 11/16" instead
+
+    // BF per board (nominal 2×6) = 2 × 6 × stockIn / 144
+    // Divided by pieces wide × pieces per length
+    bfPerSlat = (2 * 6 * stockIn / 144) / (pcsWide * piecesPerLen);
+
+  } else {
+    roughT     = getSuggestedRoughThick(cfg.thickness);
+    widthWaste = getWidthWasteFactor(cfg.slatW);
+    pcsWide    = null;
+
+    // Heath's formula: roughThick × (slatW + wasteFactor) × stockLength / 144
+    // Divided by pieces per length if multiple fit (only applies when slatL < 72")
+    bfPerSlat = roughT * (cfg.slatW + widthWaste) * stockIn / (144 * piecesPerLen);
+  }
+
+  // Total BF = BF/slat × count, apply optional defect buffer, round up
+  const rawBFExact = bfPerSlat * totalSlats;
+  const rawBFTotal = Math.ceil(defectPct > 0 ? rawBFExact / (1 - defectPct/100) : rawBFExact);
 
   return {
-    isResaw, stockInfo, stockFt, roughT, rawStockW,
-    slatsPerBoardWidth, slatsPerBoardLength, slatsPerBoard,
-    netBoards, rawBoards, bfPerBoard, rawBFTotal, defectPct,
+    isVGResaw, vgWarning,
+    stockIn, stockFt, piecesPerLen,
+    roughT, widthWaste, pcsWide,
+    bfPerSlat, rawBFTotal, defectPct,
   };
 }
 
@@ -736,20 +763,26 @@ function calcLumberPreview(cfg){
 
   const m = millLumberCalc(cfg, totalSlats);
 
-  const widthTag = m.isResaw ? '4 pcs from 2×6' : `${m.slatsPerBoardWidth} rip${m.slatsPerBoardWidth!==1?'s':''}`;
+  const roughLabel = m.isVGResaw
+    ? `2×6 (${m.pcsWide} pcs/board)`
+    : (ROUGH_THICKNESSES.find(r=>Math.abs(r.val-m.roughT)<0.001)?.label || m.roughT+'"');
+
+  const vgWarnHTML = m.vgWarning ? `
+    <div style="grid-column:1/-1;background:#3a1a00;border:1px solid var(--gold);border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--gold);line-height:1.5">
+      ⚠ ${fractionLabel(cfg.thickness.toString())} VG ${cfg.species} must be milled straight from 2×6 — only 2 pcs per board, higher cost.
+      <strong>Consider using 11/16" (4 pcs/board) for better yield.</strong>
+    </div>` : '';
 
   preview.innerHTML = `
+    ${vgWarnHTML}
     <div class="calc-preview-item"><div class="calc-preview-label">Panels Needed</div><div class="calc-preview-val">${fmtN(panelQty)}</div></div>
     <div class="calc-preview-item"><div class="calc-preview-label">Total Slats</div><div class="calc-preview-val">${fmtN(totalSlats)}</div></div>
-    <div class="calc-preview-item"><div class="calc-preview-label">Stock Length</div><div class="calc-preview-val">${m.stockFt}'</div></div>
-    <div class="calc-preview-item"><div class="calc-preview-label">Slats/Board (width)</div><div class="calc-preview-val">${widthTag}</div></div>
-    <div class="calc-preview-item"><div class="calc-preview-label">Slats/Board (length)</div><div class="calc-preview-val">${fmtN(m.slatsPerBoardLength)}</div></div>
-    <div class="calc-preview-item"><div class="calc-preview-label">Slats/Board (total)</div><div class="calc-preview-val">${fmtN(m.slatsPerBoard)}</div></div>
-    <div class="calc-preview-item"><div class="calc-preview-label">Net Boards (yield)</div><div class="calc-preview-val">${fmtN(m.netBoards)}</div></div>
-    <div class="calc-preview-item"><div class="calc-preview-label">Defect Factor</div><div class="calc-preview-val">${m.defectPct}%</div></div>
-    <div class="calc-preview-item"><div class="calc-preview-label">Raw Boards to Order</div><div class="calc-preview-val" style="color:var(--teal);font-weight:600">${fmtN(m.rawBoards)}</div></div>
-    <div class="calc-preview-item"><div class="calc-preview-label">BF / Board (rough)</div><div class="calc-preview-val">${fmtN(m.bfPerBoard,2)} BF</div></div>
-    <div class="calc-preview-item"><div class="calc-preview-label">Raw BF to Order</div><div class="calc-preview-val" style="color:var(--teal);font-weight:600">${fmtN(m.rawBFTotal,1)} BF</div></div>
+    <div class="calc-preview-item"><div class="calc-preview-label">Stock Length</div><div class="calc-preview-val">${m.stockFt}' (${m.stockIn}")</div></div>
+    ${m.piecesPerLen > 1 ? `<div class="calc-preview-item"><div class="calc-preview-label">Pcs / Board (length)</div><div class="calc-preview-val">${m.piecesPerLen}</div></div>` : ''}
+    <div class="calc-preview-item"><div class="calc-preview-label">Rough Stock</div><div class="calc-preview-val">${roughLabel}</div></div>
+    ${m.widthWaste !== null ? `<div class="calc-preview-item"><div class="calc-preview-label">Width Waste Factor</div><div class="calc-preview-val">${m.widthWaste}"</div></div>` : ''}
+    <div class="calc-preview-item"><div class="calc-preview-label">BF / Slat</div><div class="calc-preview-val">${fmtN(m.bfPerSlat,3)} BF</div></div>
+    <div class="calc-preview-item"><div class="calc-preview-label">Raw BF to Order</div><div class="calc-preview-val" style="color:var(--teal);font-weight:700;font-size:16px">${fmtN(m.rawBFTotal,0)} BF</div></div>
     <div class="calc-preview-item"><div class="calc-preview-label">Brackets</div><div class="calc-preview-val">${fmtN(panelQty * cfg.bracketsPerPanel)}</div></div>
   `;
 }
@@ -764,7 +797,7 @@ function calcLumberCost(cfg, totalSqft){
   const { panelQty, totalSlats, effectiveSqft } = qty;
 
   const m = millLumberCalc(cfg, totalSlats);
-  const { rawBoards, rawBFTotal, rawStockW, roughT, stockFt, slatsPerBoardWidth, slatsPerBoardLength, slatsPerBoard, netBoards, defectPct } = m;
+  const { rawBFTotal, bfPerSlat, stockFt, defectPct } = m;
 
   const lumberCost   = rawBFTotal * sData.price;
   const millingCost  = pricing.services.millingBase;
@@ -780,16 +813,17 @@ function calcLumberCost(cfg, totalSqft){
   const asmLine     = withMarkup(assemblyCost,  'assembly');
   const bktLine     = withMarkup(bracketCost,   'brackets');
 
+  const defectNote = defectPct > 0 ? ` +${defectPct}% defect buffer` : '';
   const subtotal = lumberLine + millingLine + asmLine + bktLine;
   return {
-    species:cfg.species, isResaw:m.isResaw, rawBoards, rawBFTotal,
+    species:cfg.species, isVGResaw:m.isVGResaw, rawBFTotal,
     panelQty, totalSlats, effectiveSqft,
     lines:{
-      ['Raw Lumber ('+fmtN(rawBFTotal,1)+' BF @ '+fmt(sData.price)+'/BF)']: lumberLine,
-      ['  ↳ '+rawBoards+' boards × '+fmtN(m.bfPerBoard,2)+' BF | '+defectPct+'% defect factor']: 0,
+      [`Raw Lumber (${fmtN(rawBFTotal,0)} BF @ ${fmt(sData.price)}/BF)`]: lumberLine,
+      [`  ↳ ${fmtN(bfPerSlat,3)} BF/slat × ${totalSlats} slats${defectNote}`]: 0,
       'Milling / Machining': millingLine,
       ...(cfg.assembly ? {'Assembly / Packing': asmLine} : {}),
-      ['Black Brackets ('+fmtN(panelQty*cfg.bracketsPerPanel)+')']: bktLine,
+      [`Black Brackets (${fmtN(panelQty*cfg.bracketsPerPanel)})`]: bktLine,
     },
     subtotal,
     sqftCost: effectiveSqft > 0 ? subtotal / effectiveSqft : null,
