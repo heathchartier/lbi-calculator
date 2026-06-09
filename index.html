@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LBI Panel Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ─── IQ BRAND TOKENS ───────────────────────────────────────────── */
+:root{
+  --teal:#00e5b8; --teal-dim:rgba(0,229,184,.12); --teal-mid:rgba(0,229,184,.3);
+  --gold:#d4a800; --gold-dim:rgba(212,168,0,.12);
+  --red:#e84040;  --red-dim:rgba(232,64,64,.12);
+  --bg:#0f1112;   --surf:#181b1e;  --surf2:#1e2226;  --surf3:#252a2d;
+  --bdr:rgba(255,255,255,.07); --bdr2:rgba(255,255,255,.14);
+  --ink:#f0f2f4;  --mid:#8a9299;   --dim:#4a5058;
+  --r:8px; --r2:12px; --r3:16px;
+  --sh:0 4px 20px rgba(0,0,0,.4);
+  --font-head:'Barlow Condensed',sans-serif;
+  --font-body:'Barlow',sans-serif;
+  --font-mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-body);background:var(--bg);color:var(--ink);min-height:100vh;font-size:15px}
+
+/* ─── LOCK SCREEN ───────────────────────────────────────────────── */
+#lockScreen{
+  position:fixed;inset:0;background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:1000;gap:32px;padding:24px;
+}
+#lockScreen .lock-logo{
+  font-family:var(--font-head);font-size:32px;font-weight:800;
+  color:var(--ink);letter-spacing:-0.5px;
+}
+#lockScreen .lock-logo span{color:var(--teal)}
+#lockScreen .lock-card{
+  background:var(--surf);border:1px solid var(--bdr2);border-radius:var(--r3);
+  padding:32px;width:100%;max-width:380px;display:flex;flex-direction:column;gap:20px;
+}
+#lockScreen h2{font-family:var(--font-head);font-size:22px;font-weight:700;text-align:center;color:var(--mid)}
+#lockPw{
+  background:var(--surf2);border:1px solid var(--bdr2);border-radius:var(--r);
+  color:var(--ink);font-size:18px;padding:14px 16px;width:100%;
+  font-family:var(--font-mono);letter-spacing:3px;outline:none;
+  transition:border-color .2s;text-align:center;
+}
+#lockPw:focus{border-color:var(--teal)}
+#lockErr{color:var(--red);font-size:13px;text-align:center;min-height:18px}
+.btn-primary{
+  background:var(--teal);color:#0f1112;border:none;border-radius:var(--r);
+  font-family:var(--font-head);font-size:17px;font-weight:700;letter-spacing:.5px;
+  padding:14px 24px;cursor:pointer;width:100%;transition:opacity .15s;
+}
+.btn-primary:hover{opacity:.88}
+.btn-secondary{
+  background:var(--surf3);color:var(--ink);border:1px solid var(--bdr2);border-radius:var(--r);
+  font-family:var(--font-head);font-size:15px;font-weight:600;letter-spacing:.3px;
+  padding:10px 18px;cursor:pointer;transition:border-color .15s,background .15s;
+}
+.btn-secondary:hover{border-color:var(--teal);background:var(--teal-dim)}
+.btn-danger{
+  background:var(--red-dim);color:var(--red);border:1px solid var(--red);
+  border-radius:var(--r);font-family:var(--font-head);font-size:14px;font-weight:600;
+  padding:8px 14px;cursor:pointer;
+}
+.btn-ghost{
+  background:none;border:1px solid var(--bdr2);color:var(--mid);border-radius:var(--r);
+  font-family:var(--font-head);font-size:14px;font-weight:600;padding:7px 12px;
+  cursor:pointer;transition:border-color .15s,color .15s;
+}
+.btn-ghost:hover{border-color:var(--teal);color:var(--teal)}
+
+/* ─── APP SHELL ─────────────────────────────────────────────────── */
+#app{display:none;flex-direction:column;min-height:100vh}
+#app.visible{display:flex}
+
+header{
+  background:var(--surf);border-bottom:1px solid var(--bdr);
+  padding:0 24px;height:56px;display:flex;align-items:center;gap:16px;
+  position:sticky;top:0;z-index:200;
+}
+.header-logo{font-family:var(--font-head);font-size:22px;font-weight:800;color:var(--ink);letter-spacing:-.3px}
+.header-logo span{color:var(--teal)}
+.header-actions{margin-left:auto;display:flex;align-items:center;gap:10px}
+.icon-btn{
+  background:none;border:none;color:var(--mid);cursor:pointer;
+  width:36px;height:36px;display:flex;align-items:center;justify-content:center;
+  border-radius:var(--r);transition:color .15s,background .15s;font-size:18px;
+}
+.icon-btn:hover{color:var(--teal);background:var(--teal-dim)}
+.header-badge{
+  background:var(--teal-dim);color:var(--teal);border:1px solid var(--teal-mid);
+  border-radius:20px;font-family:var(--font-head);font-size:12px;font-weight:700;
+  padding:3px 10px;letter-spacing:.5px;text-transform:uppercase;
+}
+
+main{flex:1;padding:24px;max-width:1200px;margin:0 auto;width:100%}
+
+/* ─── JOB HEADER ────────────────────────────────────────────────── */
+.job-header-card{
+  background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r3);
+  padding:20px 24px;margin-bottom:20px;
+}
+.job-header-card h2{
+  font-family:var(--font-head);font-size:13px;font-weight:700;letter-spacing:2px;
+  text-transform:uppercase;color:var(--teal);margin-bottom:16px;
+}
+.job-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.job-grid .span2{grid-column:span 2}
+.field-label{
+  font-family:var(--font-head);font-size:11px;font-weight:700;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--mid);display:block;margin-bottom:5px;
+}
+input[type=text],input[type=number],input[type=date],select,textarea{
+  background:var(--surf2);border:1px solid var(--bdr2);border-radius:var(--r);
+  color:var(--ink);font-size:14px;padding:9px 12px;width:100%;
+  font-family:var(--font-body);outline:none;transition:border-color .2s;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--teal)}
+select{cursor:pointer;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238a9299' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;
+}
+select option{background:#1e2226}
+
+/* ─── TABS ──────────────────────────────────────────────────────── */
+.tab-bar{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--bdr);padding-bottom:0}
+.tab-btn{
+  font-family:var(--font-head);font-size:15px;font-weight:700;letter-spacing:.3px;
+  color:var(--mid);background:none;border:none;cursor:pointer;
+  padding:10px 18px;border-bottom:2px solid transparent;margin-bottom:-1px;
+  transition:color .15s,border-color .15s;
+}
+.tab-btn.active{color:var(--teal);border-bottom-color:var(--teal)}
+.tab-btn:hover:not(.active){color:var(--ink)}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+
+/* ─── CONFIG ROWS ───────────────────────────────────────────────── */
+.configs-container{display:flex;flex-direction:column;gap:16px}
+.config-card{
+  background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r3);
+  overflow:hidden;
+}
+.config-header{
+  background:var(--surf2);padding:14px 20px;
+  display:flex;align-items:center;gap:12px;cursor:pointer;
+  border-bottom:1px solid var(--bdr);
+}
+.config-num{
+  background:var(--teal-dim);color:var(--teal);border:1px solid var(--teal-mid);
+  border-radius:20px;font-family:var(--font-head);font-size:12px;font-weight:800;
+  padding:2px 10px;letter-spacing:.5px;flex-shrink:0;
+}
+.config-title{font-family:var(--font-head);font-size:16px;font-weight:700;flex:1}
+.config-chevron{color:var(--mid);font-size:12px;transition:transform .2s;margin-left:auto}
+.config-card.collapsed .config-chevron{transform:rotate(-90deg)}
+.config-card.collapsed .config-body{display:none}
+
+.config-body{padding:20px}
+.config-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:16px}
+.config-grid .span2{grid-column:span 2}
+.config-grid .span3{grid-column:span 3}
+.config-divider{
+  border:none;border-top:1px solid var(--bdr);margin:16px 0;
+}
+.section-label{
+  font-family:var(--font-head);font-size:11px;font-weight:700;letter-spacing:2px;
+  text-transform:uppercase;color:var(--teal);margin-bottom:12px;display:block;
+}
+
+/* toggle switches */
+.toggle-row{display:flex;align-items:center;gap:10px}
+.toggle-label{font-size:14px;color:var(--mid)}
+.toggle{
+  position:relative;display:inline-block;width:42px;height:24px;flex-shrink:0;
+}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{
+  position:absolute;inset:0;background:var(--surf3);border-radius:24px;
+  cursor:pointer;transition:background .2s;border:1px solid var(--bdr2);
+}
+.toggle-slider:before{
+  content:'';position:absolute;width:18px;height:18px;left:2px;bottom:2px;
+  background:var(--mid);border-radius:50%;transition:transform .2s,background .2s;
+}
+.toggle input:checked+.toggle-slider{background:var(--teal-dim);border-color:var(--teal)}
+.toggle input:checked+.toggle-slider:before{transform:translateX(18px);background:var(--teal)}
+
+/* note banners */
+.note-banner{
+  background:var(--gold-dim);border:1px solid var(--gold);border-radius:var(--r);
+  padding:10px 14px;font-size:13px;color:var(--gold);margin-top:8px;
+  display:flex;align-items:flex-start;gap:8px;
+}
+.note-banner.info{background:var(--teal-dim);border-color:var(--teal-mid);color:var(--teal)}
+
+/* ─── RESULTS PANEL ─────────────────────────────────────────────── */
+#resultsPanel{
+  background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r3);
+  padding:24px;margin-top:20px;
+}
+#resultsPanel h2{
+  font-family:var(--font-head);font-size:22px;font-weight:800;
+  color:var(--ink);margin-bottom:20px;letter-spacing:-.3px;
+}
+.results-empty{color:var(--mid);font-size:14px;text-align:center;padding:24px 0}
+
+.result-config{margin-bottom:20px}
+.result-config-title{
+  font-family:var(--font-head);font-size:13px;font-weight:700;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--teal);margin-bottom:10px;
+  padding-bottom:8px;border-bottom:1px solid var(--bdr);
+}
+.result-row{
+  display:flex;justify-content:space-between;align-items:baseline;
+  padding:6px 0;border-bottom:1px solid var(--bdr);font-size:14px;
+}
+.result-row:last-child{border-bottom:none}
+.result-label{color:var(--mid)}
+.result-value{font-family:var(--font-mono);color:var(--ink);font-size:13px}
+.result-value.sub{color:var(--mid);font-size:12px}
+
+.result-total-card{
+  background:var(--surf2);border:1px solid var(--bdr2);border-radius:var(--r2);
+  padding:16px 20px;margin-top:16px;
+}
+.result-total-row{
+  display:flex;justify-content:space-between;align-items:baseline;
+  padding:5px 0;font-size:14px;
+}
+.result-total-row.grand{
+  font-family:var(--font-head);font-size:24px;font-weight:800;
+  color:var(--teal);padding-top:12px;margin-top:8px;
+  border-top:1px solid var(--bdr2);
+}
+.result-total-row.grand .result-label{color:var(--teal)}
+
+/* ─── ADD CONFIG BTN ────────────────────────────────────────────── */
+.add-config-btn{
+  background:var(--surf);border:2px dashed var(--bdr2);border-radius:var(--r3);
+  color:var(--mid);font-family:var(--font-head);font-size:16px;font-weight:700;
+  padding:16px;width:100%;cursor:pointer;transition:border-color .2s,color .2s;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.add-config-btn:hover{border-color:var(--teal);color:var(--teal)}
+
+/* ─── SAVED JOBS ────────────────────────────────────────────────── */
+.saved-job-card{
+  background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r2);
+  padding:16px 20px;display:flex;align-items:center;gap:16px;
+}
+.saved-job-info{flex:1}
+.saved-job-name{font-family:var(--font-head);font-size:18px;font-weight:700}
+.saved-job-meta{font-size:12px;color:var(--mid);margin-top:3px}
+.saved-jobs-list{display:flex;flex-direction:column;gap:10px}
+
+/* ─── MODAL ─────────────────────────────────────────────────────── */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;
+  display:flex;align-items:center;justify-content:center;padding:20px;
+}
+.modal-overlay.hidden{display:none}
+.modal-box{
+  background:var(--surf);border:1px solid var(--bdr2);border-radius:var(--r3);
+  padding:28px;width:100%;max-width:680px;max-height:90vh;overflow-y:auto;
+  box-shadow:var(--sh);
+}
+.modal-box h2{
+  font-family:var(--font-head);font-size:22px;font-weight:800;
+  margin-bottom:20px;letter-spacing:-.3px;
+}
+.modal-section{margin-bottom:28px}
+.modal-section h3{
+  font-family:var(--font-head);font-size:13px;font-weight:700;letter-spacing:2px;
+  text-transform:uppercase;color:var(--teal);margin-bottom:14px;
+  padding-bottom:8px;border-bottom:1px solid var(--bdr);
+}
+
+/* admin pricing table */
+.pricing-table{width:100%;border-collapse:collapse;font-size:13px}
+.pricing-table th{
+  font-family:var(--font-head);font-size:11px;font-weight:700;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--mid);padding:6px 8px;
+  border-bottom:1px solid var(--bdr);text-align:left;
+}
+.pricing-table td{padding:6px 8px;border-bottom:1px solid var(--bdr)}
+.pricing-table input[type=number]{
+  padding:5px 8px;font-size:13px;background:var(--surf3);
+  border:1px solid var(--bdr2);border-radius:6px;color:var(--ink);width:90px;
+}
+.pricing-table input[type=number].zero{color:var(--dim)}
+.pricing-table tr.disabled-row{opacity:.5}
+
+/* ─── PRINT ─────────────────────────────────────────────────────── */
+@media print{
+  #lockScreen,header,.tab-bar,.add-config-btn,.config-header .btn-danger,
+  .header-actions,.print-hide{display:none!important}
+  body{background:#fff;color:#000}
+  :root{--ink:#000;--mid:#555;--surf:#fff;--surf2:#f5f5f5;--bdr:#ddd;--bdr2:#ccc}
+  #resultsPanel{border:1px solid #ddd}
+  .config-card.collapsed .config-body{display:block!important}
+}
+
+/* ─── WASTE BADGE ───────────────────────────────────────────────── */
+.waste-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--teal-dim);color:var(--teal);border:1px solid var(--teal-mid);
+  border-radius:20px;font-family:var(--font-mono);font-size:11px;font-weight:500;
+  padding:3px 10px;margin-top:6px;
+}
+.unit{font-size:11px;color:var(--mid);margin-left:2px}
+
+/* ─── LUMBER STOCK TAG ──────────────────────────────────────────── */
+.stock-tag{
+  background:var(--gold-dim);color:var(--gold);border:1px solid var(--gold);
+  border-radius:6px;font-family:var(--font-mono);font-size:12px;
+  padding:3px 10px;display:inline-block;margin-top:4px;
+}
+
+/* ─── INLINE CALC PREVIEW ───────────────────────────────────────── */
+.calc-preview{
+  background:var(--surf3);border-radius:var(--r);padding:14px 16px;
+  margin-top:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;
+}
+.calc-preview-item{}
+.calc-preview-label{font-size:11px;color:var(--mid);font-family:var(--font-head);
+  font-weight:700;letter-spacing:1px;text-transform:uppercase;}
+.calc-preview-val{font-family:var(--font-mono);font-size:14px;color:var(--ink);margin-top:2px}
+
+/* ─── SCROLLBAR ─────────────────────────────────────────────────── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--surf3);border-radius:3px}
+
+/* ─── CUTLISTIQ LINK ─────────────────────────────────────────────── */
+.cutlistiq-link{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--teal-dim);color:var(--teal);border:1px solid var(--teal-mid);
+  border-radius:var(--r);padding:8px 14px;font-family:var(--font-head);
+  font-size:14px;font-weight:700;text-decoration:none;letter-spacing:.3px;
+  transition:background .15s;
+}
+.cutlistiq-link:hover{background:rgba(0,229,184,.2)}
+
+/* ─── RESPONSIVE ─────────────────────────────────────────────────── */
+@media(max-width:640px){
+  main{padding:16px}
+  .config-grid{grid-template-columns:1fr 1fr}
+  .config-grid .span3{grid-column:span 2}
+  header{padding:0 16px}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════
+     LOCK SCREEN
+═══════════════════════════════════════════════════ -->
+<div id="lockScreen">
+  <div class="lock-logo">LBI<span>IQ</span> Calculator</div>
+  <div class="lock-card">
+    <h2>Enter Access Code</h2>
+    <input type="password" id="lockPw" placeholder="••••••••••••" autocomplete="off" autofocus>
+    <div id="lockErr"></div>
+    <button class="btn-primary" onclick="unlock()">Unlock</button>
+  </div>
+  <div style="font-size:12px;color:var(--dim)">Powered by <a href="https://cutlistiq.pro" target="_blank" style="color:var(--teal);text-decoration:none">CutListIQ</a></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MAIN APP
+═══════════════════════════════════════════════════ -->
+<div id="app">
+  <header>
+    <div class="header-logo">LBI<span>IQ</span></div>
+    <div class="header-badge">Panel Calculator</div>
+    <div class="header-actions">
+      <a href="https://cutlistiq.pro" target="_blank" class="cutlistiq-link print-hide">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        CutListIQ
+      </a>
+      <button class="icon-btn print-hide" onclick="openSavedJobs()" title="Saved Jobs">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+      </button>
+      <button class="icon-btn print-hide" onclick="window.print()" title="Print">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      </button>
+      <button class="icon-btn print-hide" id="adminBtn" onclick="openAdmin()" title="Admin Settings">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M12 2v2M12 20v2M20 12h2M2 12h2M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Job Header -->
+    <div class="job-header-card">
+      <h2>Job Information</h2>
+      <div class="job-grid">
+        <div class="span2">
+          <label class="field-label">Job Name / Project</label>
+          <input type="text" id="jobName" placeholder="e.g. Conference Room — 4th Floor" oninput="markDirty()">
+        </div>
+        <div>
+          <label class="field-label">Customer</label>
+          <input type="text" id="jobCustomer" placeholder="LBI" oninput="markDirty()">
+        </div>
+        <div>
+          <label class="field-label">PO / Quote #</label>
+          <input type="text" id="jobPO" placeholder="e.g. PO-2026-001" oninput="markDirty()">
+        </div>
+        <div>
+          <label class="field-label">Date</label>
+          <input type="date" id="jobDate" oninput="markDirty()">
+        </div>
+        <div>
+          <label class="field-label">Total Ceiling Sq Ft</label>
+          <input type="number" id="totalSqft" value="500" min="0" step="1" oninput="recalcAll()">
+        </div>
+        <div>
+          <label class="field-label">Supplier Tier</label>
+          <select id="jobSupplier" onchange="recalcAll()">
+            <option value="talbert">Talbert (Premium)</option>
+            <option value="timber">Timber (Standard)</option>
+          </select>
+        </div>
+        <div style="grid-column:1/-1">
+          <label class="field-label">Notes</label>
+          <input type="text" id="jobNotes" placeholder="Optional notes for this quote" oninput="markDirty()">
+        </div>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap" class="print-hide">
+        <button class="btn-secondary" onclick="saveJob()">💾 Save Job</button>
+        <button class="btn-secondary" onclick="newJob()">＋ New Job</button>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-bar print-hide">
+      <button class="tab-btn active" onclick="switchTab('veneer',this)">Veneer Panels</button>
+      <button class="tab-btn" onclick="switchTab('lumber',this)">Solid Lumber</button>
+    </div>
+
+    <!-- Veneer Tab -->
+    <div id="tab-veneer" class="tab-pane active">
+      <div class="configs-container" id="veneerConfigs"></div>
+      <button class="add-config-btn print-hide" onclick="addVeneerConfig()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Panel Configuration
+      </button>
+    </div>
+
+    <!-- Lumber Tab -->
+    <div id="tab-lumber" class="tab-pane">
+      <div class="configs-container" id="lumberConfigs"></div>
+      <button class="add-config-btn print-hide" onclick="addLumberConfig()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Lumber Configuration
+      </button>
+    </div>
+
+    <!-- Results -->
+    <div id="resultsPanel">
+      <h2>Quote Summary</h2>
+      <div id="resultsContent" class="results-empty">Fill in job details and add a configuration above to see results.</div>
+    </div>
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     ADMIN MODAL
+═══════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="adminModal">
+  <div class="modal-box">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <h2 style="margin-bottom:0">⚙ Admin Pricing</h2>
+      <button class="icon-btn" onclick="closeAdmin()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <!-- LBI Access Password -->
+    <div class="modal-section">
+      <h3>LBI Access Password</h3>
+      <p style="font-size:12px;color:var(--mid);margin-bottom:12px">Change the password LBI uses to log in. Save to apply.</p>
+      <div style="display:flex;gap:12px;align-items:flex-end;max-width:340px">
+        <div style="flex:1">
+          <label class="field-label">LBI Password</label>
+          <input type="text" id="admin-lbi-password" placeholder="lbi2024" autocomplete="off"
+            style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+        </div>
+      </div>
+    </div>
+
+    <!-- Markup -->
+    <div class="modal-section">
+      <h3>Markup / Margin (% added to each category)</h3>
+      <div id="markupGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px"></div>
+    </div>
+
+    <!-- Veneer Species Pricing -->
+    <div class="modal-section">
+      <h3>Veneer Panel Pricing (per sheet)</h3>
+      <p style="font-size:12px;color:var(--mid);margin-bottom:12px">A3 = Horizontal slats &nbsp;|&nbsp; AA = Vertical slats &nbsp;|&nbsp; Set to $0 to hide from LBI</p>
+      <div style="overflow-x:auto">
+        <table class="pricing-table" id="veneerPricingTable">
+          <thead>
+            <tr>
+              <th>Species</th>
+              <th>Supplier</th>
+              <th>A3 4×8</th>
+              <th>A3 4×10</th>
+              <th>AA 4×8</th>
+              <th>AA 4×10</th>
+              <th>EB Roll</th>
+            </tr>
+          </thead>
+          <tbody id="veneerPricingBody"></tbody>
+        </table>
+      </div>
+      <button class="btn-ghost" style="margin-top:12px" onclick="addCustomSpecies('veneer')">+ Add Species</button>
+    </div>
+
+    <!-- Lumber Pricing -->
+    <div class="modal-section">
+      <h3>Lumber Pricing (per board foot)</h3>
+      <p style="font-size:12px;color:var(--mid);margin-bottom:12px">Set to $0 to hide from LBI. Check "Resaw" for Hemlock/Fir (4 pcs from 2×6)</p>
+      <div style="overflow-x:auto">
+        <table class="pricing-table" id="lumberPricingTable">
+          <thead>
+            <tr>
+              <th>Species</th>
+              <th>$/BF</th>
+              <th>Resaw (2×6)</th>
+            </tr>
+          </thead>
+          <tbody id="lumberPricingBody"></tbody>
+        </table>
+      </div>
+      <button class="btn-ghost" style="margin-top:12px" onclick="addCustomSpecies('lumber')">+ Add Species</button>
+    </div>
+
+    <!-- Service Rates -->
+    <div class="modal-section">
+      <h3>Service Rates</h3>
+      <div id="serviceRatesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px"></div>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+      <button class="btn-ghost" onclick="closeAdmin()">Cancel</button>
+      <button class="btn-primary" onclick="saveAdmin()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     SAVED JOBS MODAL
+═══════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="savedModal">
+  <div class="modal-box" style="max-width:560px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <h2 style="margin-bottom:0">Saved Jobs</h2>
+      <button class="icon-btn" onclick="closeSavedJobs()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="savedJobsList" class="saved-jobs-list"></div>
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--bdr)">
+      <p style="font-size:12px;color:var(--mid);margin-bottom:10px">Share a job code with another employee:</p>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="importCodeInput" placeholder="Paste job code here..." style="flex:1">
+        <button class="btn-secondary" onclick="importJobCode()">Import</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+
+</body>
+</html>
