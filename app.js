@@ -208,7 +208,7 @@ function addVeneerConfig(){
     id, orientation:'Horizontal', species:'', core:'Fire Rated MDF',
     grade:'timber',
     panelW:0, panelL:0, slatW:0, slatL:0, slatsPerPanel:0,
-    bracketsPerPanel:0, ebSides:4, assembly:true, satinFinish:true, notes:'',
+    bracketsPerPanel:0, ebSides:4, assembly:false, satinFinish:false, notes:'',
     calcMode:'sqft', manualQty:0,
   };
   veneerConfigs.push(cfg);
@@ -506,7 +506,7 @@ function addLumberConfig(){
   const cfg = {
     id, species:'', thickness:0.75, slatW:0, slatL:0,
     slatsPerPanel:0, panelW:0, panelL:0, bracketsPerPanel:0,
-    sanding:false, cutToLength:true, assembly:true, orientation:'Horizontal', notes:'',
+    sanding:false, cutToLength:false, assembly:false, orientation:'Horizontal', notes:'',
     calcMode:'sqft', manualQty:0,
     roughThick:getSuggestedRoughThick(0.75), safetyBuffer:false,
   };
@@ -1161,7 +1161,7 @@ function newJob(){
   document.getElementById('jobCustomer').value = 'LBI';
   document.getElementById('jobPO').value       = '';
   document.getElementById('jobDate').value     = new Date().toISOString().split('T')[0];
-  document.getElementById('totalSqft').value   = '500';
+  document.getElementById('totalSqft').value   = '';
   document.getElementById('jobNotes').value    = '';
   veneerConfigs = []; lumberConfigs = [];
   veneerCounter = 0; lumberCounter = 0;
