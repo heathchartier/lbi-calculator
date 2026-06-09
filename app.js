@@ -2,6 +2,9 @@
 // --- CONSTANTS -------------------------------------------------------
 const ADMIN_PASSWORD = 'Millwork2024';
 const KERF = 0.125;
+const RESAW_KERF = 0.0625;   // thin-kerf blade for resaw/rip operations on 2x6
+const TWO_X_SIX_T = 1.5;    // 2x6 actual thickness (inches)
+const TWO_X_SIX_W = 6.0;    // 2x6 nominal width (inches, rough/green)
 const END_TRIM = 4.0;
 const STOCK_LENGTHS = [96, 120, 144, 168, 192];
 const SHEET_WIDTHS  = { '4x8': 48.5, '4x10': 48.5 };
@@ -484,9 +487,19 @@ function getMillStockLength(slatL){
   return getBestStock(slatL).stockIn; // <72": maximize pieces per board
 }
 
-// VG Fir/Hemlock: pieces per 2×6 board based on finished thickness
-// ≤ 11/16" → 4 pcs (resaw), > 11/16" → 2 pcs (direct cut, more waste)
-function getVGResawPcs(finishedT){ return finishedT <= 0.6875 ? 4 : 2; }
+// VG Fir/Hemlock: pieces per 2×6 board — width rips × thickness slabs
+// 2×6 stock: 1.5" actual thickness, ~6" rough width; thin-kerf resaw/rip (RESAW_KERF = 1/16")
+// Slabs from thickness:  floor(1.5 / (slatT + RESAW_KERF))
+//   11/16" (0.6875): 1.5/0.75 = 2 slabs  |  3/4" (0.75): 1.5/0.8125 = 1 slab
+// Strips from width:     floor(6 / (slatW + RESAW_KERF))
+//   1.75":  6/1.8125 = 3 strips  |  2.75":  6/2.8125 = 2 strips
+// Examples: 11/16"×1.75" → 2×3=6 ✓  3/4"×1.75" → 1×3=3 ✓
+//           11/16"×2.75" → 2×2=4 ✓  3/4"×2.75" → 1×2=2 ✓
+function getVGPcsPerBoard(slatT, slatW){
+  const slabs  = Math.floor(TWO_X_SIX_T / (slatT + RESAW_KERF));
+  const strips = Math.floor(TWO_X_SIX_W / (slatW + RESAW_KERF));
+  return Math.max(1, slabs * strips);
+}
 
 const ROUGH_THICKNESSES = [
   {val:1.0,   label:'4/4  (1")'},
@@ -727,8 +740,9 @@ function millLumberCalc(cfg, totalSlats){
   if(isVGResaw){
     roughT     = 2.0;
     widthWaste = null;
-    pcsWide    = getVGResawPcs(cfg.thickness);
-    if(cfg.thickness > 0.6875) vgWarning = true; // suggest 11/16" instead
+    pcsWide    = getVGPcsPerBoard(cfg.thickness, cfg.slatW);
+    const vgAltPcs = getVGPcsPerBoard(0.6875, cfg.slatW); // 11/16" yield for comparison
+    if(cfg.thickness > 0.6875) vgWarning = true; // suggest 11/16" for better yield
 
     // Board-based: buy whole 2×6 boards, each yields pcsWide × piecesPerLen slats
     // You can't buy a fraction of a board so ceil first, then multiply by BF/board
@@ -741,7 +755,7 @@ function millLumberCalc(cfg, totalSlats){
     // Apply safety buffer if on
     const safetyMult = cfg.safetyBuffer ? 1.10 : 1;
     return {
-      isVGResaw, vgWarning,
+      isVGResaw, vgWarning, vgAltPcs,
       stockIn, stockFt, piecesPerLen,
       roughT, widthWaste, pcsWide,
       boardsNeeded, bfPerBoard, pcsPerBoard,
@@ -790,8 +804,8 @@ function calcLumberPreview(cfg){
 
   const vgWarnHTML = m.vgWarning ? `
     <div style="grid-column:1/-1;background:#3a1a00;border:1px solid var(--gold);border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--gold);line-height:1.5">
-      ⚠ ${fractionLabel(cfg.thickness.toString())} VG ${cfg.species} must be milled straight from 2×6 — only 2 pcs per board, higher cost.
-      <strong>Consider using 11/16" (4 pcs/board) for better yield.</strong>
+      ⚠ ${fractionLabel(cfg.thickness.toString())} VG ${cfg.species} yields only <strong>${m.pcsWide} pcs</strong> per 2×6 board — higher cost.
+      <strong>Consider 11/16" (${m.vgAltPcs} pcs/board) for better yield.</strong>
     </div>` : '';
 
   preview.innerHTML = `
