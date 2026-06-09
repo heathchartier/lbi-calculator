@@ -79,10 +79,11 @@ const DEFAULT_PRICING = {
     'Custom':             { price:3.25,  resaw:false },
   },
   services: {
-    ebServicePerFt:0.50, cutServicePerSqft:0.19,
-    assemblyLow:2.00, assemblyHigh:3.00, bracketPrice:2.50,
-    millingBase:780, sandingOneSide:453.60, sandingTwoSides:604.80, cuttingCharge:630,
-    lumberDefectPct:0,
+    ebServicePerFt: 0.50, cutServicePerSqft: 0.19,
+    assembly: 1.50, bracketPrice: 2.50,
+    millingFlat: 780, millingThreshold: 3000, millingPerLF: 0.21, seriesChange: 115,
+    sandingFlat: 240, sandingThreshold: 1700, sandingPerLF: 0.19,
+    cutFlat: 500, cutThreshold: 3000, cutPerLF: 0.21,
   },
   markup: {
     panels:0, edgeBand:0, lumber:0, milling:0,
@@ -144,7 +145,7 @@ function getSupplier(){ return document.getElementById('jobSupplier')?.value || 
 
 // --- SPECIES VISIBILITY -----------------------------------------------
 function visibleVeneerSpecies(orientation, supplier){
-  const sup = supplier || getSupplier();
+  const sup = supplier || 'talbert';
   const grade = orientation === 'Vertical' ? 'AA' : 'A3';
   return Object.entries(pricing.veneerSpecies).filter(([,p]) => {
     return (p[sup+'_'+grade+'_4x8']||0) > 0 || (p[sup+'_'+grade+'_4x10']||0) > 0;
@@ -159,6 +160,7 @@ function addVeneerConfig(){
   const id = ++veneerCounter;
   const cfg = {
     id, orientation:'Horizontal', species:'', core:'Fire Rated MDF',
+    grade:'talbert',
     panelW:12, panelL:96, slatW:3.25, slatL:96, slatsPerPanel:4,
     bracketsPerPanel:8, ebSides:4, assembly:true, satinFinish:true, notes:'',
     calcMode:'sqft', manualQty:0,
@@ -178,7 +180,8 @@ function renderVeneerConfigs(){
   const cont = document.getElementById('veneerConfigs');
   cont.innerHTML = '';
   veneerConfigs.forEach(cfg => {
-    const species = visibleVeneerSpecies(cfg.orientation);
+    if(!cfg.grade) cfg.grade = 'talbert';
+    const species = visibleVeneerSpecies(cfg.orientation, cfg.grade);
     if(!cfg.species && species.length > 0) cfg.species = species[0];
 
     const modeLabels = {sqft:'By Sq Ft', slats:'By Slat Count', panels:'By Panel Count'};
@@ -202,6 +205,13 @@ function renderVeneerConfigs(){
             <select id="v-orient-${cfg.id}" onchange="vUpdate(${cfg.id})">
               <option value="Horizontal" ${cfg.orientation==='Horizontal'?'selected':''}>Horizontal Slats (A3)</option>
               <option value="Vertical"   ${cfg.orientation==='Vertical'?'selected':''}>Vertical Slats (AA)</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Grade</label>
+            <select id="v-grade-${cfg.id}" onchange="vUpdate(${cfg.id})">
+              <option value="talbert" ${(cfg.grade||'talbert')==='talbert'?'selected':''}>Premium (Talbert)</option>
+              <option value="timber"  ${(cfg.grade||'talbert')==='timber'?'selected':''}>Standard (Timber)</option>
             </select>
           </div>
           <div>
@@ -290,6 +300,7 @@ function vUpdate(id){
   const cfg = veneerConfigs.find(c => c.id === id);
   if(!cfg) return;
   cfg.orientation    = document.getElementById('v-orient-'+id)?.value || cfg.orientation;
+  cfg.grade          = document.getElementById('v-grade-'+id)?.value || cfg.grade || 'talbert';
   cfg.core           = document.getElementById('v-core-'+id)?.value || cfg.core;
   cfg.panelW         = parseFloat(document.getElementById('v-panelW-'+id)?.value) || cfg.panelW;
   cfg.panelL         = parseFloat(document.getElementById('v-panelL-'+id)?.value) || cfg.panelL;
@@ -309,8 +320,8 @@ function vUpdate(id){
     document.getElementById('v-mode-'+id).dataset.prev = cfg.calcMode;
   }
 
-  // update species dropdown when orientation changes
-  const specs = visibleVeneerSpecies(cfg.orientation);
+  // update species dropdown when orientation or grade changes
+  const specs = visibleVeneerSpecies(cfg.orientation, cfg.grade);
   const sel = document.getElementById('v-species-'+id);
   if(sel){
     sel.innerHTML = specs.length === 0
@@ -385,7 +396,7 @@ function calcVeneerPreview(cfg){
   `;
 }
 
-function calcVeneerCost(cfg, totalSqft, supplier){
+function calcVeneerCost(cfg, totalSqft){
   if(!cfg.species || !cfg.slatW || !cfg.panelW || !cfg.panelL) return null;
   const sData = pricing.veneerSpecies[cfg.species];
   if(!sData) return null;
@@ -394,7 +405,7 @@ function calcVeneerCost(cfg, totalSqft, supplier){
   if(!qty) return null;
   const { panelQty, totalSlats, effectiveSqft } = qty;
 
-  const sup   = supplier || 'talbert';
+  const sup   = cfg.grade || 'talbert';
   const grade = cfg.orientation === 'Vertical' ? 'AA' : 'A3';
   const colsPerSheet = Math.floor((SHEET_WIDTHS['4x8'] + KERF) / (cfg.slatW + KERF));
   const rowsPerSheet = Math.floor((SHEET_LENGTHS['4x8'] + KERF) / (cfg.slatL + KERF));
@@ -413,7 +424,7 @@ function calcVeneerCost(cfg, totalSqft, supplier){
   const ebServiceCost  = ebFt * pricing.services.ebServicePerFt;
 
   const cutCost      = effectiveSqft * pricing.services.cutServicePerSqft;
-  const assemblyCost = cfg.assembly ? effectiveSqft * (cfg.slatsPerPanel<=4 ? pricing.services.assemblyLow : pricing.services.assemblyHigh) : 0;
+  const assemblyCost = cfg.assembly ? effectiveSqft * pricing.services.assembly : 0;
   const bracketCount = panelQty * cfg.bracketsPerPanel;
   const bracketCost  = bracketCount * pricing.services.bracketPrice;
 
@@ -426,7 +437,7 @@ function calcVeneerCost(cfg, totalSqft, supplier){
 
   const subtotal = panelLine+ebMatLine+ebSvcLine+cutLine+asmLine+bktLine;
   return {
-    species:cfg.species, orientation:cfg.orientation, grade, supplier:sup,
+    species:cfg.species, orientation:cfg.orientation, grade, supplier:sup, cfgGrade:sup,
     sqftPerPanel:qty.sqftPerPanel, panelQty, totalSlats, sheetsNeeded,
     sheetPrice, slatsPerSheet, ebFt, ebRolls, ebRollPrice, bracketCount, effectiveSqft,
     lines:{
@@ -448,9 +459,9 @@ function addLumberConfig(){
   const cfg = {
     id, species:'', thickness:0.75, slatW:3.25, slatL:96,
     slatsPerPanel:4, panelW:12, panelL:96, bracketsPerPanel:8,
-    sanded:'1-side', cutToLength:true, assembly:true, orientation:'Horizontal', notes:'',
+    sanding:false, cutToLength:true, assembly:true, orientation:'Horizontal', notes:'',
     calcMode:'sqft', manualQty:0,
-    roughThick:getSuggestedRoughThick(0.75), stockWidth:6, safetyBuffer:false,
+    roughThick:getSuggestedRoughThick(0.75), safetyBuffer:false,
   };
   lumberConfigs.push(cfg);
   renderLumberConfigs();
@@ -519,11 +530,11 @@ function renderLumberConfigs(){
     if(!cfg.species && species.length > 0) cfg.species = species[0];
     const sData    = pricing.lumberSpecies[cfg.species] || {};
     const isResaw  = sData.resaw || false;
-    const stockInfo = getBestStock(cfg.slatL);
-    const stockFt  = stockInfo.stockIn / 12;
+    const millStockIn = getMillStockLength(cfg.slatL);
+    const stockFt     = millStockIn / 12;
+    const pcsPerLen   = cfg.slatL >= 72 ? 1 : Math.max(1, Math.floor((millStockIn - END_TRIM) / cfg.slatL));
     const showQty  = cfg.calcMode !== 'sqft';
     const qtyLabel = cfg.calcMode === 'slats' ? 'Total Slats' : 'Number of Panels';
-    const defectPct = pricing.services.lumberDefectPct || 15;
 
     const div = document.createElement('div');
     div.className = 'config-card';
@@ -580,7 +591,7 @@ function renderLumberConfigs(){
           <div>
             <label class="field-label">Finished Length</label>
             <input type="number" id="l-slatL-${cfg.id}" value="${cfg.slatL}" step="0.25" min="1" oninput="lUpdate(${cfg.id})">
-            <span class="stock-tag" id="l-stock-${cfg.id}">📏 ${stockFt}' stock · ${stockInfo.piecesPerBoard} pc/length</span>
+            <span class="stock-tag" id="l-stock-${cfg.id}">📏 ${stockFt}' stock · ${pcsPerLen} pc/length</span>
           </div>
           <div>
             <label class="field-label">Slats / Panel</label>
@@ -600,43 +611,14 @@ function renderLumberConfigs(){
           </div>
         </div>
         <hr class="config-divider">
-        <span class="section-label">Raw Stock (purchased rough lumber)</span>
-        <div class="config-grid">
-          <div>
-            <label class="field-label">Rough Thickness (auto)</label>
-            <div style="padding:8px 10px;background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--teal);font-weight:600;font-family:var(--font-mono);font-size:14px">
-              ${(()=>{const rt=getSuggestedRoughThick(cfg.thickness);return ROUGH_THICKNESSES.find(r=>Math.abs(r.val-rt)<0.001)?.label||rt+'"';})()}
-            </div>
-            <span style="font-size:11px;color:var(--mid)">From thickness chart</span>
-          </div>
-          ${!isResaw ? `<div>
-            <label class="field-label">Raw Stock Width (in)</label>
-            <input type="number" id="l-stockW-${cfg.id}" value="${cfg.stockWidth||6}" step="0.25" min="2" oninput="lUpdate(${cfg.id})" placeholder="e.g. 6">
-          </div>` : ''}
-          ${!isResaw ? `<div>
-            <label class="field-label">Width Waste Factor (auto)</label>
-            <div style="padding:8px 10px;background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--gold);font-weight:600;font-family:var(--font-mono);font-size:14px">
-              ${getWidthWasteFactor(cfg.slatW)}"
-            </div>
-            <span style="font-size:11px;color:var(--mid)">Per-rip mill allowance</span>
-          </div>` : ''}
-        </div>
-        <div style="font-size:12px;color:var(--mid);margin-top:8px">
-          Grade/defect factor: <strong style="color:var(--teal)">${defectPct}%</strong> — set in Admin → Service Rates
-        </div>
-        <hr class="config-divider">
         <div style="display:flex;gap:24px;flex-wrap:wrap">
           <div class="toggle-row">
             <label class="toggle"><input type="checkbox" id="l-assembly-${cfg.id}" ${cfg.assembly?'checked':''} onchange="lUpdate(${cfg.id})"><span class="toggle-slider"></span></label>
             <span class="toggle-label">Assembly included</span>
           </div>
-          <div>
-            <label class="field-label" style="margin-bottom:5px">Sanding</label>
-            <select id="l-sanded-${cfg.id}" onchange="lUpdate(${cfg.id})" style="width:auto">
-              <option value="none"    ${cfg.sanded==='none'?'selected':''}>No sanding</option>
-              <option value="1-side"  ${cfg.sanded==='1-side'?'selected':''}>1 side</option>
-              <option value="2-sides" ${cfg.sanded==='2-sides'?'selected':''}>2 sides</option>
-            </select>
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="l-sanding-${cfg.id}" ${cfg.sanding?'checked':''} onchange="lUpdate(${cfg.id})"><span class="toggle-slider"></span></label>
+            <span class="toggle-label">Sanding</span>
           </div>
           <div class="toggle-row">
             <label class="toggle"><input type="checkbox" id="l-cut-${cfg.id}" ${cfg.cutToLength?'checked':''} onchange="lUpdate(${cfg.id})"><span class="toggle-slider"></span></label>
@@ -673,21 +655,21 @@ function lUpdate(id){
   cfg.panelL       = parseFloat(document.getElementById('l-panelL-'+id)?.value) || cfg.panelL;
   cfg.bracketsPerPanel = parseInt(document.getElementById('l-brackets-'+id)?.value) || 0;
   cfg.assembly     = document.getElementById('l-assembly-'+id)?.checked ?? true;
-  cfg.sanded       = document.getElementById('l-sanded-'+id)?.value || cfg.sanded;
+  cfg.sanding      = document.getElementById('l-sanding-'+id)?.checked ?? false;
   cfg.cutToLength  = document.getElementById('l-cut-'+id)?.checked ?? true;
   const prevMode   = cfg.calcMode;
   cfg.calcMode     = document.getElementById('l-mode-'+id)?.value || cfg.calcMode;
   cfg.manualQty    = parseInt(document.getElementById('l-manualQty-'+id)?.value) || 0;
   cfg.roughThick   = getSuggestedRoughThick(cfg.thickness);
-  cfg.stockWidth   = parseFloat(document.getElementById('l-stockW-'+id)?.value) || cfg.stockWidth;
   cfg.safetyBuffer = document.getElementById('l-safety-'+id)?.checked ?? false;
 
   const titleEl = document.getElementById('ltitle-'+id);
   if(titleEl) titleEl.textContent = cfg.species || 'New Configuration';
 
-  const stockInfo = getBestStock(cfg.slatL);
-  const stockTag  = document.getElementById('l-stock-'+id);
-  if(stockTag) stockTag.textContent = `📏 ${stockInfo.stockIn/12}' stock · ${stockInfo.piecesPerBoard} pc/board`;
+  const millStockIn   = getMillStockLength(cfg.slatL);
+  const millPcsPerLen = cfg.slatL >= 72 ? 1 : Math.max(1, Math.floor((millStockIn - END_TRIM) / cfg.slatL));
+  const stockTag      = document.getElementById('l-stock-'+id);
+  if(stockTag) stockTag.textContent = `📏 ${millStockIn/12}' stock · ${millPcsPerLen} pc/length`;
 
   if(prevMode !== cfg.calcMode) renderLumberConfigs();
 
@@ -846,37 +828,73 @@ function calcLumberCost(cfg, totalSqft){
   const { panelQty, totalSlats, effectiveSqft } = qty;
 
   const m = millLumberCalc(cfg, totalSlats);
-  const { rawBFTotal, bfPerSlat, stockFt, defectPct } = m;
+  const { rawBFTotal } = m;
 
   const lumberCost   = rawBFTotal * sData.price;
-  const millingCost  = pricing.services.millingBase;
-  const sandingCost  = cfg.sanded==='1-side' ? pricing.services.sandingOneSide :
-                       cfg.sanded==='2-sides' ? pricing.services.sandingTwoSides : 0;
-  const cuttingCost  = cfg.cutToLength ? pricing.services.cuttingCharge : 0;
-  const totalMilling = millingCost + sandingCost + cuttingCost;
-  const assemblyCost = cfg.assembly ? effectiveSqft * (cfg.slatsPerPanel<=4 ? pricing.services.assemblyLow : pricing.services.assemblyHigh) : 0;
+  const assemblyCost = cfg.assembly ? effectiveSqft * pricing.services.assembly : 0;
   const bracketCost  = (panelQty * cfg.bracketsPerPanel) * pricing.services.bracketPrice;
 
-  const lumberLine  = withMarkup(lumberCost,   'lumber');
-  const millingLine = withMarkup(totalMilling,  'milling');
-  const asmLine     = withMarkup(assemblyCost,  'assembly');
-  const bktLine     = withMarkup(bracketCost,   'brackets');
+  const lumberLine = withMarkup(lumberCost,   'lumber');
+  const asmLine    = withMarkup(assemblyCost,  'assembly');
+  const bktLine    = withMarkup(bracketCost,   'brackets');
 
-  const defectNote = defectPct > 0 ? ` +${defectPct}% defect buffer` : '';
-  const subtotal = lumberLine + millingLine + asmLine + bktLine;
+  const subtotal = lumberLine + asmLine + bktLine;
+  const lf = totalSlats * cfg.slatL / 12;
   return {
     species:cfg.species, isVGResaw:m.isVGResaw, rawBFTotal,
-    panelQty, totalSlats, effectiveSqft,
+    panelQty, totalSlats, effectiveSqft, lf,
     lines:{
-      [`Raw Lumber (${fmtN(rawBFTotal,0)} BF @ ${fmt(sData.price)}/BF)`]: lumberLine,
-      [`  ↳ ${fmtN(bfPerSlat,3)} BF/slat × ${totalSlats} slats${defectNote}`]: 0,
-      'Milling / Machining': millingLine,
+      [`Raw Lumber (${fmtN(rawBFTotal,0)} BF)`]: lumberLine,
       ...(cfg.assembly ? {'Assembly / Packing': asmLine} : {}),
       [`Black Brackets (${fmtN(panelQty*cfg.bracketsPerPanel)})`]: bktLine,
     },
     subtotal,
     sqftCost: effectiveSqft > 0 ? subtotal / effectiveSqft : null,
   };
+}
+
+// --- JOB-LEVEL MILL SERVICES -----------------------------------------
+// Called once per renderResults — totals all lumber configs together
+function calcJobServices(){
+  const svc      = pricing.services;
+  const totalSqft = parseFloat(document.getElementById('totalSqft')?.value) || 0;
+  let totalLF = 0, sandingLF = 0, cutLF = 0;
+
+  lumberConfigs.forEach(cfg => {
+    const qty = resolveLumberQty(cfg, totalSqft);
+    if(!qty) return;
+    const lf = qty.totalSlats * cfg.slatL / 12;
+    totalLF  += lf;
+    if(cfg.sanding)      sandingLF += lf;
+    if(cfg.cutToLength)  cutLF     += lf;
+  });
+
+  // Milling: flat fee up to threshold, then $/LF
+  const millingBase = totalLF > 0
+    ? (totalLF <= svc.millingThreshold ? svc.millingFlat : totalLF * svc.millingPerLF)
+    : 0;
+
+  // Series change: pairwise — +$115 per thickness diff, +$115 per width diff
+  let seriesChangeCost = 0;
+  for(let i = 0; i < lumberConfigs.length; i++){
+    for(let j = i+1; j < lumberConfigs.length; j++){
+      const a = lumberConfigs[i], b = lumberConfigs[j];
+      if(Math.abs(a.thickness - b.thickness) > 0.001) seriesChangeCost += svc.seriesChange;
+      if(Math.abs(a.slatW    - b.slatW)    > 0.001) seriesChangeCost += svc.seriesChange;
+    }
+  }
+
+  const millingTotal = millingBase + seriesChangeCost;
+
+  // Sanding: flat fee up to threshold, then $/LF (total LF for sanded configs)
+  const sandingCost = sandingLF <= 0 ? 0
+    : (sandingLF <= svc.sandingThreshold ? svc.sandingFlat : sandingLF * svc.sandingPerLF);
+
+  // Cut to length: flat fee up to threshold, then $/LF
+  const cutCost = cutLF <= 0 ? 0
+    : (cutLF <= svc.cutThreshold ? svc.cutFlat : cutLF * svc.cutPerLF);
+
+  return { totalLF, sandingLF, cutLF, millingBase, seriesChangeCost, millingTotal, sandingCost, cutCost };
 }
 
 // --- RECALC -----------------------------------------------------------
@@ -889,11 +907,10 @@ function recalcAll(){
 
 function renderResults(totalSqft){
   const cont = document.getElementById('resultsContent');
-  const supplier = getSupplier();
   const allResults = [];
 
   veneerConfigs.forEach((cfg,i) => {
-    const r = calcVeneerCost(cfg, totalSqft, supplier);
+    const r = calcVeneerCost(cfg, totalSqft);
     if(r) allResults.push({...r, label:`Panel Config ${i+1} — ${r.species} (${r.orientation})`});
   });
   lumberConfigs.forEach((cfg,i) => {
@@ -906,8 +923,19 @@ function renderResults(totalSqft){
     return;
   }
 
-  const supplierLabel = SUPPLIER_LABELS[supplier] || supplier;
-  let html = `<div style="font-size:12px;color:var(--mid);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--bdr)">Supplier: <strong style="color:var(--teal)">${supplierLabel}</strong></div>`;
+  // Mill services (all lumber configs combined)
+  const hasLumber = allResults.some(r => 'isVGResaw' in r);
+  let millSvc = null, millingBaseMarked = 0, seriesChangeMarked = 0, sandingMarked = 0, cutMarked = 0, svcTotal = 0;
+  if(hasLumber){
+    millSvc             = calcJobServices();
+    millingBaseMarked   = withMarkup(millSvc.millingBase,      'milling');
+    seriesChangeMarked  = withMarkup(millSvc.seriesChangeCost, 'milling');
+    sandingMarked       = withMarkup(millSvc.sandingCost,      'milling');
+    cutMarked           = withMarkup(millSvc.cutCost,          'milling');
+    svcTotal            = millingBaseMarked + seriesChangeMarked + sandingMarked + cutMarked;
+  }
+
+  let html = '';
   let grandTotal = 0;
 
   allResults.forEach(r => {
@@ -923,11 +951,34 @@ function renderResults(totalSqft){
     grandTotal += r.subtotal;
   });
 
+  // Combined mill services block
+  if(hasLumber && millSvc){
+    const millingRate = millSvc.totalLF > pricing.services.millingThreshold ? 'at $/LF rate' : 'flat rate';
+    html += `<div class="result-config">`;
+    html += `<div class="result-config-title" style="color:var(--gold)">MILL SERVICES</div>`;
+    html += `<div class="result-row"><span class="result-label">Milling (${fmtN(millSvc.totalLF,0)} LF — ${millingRate})</span><span class="result-value">${fmt(millingBaseMarked)}</span></div>`;
+    if(millSvc.seriesChangeCost > 0){
+      html += `<div class="result-row"><span class="result-label">Series Change</span><span class="result-value">${fmt(seriesChangeMarked)}</span></div>`;
+    }
+    if(millSvc.sandingCost > 0){
+      html += `<div class="result-row"><span class="result-label">Sanding (${fmtN(millSvc.sandingLF,0)} LF)</span><span class="result-value">${fmt(sandingMarked)}</span></div>`;
+    }
+    if(millSvc.cutCost > 0){
+      html += `<div class="result-row"><span class="result-label">Cut to Length (${fmtN(millSvc.cutLF,0)} LF)</span><span class="result-value">${fmt(cutMarked)}</span></div>`;
+    }
+    html += `<div class="result-row" style="font-weight:600"><span>Mill Services Total</span><span class="result-value">${fmt(svcTotal)}</span></div>`;
+    html += `</div>`;
+    grandTotal += svcTotal;
+  }
+
   html += `<div class="result-total-card">`;
-  if(allResults.length > 1){
+  if(allResults.length > 1 || (hasLumber && millSvc)){
     allResults.forEach(r => {
       html += `<div class="result-total-row"><span class="result-label">${r.label}</span><span style="font-family:var(--font-mono)">${fmt(r.subtotal)}</span></div>`;
     });
+    if(hasLumber && millSvc){
+      html += `<div class="result-total-row"><span class="result-label">Mill Services</span><span style="font-family:var(--font-mono)">${fmt(svcTotal)}</span></div>`;
+    }
   }
   const totalEffSqft = allResults.reduce((s,r) => s + (r.effectiveSqft||0), 0);
   if(totalEffSqft > 0){
@@ -967,7 +1018,6 @@ function buildJobObject(){
     date:     document.getElementById('jobDate')?.value || '',
     sqft:     document.getElementById('totalSqft')?.value || '',
     notes:    document.getElementById('jobNotes')?.value || '',
-    supplier: document.getElementById('jobSupplier')?.value || 'talbert',
     veneerConfigs: deepCopy(veneerConfigs),
     lumberConfigs: deepCopy(lumberConfigs),
     savedAt: new Date().toISOString(),
@@ -992,8 +1042,6 @@ function loadJob(job){
   document.getElementById('jobDate').value     = job.date     || '';
   document.getElementById('totalSqft').value   = job.sqft     || '';
   document.getElementById('jobNotes').value    = job.notes    || '';
-  const supEl = document.getElementById('jobSupplier');
-  if(supEl && job.supplier) supEl.value = job.supplier;
   veneerConfigs  = job.veneerConfigs || [];
   lumberConfigs  = job.lumberConfigs || [];
   veneerCounter  = veneerConfigs.reduce((m,c) => Math.max(m,c.id), 0);
@@ -1060,8 +1108,6 @@ function newJob(){
   document.getElementById('jobDate').value     = new Date().toISOString().split('T')[0];
   document.getElementById('totalSqft').value   = '500';
   document.getElementById('jobNotes').value    = '';
-  const supEl = document.getElementById('jobSupplier');
-  if(supEl) supEl.value = 'talbert';
   veneerConfigs = []; lumberConfigs = [];
   veneerCounter = 0; lumberCounter = 0;
   renderVeneerConfigs(); renderLumberConfigs();
@@ -1119,23 +1165,37 @@ function renderAdminModal(){
     </tr>
   `).join('');
 
-  // Service rates
+  // Service rates — grouped sections
   const sg = document.getElementById('serviceRatesGrid');
-  const svcLabels = {
-    ebServicePerFt:'EB Service ($/ft)', cutServicePerSqft:'Cut Service ($/sqft)',
-    assemblyLow:'Assembly ≤4 slats ($/sqft)', assemblyHigh:'Assembly ≥5 slats ($/sqft)',
-    bracketPrice:'Black Bracket ($/ea)', millingBase:'Milling Base ($)',
-    sandingOneSide:'Sanding 1-Side ($)', sandingTwoSides:'Sanding 2-Sides ($)',
-    cuttingCharge:'Cutting Charge ($)',
-    lumberDefectPct:'Lumber Defect/Waste % (grade)',
-  };
-  sg.innerHTML = Object.entries(svcLabels).map(([k,lbl]) => `
-    <div>
-      <label class="field-label">${lbl}</label>
-      <input type="number" id="svc-${k}" value="${pricing.services[k]||0}" step="0.01" min="0"
-        style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
-    </div>
-  `).join('');
+  const svcInput = (k, step='1', min='0') => `<input type="number" id="svc-${k}" value="${pricing.services[k]||0}" step="${step}" min="${min}" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">`;
+  const svcHead  = (label, color='var(--teal)') => `<div style="grid-column:1/-1;margin-top:12px;padding-bottom:6px;border-bottom:1px solid var(--bdr2)"><span style="font-size:13px;font-weight:700;color:${color};letter-spacing:.5px;text-transform:uppercase">${label}</span></div>`;
+  const svcField = (k, lbl, step='1') => `<div><label class="field-label">${lbl}</label>${svcInput(k, step)}</div>`;
+
+  sg.innerHTML = `
+    ${svcHead('Milling', 'var(--teal)')}
+    ${svcField('millingFlat',      'Flat Fee (≤ threshold $)', '5')}
+    ${svcField('millingThreshold', 'Threshold (LF)', '100')}
+    ${svcField('millingPerLF',     'Over threshold ($/LF)', '0.01')}
+    ${svcField('seriesChange',     'Series change charge ($)', '5')}
+
+    ${svcHead('Sanding', 'var(--teal)')}
+    ${svcField('sandingFlat',      'Flat Fee (≤ threshold $)', '5')}
+    ${svcField('sandingThreshold', 'Threshold (LF)', '100')}
+    ${svcField('sandingPerLF',     'Over threshold ($/LF)', '0.01')}
+
+    ${svcHead('Cut to Length', 'var(--teal)')}
+    ${svcField('cutFlat',      'Flat Fee (≤ threshold $)', '5')}
+    ${svcField('cutThreshold', 'Threshold (LF)', '100')}
+    ${svcField('cutPerLF',     'Over threshold ($/LF)', '0.01')}
+
+    ${svcHead('Labor / Assembly', 'var(--gold)')}
+    ${svcField('assembly',     'Assembly ($/sqft)', '0.25')}
+    ${svcField('bracketPrice', 'Black Bracket ($/ea)', '0.25')}
+
+    ${svcHead('Veneer Services', 'var(--gold)')}
+    ${svcField('ebServicePerFt',   'EB Service ($/ft)', '0.01')}
+    ${svcField('cutServicePerSqft','Cut Service ($/sqft)', '0.01')}
+  `;
 }
 
 function saveAdmin(){
@@ -1171,7 +1231,13 @@ function saveAdmin(){
   });
 
   // Services
-  Object.keys(pricing.services).forEach(k => {
+  const svcKeys = [
+    'millingFlat','millingThreshold','millingPerLF','seriesChange',
+    'sandingFlat','sandingThreshold','sandingPerLF',
+    'cutFlat','cutThreshold','cutPerLF',
+    'assembly','bracketPrice','ebServicePerFt','cutServicePerSqft',
+  ];
+  svcKeys.forEach(k => {
     const el = document.getElementById('svc-'+k);
     if(el) pricing.services[k] = parseFloat(el.value) || 0;
   });
@@ -1216,6 +1282,27 @@ function showToast(msg){
 // --- INIT -------------------------------------------------------------
 (function mergePricing(){
   const dp = DEFAULT_PRICING;
+
+  // Migrate old service keys → new threshold-based keys
+  if('millingBase' in pricing.services && !('millingFlat' in pricing.services)){
+    pricing.services.millingFlat = pricing.services.millingBase;
+    delete pricing.services.millingBase;
+  }
+  if('sandingOneSide' in pricing.services && !('sandingFlat' in pricing.services)){
+    pricing.services.sandingFlat = 240;
+    delete pricing.services.sandingOneSide;
+    delete pricing.services.sandingTwoSides;
+  }
+  if('cuttingCharge' in pricing.services && !('cutFlat' in pricing.services)){
+    pricing.services.cutFlat = pricing.services.cuttingCharge;
+    delete pricing.services.cuttingCharge;
+  }
+  if(('assemblyLow' in pricing.services || 'assemblyHigh' in pricing.services) && !('assembly' in pricing.services)){
+    pricing.services.assembly = 1.50;
+    delete pricing.services.assemblyLow;
+    delete pricing.services.assemblyHigh;
+  }
+  delete pricing.services.lumberDefectPct;
 
   // Migrate old single-price format (A3_4x8) → timber keys (those prices were always Timber)
   Object.entries(pricing.veneerSpecies).forEach(([name, p]) => {

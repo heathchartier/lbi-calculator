@@ -427,13 +427,6 @@ select option{background:#1e2226}
           <label class="field-label">Total Ceiling Sq Ft</label>
           <input type="number" id="totalSqft" value="500" min="0" step="1" oninput="recalcAll()">
         </div>
-        <div>
-          <label class="field-label">Supplier Tier</label>
-          <select id="jobSupplier" onchange="recalcAll()">
-            <option value="talbert">Talbert (Premium)</option>
-            <option value="timber">Timber (Standard)</option>
-          </select>
-        </div>
         <div style="grid-column:1/-1">
           <label class="field-label">Notes</label>
           <input type="text" id="jobNotes" placeholder="Optional notes for this quote" oninput="markDirty()">
@@ -585,7 +578,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260609c"></script>
+<script src="app.js?v=20260609d"></script>
 
 </body>
 </html>
