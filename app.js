@@ -536,7 +536,7 @@ function renderLumberConfigs(){
         <button class="btn-danger print-hide" onclick="event.stopPropagation();removeLumberConfig(${cfg.id})" style="margin-left:8px">Remove</button>
       </div>
       <div class="config-body">
-        ${isResaw ? `<div class="note-banner">⚠ Hemlock/Fir: Resaw from 2×6 rough stock — 4 pcs @ 11/16" × 2-1/4" per board. BF calculated on nominal 2×6.</div>` : ''}
+        ${isResaw ? `<div class="note-banner" id="lresaw-note-${cfg.id}">⚠ Hemlock/Fir: Milled from 2×6 rough stock — pcs per board depends on slat dimensions (see Lumber Calculation below).</div>` : ''}
         <div class="config-grid" style="margin-top:${isResaw?'16px':'0'}">
           <div>
             <label class="field-label">Species</label>
@@ -797,6 +797,19 @@ function calcLumberPreview(cfg){
   const { panelQty, totalSlats } = qty;
 
   const m = millLumberCalc(cfg, totalSlats);
+
+  // Update VG resaw note banner — show/hide and update text based on current species
+  const resawNote = document.getElementById('lresaw-note-' + cfg.id);
+  if(resawNote){
+    if(m.isVGResaw){
+      const tLabel = fractionLabel(cfg.thickness.toString());
+      const wLabel = fractionLabel(cfg.slatW.toString());
+      resawNote.textContent = `⚠ Hemlock/Fir: Milled from 2×6 rough stock — ${m.pcsWide} pcs @ ${tLabel} × ${wLabel} per board. BF calculated on nominal 2×6.`;
+      resawNote.style.display = '';
+    } else {
+      resawNote.style.display = 'none';
+    }
+  }
 
   const roughLabel = m.isVGResaw
     ? `2×6 (${m.pcsWide} pcs/board)`
