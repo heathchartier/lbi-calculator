@@ -113,6 +113,7 @@ function unlock(){
     document.getElementById('jobDate').value = new Date().toISOString().split('T')[0];
     document.getElementById('adminBtn').style.display = isAdmin ? '' : 'none';
     addVeneerConfig();
+    addLumberConfig();
     recalcAll();
   } else {
     document.getElementById('lockErr').textContent = 'Incorrect password. Try again.';
@@ -210,8 +211,8 @@ function renderVeneerConfigs(){
           <div>
             <label class="field-label">Grade</label>
             <select id="v-grade-${cfg.id}" onchange="vUpdate(${cfg.id})">
-              <option value="talbert" ${(cfg.grade||'talbert')==='talbert'?'selected':''}>Premium (Talbert)</option>
-              <option value="timber"  ${(cfg.grade||'talbert')==='timber'?'selected':''}>Standard (Timber)</option>
+              <option value="talbert" ${(cfg.grade||'talbert')==='talbert'?'selected':''}>Premium</option>
+              <option value="timber"  ${(cfg.grade||'talbert')==='timber'?'selected':''}>Standard</option>
             </select>
           </div>
           <div>
