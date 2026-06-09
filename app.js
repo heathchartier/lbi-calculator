@@ -159,15 +159,14 @@ function logout(){
   document.getElementById('lockPw').value = '';
 }
 
-// Auto-restore session on page load
-(function checkSession(){
+// Auto-restore session — called after mergePricing() at bottom of file
+function checkSession(){
   const role = getValidSession();
   if(role){
-    // Bump expiry on each page load so active users stay logged in
-    saveSession(role);
+    saveSession(role); // bump expiry on each load
     activateApp(role === 'admin');
   }
-})();
+}
 
 function openAdmin(){
   renderAdminModal();
@@ -207,7 +206,7 @@ function addVeneerConfig(){
   const id = ++veneerCounter;
   const cfg = {
     id, orientation:'Horizontal', species:'', core:'Fire Rated MDF',
-    grade:'talbert',
+    grade:'timber',
     panelW:12, panelL:96, slatW:3.25, slatL:96, slatsPerPanel:4,
     bracketsPerPanel:8, ebSides:4, assembly:true, satinFinish:true, notes:'',
     calcMode:'sqft', manualQty:0,
@@ -1397,4 +1396,7 @@ function showToast(msg){
     if(pricing.services[k] == null) pricing.services[k] = dp.services[k];
   });
   localStorage.setItem('lbiq_pricing', JSON.stringify(pricing));
+
+  // Restore session now that pricing is fully merged
+  checkSession();
 })();
