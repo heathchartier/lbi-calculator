@@ -209,7 +209,7 @@ function addVeneerConfig(){
     grade:'timber',
     panelW:0, panelL:0, slatW:0, slatL:0, slatsPerPanel:0,
     bracketsPerPanel:0, ebSides:4, assembly:false, satinFinish:false, notes:'',
-    calcMode:'sqft', manualQty:0, sqft:0,
+    calcMode:'sqft', manualQty:0, sqft:0, customPricePerPanel:0,
   };
   veneerConfigs.push(cfg);
   renderVeneerConfigs();
@@ -267,6 +267,10 @@ function renderVeneerConfigs(){
                 ? '<option value="">No species priced — see admin</option>'
                 : species.map(s => `<option value="${s}" ${cfg.species===s?'selected':''}>${s}</option>`).join('')}
             </select>
+          </div>
+          <div id="v-customprice-wrap-${cfg.id}" style="${cfg.species==='Custom'?'':'display:none'}">
+            <label class="field-label">Price / Panel ($)</label>
+            <input type="number" id="v-customprice-${cfg.id}" value="${cfg.customPricePerPanel||''}" step="0.01" min="0" placeholder="e.g. 250.00" oninput="vUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Panel Core</label>
@@ -362,18 +366,23 @@ function vUpdate(id){
   cfg.satinFinish    = document.getElementById('v-satin-'+id)?.checked ?? true;
   const prevMode     = cfg.calcMode;
   cfg.calcMode       = document.getElementById('v-mode-'+id)?.value || cfg.calcMode;
-  cfg.sqft           = parseFloat(document.getElementById('v-sqft-'+id)?.value) || 0;
-  cfg.manualQty      = parseInt(document.getElementById('v-manualQty-'+id)?.value) || 0;
+  cfg.sqft               = parseFloat(document.getElementById('v-sqft-'+id)?.value) || 0;
+  cfg.manualQty          = parseInt(document.getElementById('v-manualQty-'+id)?.value) || 0;
+  cfg.customPricePerPanel = parseFloat(document.getElementById('v-customprice-'+id)?.value) || 0;
 
-  // update species dropdown when orientation or grade changes
+  // update species dropdown when orientation or grade changes — read current selection first
+  const selectedSpecies = document.getElementById('v-species-'+id)?.value || cfg.species;
   const specs = visibleVeneerSpecies(cfg.orientation, cfg.grade);
   const sel = document.getElementById('v-species-'+id);
   if(sel){
     sel.innerHTML = specs.length === 0
       ? '<option value="">No species priced — see admin</option>'
-      : specs.map(s => `<option value="${s}" ${cfg.species===s?'selected':''}>${s}</option>`).join('');
+      : specs.map(s => `<option value="${s}" ${s===selectedSpecies?'selected':''}>${s}</option>`).join('');
   }
-  cfg.species = document.getElementById('v-species-'+id)?.value || cfg.species;
+  cfg.species = sel?.value || cfg.species;
+
+  const vCustWrap = document.getElementById('v-customprice-wrap-'+id);
+  if(vCustWrap) vCustWrap.style.display = cfg.species === 'Custom' ? '' : 'none';
 
   const titleEl = document.getElementById('vtitle-'+id);
   if(titleEl) titleEl.textContent = cfg.species || 'New Configuration';
@@ -458,7 +467,9 @@ function calcVeneerCost(cfg){
   const sheetsNeeded  = Math.ceil(totalSlats / slatsPerSheet);
 
   const sheetPrice = sData[sup+'_'+grade+'_4x8'] || 0;
-  const sheetCost  = sheetsNeeded * sheetPrice;
+  const sheetCost  = cfg.species === 'Custom' && cfg.customPricePerPanel
+    ? panelQty * cfg.customPricePerPanel
+    : sheetsNeeded * sheetPrice;
 
   const ebLong  = (cfg.slatL/12) * totalSlats * 2;
   const ebShort = (cfg.slatW/12) * totalSlats * (cfg.ebSides>=4?2:cfg.ebSides===3?1:0);
@@ -486,7 +497,7 @@ function calcVeneerCost(cfg){
     sqftPerPanel:qty.sqftPerPanel, panelQty, totalSlats, sheetsNeeded,
     sheetPrice, slatsPerSheet, ebFt, ebRolls, ebRollPrice, bracketCount, effectiveSqft,
     lines:{
-      ['Panel Sheets ('+fmtN(sheetsNeeded)+' x '+grade+' 4x8)']: panelLine,
+      [cfg.species==='Custom' ? 'Panel Material ('+fmtN(panelQty)+' panels)' : 'Panel Sheets ('+fmtN(sheetsNeeded)+' x '+grade+' 4x8)']: panelLine,
       ['Edge Band Material ('+fmtN(ebRolls)+' rolls)']: ebMatLine,
       ['Edge Band Service ('+fmtN(ebFt,0)+' ft)']: ebSvcLine,
       'Cut Service': cutLine,
@@ -505,7 +516,7 @@ function addLumberConfig(){
     id, species:'', thickness:0.75, slatW:0, slatL:0,
     slatsPerPanel:0, panelW:0, panelL:0, bracketsPerPanel:0,
     sanding:false, cutToLength:false, assembly:false, orientation:'Horizontal', notes:'',
-    calcMode:'sqft', manualQty:0, sqft:0,
+    calcMode:'sqft', manualQty:0, sqft:0, customPricePerBF:0,
     roughThick:getSuggestedRoughThick(0.75), safetyBuffer:false,
   };
   lumberConfigs.push(cfg);
@@ -599,6 +610,10 @@ function renderLumberConfigs(){
             <select id="l-species-${cfg.id}" onchange="lUpdate(${cfg.id})">
               ${species.length===0 ? '<option value="">No species priced — see admin</option>' : species.map(s=>`<option value="${s}" ${cfg.species===s?'selected':''}>${s}</option>`).join('')}
             </select>
+          </div>
+          <div id="l-custombf-wrap-${cfg.id}" style="${cfg.species==='Custom'?'':'display:none'}">
+            <label class="field-label">Price / BF ($)</label>
+            <input type="number" id="l-custombf-${cfg.id}" value="${cfg.customPricePerBF||''}" step="0.01" min="0" placeholder="e.g. 8.50" oninput="lUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Orientation</label>
@@ -709,8 +724,12 @@ function lUpdate(id){
   cfg.calcMode     = document.getElementById('l-mode-'+id)?.value || cfg.calcMode;
   cfg.sqft         = parseFloat(document.getElementById('l-sqft-'+id)?.value) || 0;
   cfg.manualQty    = parseInt(document.getElementById('l-manualQty-'+id)?.value) || 0;
-  cfg.roughThick   = getSuggestedRoughThick(cfg.thickness);
-  cfg.safetyBuffer = document.getElementById('l-safety-'+id)?.checked ?? false;
+  cfg.roughThick      = getSuggestedRoughThick(cfg.thickness);
+  cfg.safetyBuffer    = document.getElementById('l-safety-'+id)?.checked ?? false;
+  cfg.customPricePerBF = parseFloat(document.getElementById('l-custombf-'+id)?.value) || 0;
+
+  const lCustWrap = document.getElementById('l-custombf-wrap-'+id);
+  if(lCustWrap) lCustWrap.style.display = cfg.species === 'Custom' ? '' : 'none';
 
   const titleEl = document.getElementById('ltitle-'+id);
   if(titleEl) titleEl.textContent = cfg.species || 'New Configuration';
@@ -877,7 +896,8 @@ function calcLumberPreview(cfg){
 function calcLumberCost(cfg){
   if(!cfg.species || !cfg.slatW || !cfg.panelW || !cfg.panelL) return null;
   const sData = pricing.lumberSpecies[cfg.species] || {};
-  if(!sData.price) return null;
+  const bfPrice = cfg.species === 'Custom' ? (cfg.customPricePerBF || 0) : (sData.price || 0);
+  if(!bfPrice) return null;
 
   const qty = resolveLumberQty(cfg);
   if(!qty) return null;
@@ -886,7 +906,7 @@ function calcLumberCost(cfg){
   const m = millLumberCalc(cfg, totalSlats);
   const { rawBFTotal } = m;
 
-  const lumberCost   = rawBFTotal * sData.price;
+  const lumberCost = rawBFTotal * bfPrice;
   const assemblyCost = cfg.assembly ? effectiveSqft * pricing.services.assembly : 0;
   const bracketCost  = (panelQty * cfg.bracketsPerPanel) * pricing.services.bracketPrice;
 
