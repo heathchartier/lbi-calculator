@@ -360,15 +360,10 @@ function vUpdate(id){
   cfg.ebSides        = parseInt(document.getElementById('v-ebsides-'+id)?.value) || 4;
   cfg.assembly       = document.getElementById('v-assembly-'+id)?.checked ?? true;
   cfg.satinFinish    = document.getElementById('v-satin-'+id)?.checked ?? true;
+  const prevMode     = cfg.calcMode;
   cfg.calcMode       = document.getElementById('v-mode-'+id)?.value || cfg.calcMode;
   cfg.sqft           = parseFloat(document.getElementById('v-sqft-'+id)?.value) || 0;
   cfg.manualQty      = parseInt(document.getElementById('v-manualQty-'+id)?.value) || 0;
-
-  // re-render if mode changed (shows/hides manual qty input)
-  const modeChanged = cfg.calcMode !== (document.getElementById('v-mode-'+id)?.dataset.prev);
-  if(document.getElementById('v-mode-'+id)){
-    document.getElementById('v-mode-'+id).dataset.prev = cfg.calcMode;
-  }
 
   // update species dropdown when orientation or grade changes
   const specs = visibleVeneerSpecies(cfg.orientation, cfg.grade);
@@ -383,8 +378,8 @@ function vUpdate(id){
   const titleEl = document.getElementById('vtitle-'+id);
   if(titleEl) titleEl.textContent = cfg.species || 'New Configuration';
 
-  // Re-render config to show/hide manual qty field when mode changes
-  if(modeChanged){
+  // Re-render only when mode actually changes (shows/hides sqft vs manual qty field)
+  if(prevMode !== cfg.calcMode){
     renderVeneerConfigs();
   }
 
