@@ -209,7 +209,7 @@ function addVeneerConfig(){
     grade:'timber',
     panelW:0, panelL:0, slatW:0, slatL:0, slatsPerPanel:0,
     bracketsPerPanel:0, ebSides:4, assembly:false, satinFinish:false, notes:'',
-    calcMode:'sqft', manualQty:0,
+    calcMode:'sqft', manualQty:0, sqft:0,
   };
   veneerConfigs.push(cfg);
   renderVeneerConfigs();
@@ -278,15 +278,18 @@ function renderVeneerConfigs(){
           <div>
             <label class="field-label">Calculate By</label>
             <select id="v-mode-${cfg.id}" onchange="vUpdate(${cfg.id})">
-              <option value="sqft"   ${cfg.calcMode==='sqft'?'selected':''}>By Sq Ft (job total)</option>
+              <option value="sqft"   ${cfg.calcMode==='sqft'?'selected':''}>By Sq Ft</option>
               <option value="slats"  ${cfg.calcMode==='slats'?'selected':''}>By Slat Count</option>
               <option value="panels" ${cfg.calcMode==='panels'?'selected':''}>By Panel Count</option>
             </select>
           </div>
-          ${showQty ? `<div>
+          ${cfg.calcMode==='sqft' ? `<div>
+            <label class="field-label">Ceiling Sq Ft</label>
+            <input type="number" id="v-sqft-${cfg.id}" value="${cfg.sqft||''}" step="1" min="1" placeholder="e.g. 500" oninput="vUpdate(${cfg.id})">
+          </div>` : `<div>
             <label class="field-label">${qtyLabel}</label>
             <input type="number" id="v-manualQty-${cfg.id}" value="${cfg.manualQty||''}" step="1" min="1" placeholder="Enter count" oninput="vUpdate(${cfg.id})">
-          </div>` : ''}
+          </div>`}
         </div>
         <hr class="config-divider">
         <span class="section-label">Panel & Slat Dimensions (inches)</span>
@@ -358,6 +361,7 @@ function vUpdate(id){
   cfg.assembly       = document.getElementById('v-assembly-'+id)?.checked ?? true;
   cfg.satinFinish    = document.getElementById('v-satin-'+id)?.checked ?? true;
   cfg.calcMode       = document.getElementById('v-mode-'+id)?.value || cfg.calcMode;
+  cfg.sqft           = parseFloat(document.getElementById('v-sqft-'+id)?.value) || 0;
   cfg.manualQty      = parseInt(document.getElementById('v-manualQty-'+id)?.value) || 0;
 
   // re-render if mode changed (shows/hides manual qty input)
@@ -390,14 +394,14 @@ function vUpdate(id){
 }
 
 // --- VENEER QUANTITY HELPERS ------------------------------------------
-function resolveVeneerQty(cfg, totalSqft){
+function resolveVeneerQty(cfg){
   if(!cfg.panelW || !cfg.panelL || !cfg.slatW || !cfg.slatL || !cfg.slatsPerPanel) return null;
   const sqftPerPanel = (cfg.panelW * cfg.panelL) / 144;
   if(cfg.calcMode === 'sqft'){
-    if(!totalSqft) return null;
-    const panelQty   = Math.ceil(totalSqft / sqftPerPanel);
+    if(!cfg.sqft) return null;
+    const panelQty   = Math.ceil(cfg.sqft / sqftPerPanel);
     const totalSlats = panelQty * cfg.slatsPerPanel;
-    return { panelQty, totalSlats, effectiveSqft: totalSqft, sqftPerPanel };
+    return { panelQty, totalSlats, effectiveSqft: cfg.sqft, sqftPerPanel };
   } else if(cfg.calcMode === 'slats'){
     if(!cfg.manualQty) return null;
     const totalSlats = cfg.manualQty;
@@ -414,10 +418,9 @@ function resolveVeneerQty(cfg, totalSqft){
 function calcVeneerPreview(cfg){
   const preview = document.getElementById('v-preview-'+cfg.id);
   if(!preview) return;
-  const totalSqft = parseFloat(document.getElementById('totalSqft')?.value) || 0;
   if(!cfg.slatW || !cfg.panelW || !cfg.panelL){ preview.innerHTML = ''; return; }
 
-  const qty = resolveVeneerQty(cfg, totalSqft);
+  const qty = resolveVeneerQty(cfg);
   if(!qty){ preview.innerHTML = ''; return; }
   const { panelQty, totalSlats } = qty;
 
@@ -443,12 +446,12 @@ function calcVeneerPreview(cfg){
   `;
 }
 
-function calcVeneerCost(cfg, totalSqft){
+function calcVeneerCost(cfg){
   if(!cfg.species || !cfg.slatW || !cfg.panelW || !cfg.panelL) return null;
   const sData = pricing.veneerSpecies[cfg.species];
   if(!sData) return null;
 
-  const qty = resolveVeneerQty(cfg, totalSqft);
+  const qty = resolveVeneerQty(cfg);
   if(!qty) return null;
   const { panelQty, totalSlats, effectiveSqft } = qty;
 
@@ -507,7 +510,7 @@ function addLumberConfig(){
     id, species:'', thickness:0.75, slatW:0, slatL:0,
     slatsPerPanel:0, panelW:0, panelL:0, bracketsPerPanel:0,
     sanding:false, cutToLength:false, assembly:false, orientation:'Horizontal', notes:'',
-    calcMode:'sqft', manualQty:0,
+    calcMode:'sqft', manualQty:0, sqft:0,
     roughThick:getSuggestedRoughThick(0.75), safetyBuffer:false,
   };
   lumberConfigs.push(cfg);
@@ -612,15 +615,18 @@ function renderLumberConfigs(){
           <div>
             <label class="field-label">Calculate By</label>
             <select id="l-mode-${cfg.id}" onchange="lUpdate(${cfg.id})">
-              <option value="sqft"   ${cfg.calcMode==='sqft'?'selected':''}>By Sq Ft (job total)</option>
+              <option value="sqft"   ${cfg.calcMode==='sqft'?'selected':''}>By Sq Ft</option>
               <option value="slats"  ${cfg.calcMode==='slats'?'selected':''}>By Slat Count</option>
               <option value="panels" ${cfg.calcMode==='panels'?'selected':''}>By Panel Count</option>
             </select>
           </div>
-          ${showQty ? `<div>
+          ${cfg.calcMode==='sqft' ? `<div>
+            <label class="field-label">Ceiling Sq Ft</label>
+            <input type="number" id="l-sqft-${cfg.id}" value="${cfg.sqft||''}" step="1" min="1" placeholder="e.g. 500" oninput="lUpdate(${cfg.id})">
+          </div>` : `<div>
             <label class="field-label">${qtyLabel}</label>
             <input type="number" id="l-manualQty-${cfg.id}" value="${cfg.manualQty||''}" step="1" min="1" placeholder="Enter count" oninput="lUpdate(${cfg.id})">
-          </div>` : ''}
+          </div>`}
         </div>
         <hr class="config-divider">
         <span class="section-label">Finished Slat Dimensions (inches)</span>
@@ -706,6 +712,7 @@ function lUpdate(id){
   cfg.cutToLength  = document.getElementById('l-cut-'+id)?.checked ?? true;
   const prevMode   = cfg.calcMode;
   cfg.calcMode     = document.getElementById('l-mode-'+id)?.value || cfg.calcMode;
+  cfg.sqft         = parseFloat(document.getElementById('l-sqft-'+id)?.value) || 0;
   cfg.manualQty    = parseInt(document.getElementById('l-manualQty-'+id)?.value) || 0;
   cfg.roughThick   = getSuggestedRoughThick(cfg.thickness);
   cfg.safetyBuffer = document.getElementById('l-safety-'+id)?.checked ?? false;
@@ -732,14 +739,14 @@ function lUpdate(id){
   markDirty();
 }
 
-function resolveLumberQty(cfg, totalSqft){
+function resolveLumberQty(cfg){
   if(!cfg.panelW || !cfg.panelL || !cfg.slatW || !cfg.slatL || !cfg.slatsPerPanel) return null;
   const sqftPerPanel = (cfg.panelW * cfg.panelL) / 144;
   if(cfg.calcMode === 'sqft'){
-    if(!totalSqft) return null;
-    const panelQty   = Math.ceil(totalSqft / sqftPerPanel);
+    if(!cfg.sqft) return null;
+    const panelQty   = Math.ceil(cfg.sqft / sqftPerPanel);
     const totalSlats = panelQty * cfg.slatsPerPanel;
-    return { panelQty, totalSlats, effectiveSqft: totalSqft, sqftPerPanel };
+    return { panelQty, totalSlats, effectiveSqft: cfg.sqft, sqftPerPanel };
   } else if(cfg.calcMode === 'slats'){
     if(!cfg.manualQty) return null;
     const totalSlats = cfg.manualQty;
@@ -826,10 +833,9 @@ function millLumberCalc(cfg, totalSlats){
 function calcLumberPreview(cfg){
   const preview = document.getElementById('l-preview-'+cfg.id);
   if(!preview) return;
-  const totalSqft = parseFloat(document.getElementById('totalSqft')?.value) || 0;
   if(!cfg.slatW || !cfg.panelW || !cfg.panelL){ preview.innerHTML = ''; return; }
 
-  const qty = resolveLumberQty(cfg, totalSqft);
+  const qty = resolveLumberQty(cfg);
   if(!qty){ preview.innerHTML = ''; return; }
   const { panelQty, totalSlats } = qty;
 
@@ -873,12 +879,12 @@ function calcLumberPreview(cfg){
   `;
 }
 
-function calcLumberCost(cfg, totalSqft){
+function calcLumberCost(cfg){
   if(!cfg.species || !cfg.slatW || !cfg.panelW || !cfg.panelL) return null;
   const sData = pricing.lumberSpecies[cfg.species] || {};
   if(!sData.price) return null;
 
-  const qty = resolveLumberQty(cfg, totalSqft);
+  const qty = resolveLumberQty(cfg);
   if(!qty) return null;
   const { panelQty, totalSlats, effectiveSqft } = qty;
 
@@ -911,12 +917,11 @@ function calcLumberCost(cfg, totalSqft){
 // --- JOB-LEVEL MILL SERVICES -----------------------------------------
 // Called once per renderResults — totals all lumber configs together
 function calcJobServices(){
-  const svc      = pricing.services;
-  const totalSqft = parseFloat(document.getElementById('totalSqft')?.value) || 0;
+  const svc = pricing.services;
   let totalLF = 0, sandingLF = 0, cutLF = 0;
 
   lumberConfigs.forEach(cfg => {
-    const qty = resolveLumberQty(cfg, totalSqft);
+    const qty = resolveLumberQty(cfg);
     if(!qty) return;
     const lf = qty.totalSlats * cfg.slatL / 12;
     totalLF  += lf;
@@ -954,22 +959,21 @@ function calcJobServices(){
 
 // --- RECALC -----------------------------------------------------------
 function recalcAll(){
-  const totalSqft = parseFloat(document.getElementById('totalSqft')?.value) || 0;
   veneerConfigs.forEach(cfg => calcVeneerPreview(cfg));
   lumberConfigs.forEach(cfg => calcLumberPreview(cfg));
-  renderResults(totalSqft);
+  renderResults();
 }
 
-function renderResults(totalSqft){
+function renderResults(){
   const cont = document.getElementById('resultsContent');
   const allResults = [];
 
   veneerConfigs.forEach((cfg,i) => {
-    const r = calcVeneerCost(cfg, totalSqft);
+    const r = calcVeneerCost(cfg);
     if(r) allResults.push({...r, label:`Panel Config ${i+1} — ${r.species} (${r.orientation})`});
   });
   lumberConfigs.forEach((cfg,i) => {
-    const r = calcLumberCost(cfg, totalSqft);
+    const r = calcLumberCost(cfg);
     if(r) allResults.push({...r, label:`Lumber Config ${i+1} — ${r.species}`});
   });
 
@@ -1071,7 +1075,6 @@ function buildJobObject(){
     customer: document.getElementById('jobCustomer')?.value || '',
     po:       document.getElementById('jobPO')?.value || '',
     date:     document.getElementById('jobDate')?.value || '',
-    sqft:     document.getElementById('totalSqft')?.value || '',
     notes:    document.getElementById('jobNotes')?.value || '',
     veneerConfigs: deepCopy(veneerConfigs),
     lumberConfigs: deepCopy(lumberConfigs),
@@ -1095,8 +1098,12 @@ function loadJob(job){
   document.getElementById('jobCustomer').value = job.customer || '';
   document.getElementById('jobPO').value       = job.po       || '';
   document.getElementById('jobDate').value     = job.date     || '';
-  document.getElementById('totalSqft').value   = job.sqft     || '';
   document.getElementById('jobNotes').value    = job.notes    || '';
+  // migrate old single-sqft jobs: distribute global sqft to each config
+  if(job.sqft){
+    (job.veneerConfigs||[]).forEach(c => { if(!c.sqft) c.sqft = parseFloat(job.sqft)||0; });
+    (job.lumberConfigs||[]).forEach(c => { if(!c.sqft) c.sqft = parseFloat(job.sqft)||0; });
+  }
   veneerConfigs  = job.veneerConfigs || [];
   lumberConfigs  = job.lumberConfigs || [];
   veneerCounter  = veneerConfigs.reduce((m,c) => Math.max(m,c.id), 0);
@@ -1118,7 +1125,7 @@ function openSavedJobs(){
       <div class="saved-job-card">
         <div class="saved-job-info">
           <div class="saved-job-name">${j.name||'Untitled'}</div>
-          <div class="saved-job-meta">${j.customer||''} ${j.po?'| '+j.po:''} | ${j.sqft||'?'} sqft | ${j.date||''}</div>
+          <div class="saved-job-meta">${j.customer||''} ${j.po?'| '+j.po:''} | ${j.date||''}</div>
         </div>
         <button class="btn-secondary" onclick="loadJob(${JSON.stringify(j).replace(/"/g,'"')})">Load</button>
         <button class="btn-ghost" onclick="copyJobCode(${JSON.stringify(j).replace(/"/g,'"')})">Share</button>
@@ -1161,7 +1168,6 @@ function newJob(){
   document.getElementById('jobCustomer').value = 'LBI';
   document.getElementById('jobPO').value       = '';
   document.getElementById('jobDate').value     = new Date().toISOString().split('T')[0];
-  document.getElementById('totalSqft').value   = '';
   document.getElementById('jobNotes').value    = '';
   veneerConfigs = []; lumberConfigs = [];
   veneerCounter = 0; lumberCounter = 0;

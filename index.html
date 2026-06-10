@@ -426,10 +426,6 @@ select option{background:#1e2226}
           <label class="field-label">Date</label>
           <input type="date" id="jobDate" oninput="markDirty()">
         </div>
-        <div>
-          <label class="field-label">Total Ceiling Sq Ft</label>
-          <input type="number" id="totalSqft" value="" min="0" step="1" placeholder="e.g. 500" oninput="recalcAll()">
-        </div>
         <div style="grid-column:1/-1">
           <label class="field-label">Notes</label>
           <input type="text" id="jobNotes" placeholder="Optional notes for this quote" oninput="markDirty()">
@@ -581,7 +577,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260609i"></script>
+<script src="app.js?v=20260610a"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });
