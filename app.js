@@ -1672,24 +1672,10 @@ function catDrop(e, targetId){
 }
 
 function populateProductFormSelects(){
-  const pSel = document.getElementById('apf-pspecies');
-  const lSel = document.getElementById('apf-lspecies');
   const catSel = document.getElementById('apf-category');
-  const pcoreSel = document.getElementById('apf-pcore');
-  if(pSel){
-    const vSpecs = Object.keys(pricing.veneerSpecies).filter(s => s !== 'Custom');
-    pSel.innerHTML = vSpecs.map(s=>`<option value="${s}">${s}</option>`).join('');
-  }
-  if(lSel){
-    const lSpecs = Object.keys(pricing.lumberSpecies).filter(s => s !== 'Custom');
-    lSel.innerHTML = lSpecs.map(s=>`<option value="${s}">${s}</option>`).join('');
-  }
   if(catSel){
     const cats = pricing.productCategories || [];
     catSel.innerHTML = '<option value="0">— No Category —</option>' + cats.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-  }
-  if(pcoreSel){
-    pcoreSel.innerHTML = (pricing.veneerCores||[]).map(c=>`<option value="${c.label}">${c.label}</option>`).join('');
   }
 }
 
@@ -1702,22 +1688,7 @@ function showProductForm(type, p){
   document.getElementById('apf-name').value = p ? p.name : '';
   document.getElementById('apf-markup').value = p ? (p.markup||0) : 0;
   document.getElementById('apf-category').value = p ? (p.category||0) : 0;
-  document.getElementById('apf-panel-fields').style.display = type==='panel' ? '' : 'none';
-  document.getElementById('apf-lumber-fields').style.display = type==='lumber' ? 'grid' : 'none';
   document.getElementById('apf-form-title').textContent = (p ? 'Edit' : 'New') + (type==='panel' ? ' Panel' : ' Lumber') + ' Product';
-  if(type==='panel' && p){
-    document.getElementById('apf-pspecies').value = p.species;
-    document.getElementById('apf-pgrade').value = p.grade;
-    document.getElementById('apf-psheetgrade').value = p.sheetGrade;
-    document.getElementById('apf-psheetsize').value = p.sheetSize;
-    document.getElementById('apf-pcore').value = p.core || 'Fire Rated MDF';
-  }
-  if(type==='lumber' && p){
-    document.getElementById('apf-lspecies').value = p.lSpecies;
-    document.getElementById('apf-lthick').value = p.thickness;
-    document.getElementById('apf-lslatw').value = p.slatW;
-    document.getElementById('apf-lslatl').value = p.slatL;
-  }
 }
 
 function addStandardProduct(type){ showProductForm(type, null); }
@@ -1734,23 +1705,7 @@ function saveProductForm(){
   if(!name){ showToast('Enter a product name'); return; }
   const markup = parseFloat(document.getElementById('apf-markup').value)||0;
   const category = parseInt(document.getElementById('apf-category').value)||0;
-  let product;
-  if(type==='panel'){
-    product = { id: existingId||++productCounter, type, name, markup, category,
-      species: document.getElementById('apf-pspecies').value,
-      grade: document.getElementById('apf-pgrade').value,
-      sheetGrade: document.getElementById('apf-psheetgrade').value,
-      sheetSize: document.getElementById('apf-psheetsize').value,
-      core: document.getElementById('apf-pcore').value };
-  } else {
-    const slatW = parseFloat(document.getElementById('apf-lslatw').value)||0;
-    const slatL = parseFloat(document.getElementById('apf-lslatl').value)||0;
-    if(!slatW||!slatL){ showToast('Enter slat width and length'); return; }
-    product = { id: existingId||++productCounter, type, name, markup, category,
-      lSpecies: document.getElementById('apf-lspecies').value,
-      thickness: parseFloat(document.getElementById('apf-lthick').value)||0.75,
-      slatW, slatL };
-  }
+  const product = { id: existingId||++productCounter, type, name, markup, category };
   if(!pricing.standardProducts) pricing.standardProducts=[];
   const idx = pricing.standardProducts.findIndex(p => p.id===existingId);
   if(idx>=0) pricing.standardProducts[idx]=product;

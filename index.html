@@ -736,67 +736,6 @@ select option{background:#1e2226}
             <select id="apf-category" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%"></select>
           </div>
         </div>
-        <!-- Panel fields -->
-        <div id="apf-panel-fields" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:10px">
-          <div>
-            <label class="field-label">Species</label>
-            <select id="apf-pspecies" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%"></select>
-          </div>
-          <div>
-            <label class="field-label">Grade</label>
-            <select id="apf-pgrade" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
-              <option value="timber">Standard</option>
-              <option value="talbert">Premium</option>
-            </select>
-          </div>
-          <div>
-            <label class="field-label">Sheet Grade</label>
-            <select id="apf-psheetgrade" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
-              <option value="A3">A3 (Horizontal)</option>
-              <option value="AA">AA (Vertical)</option>
-            </select>
-          </div>
-          <div>
-            <label class="field-label">Sheet Size</label>
-            <select id="apf-psheetsize" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
-              <option value="4x8">4×8</option>
-              <option value="4x10">4×10</option>
-            </select>
-          </div>
-          <div>
-            <label class="field-label">Core</label>
-            <select id="apf-pcore" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%"></select>
-          </div>
-        </div>
-        <!-- Lumber fields -->
-        <div id="apf-lumber-fields" style="display:none;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:10px">
-          <div>
-            <label class="field-label">Species</label>
-            <select id="apf-lspecies" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%"></select>
-          </div>
-          <div>
-            <label class="field-label">Thickness</label>
-            <select id="apf-lthick" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
-              <option value="0.25">1/4"</option>
-              <option value="0.4375">7/16"</option>
-              <option value="0.5">1/2"</option>
-              <option value="0.625">5/8"</option>
-              <option value="0.6875">11/16"</option>
-              <option value="0.75" selected>3/4"</option>
-              <option value="1">1"</option>
-              <option value="1.25">1-1/4"</option>
-              <option value="1.5">1-1/2"</option>
-            </select>
-          </div>
-          <div>
-            <label class="field-label">Slat Width (in)</label>
-            <input type="number" id="apf-lslatw" step="0.0625" min="0.5" placeholder="e.g. 3.25" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
-          </div>
-          <div>
-            <label class="field-label">Slat Length (in)</label>
-            <input type="number" id="apf-lslatl" step="1" min="12" placeholder="e.g. 96" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
-          </div>
-        </div>
         <div style="display:flex;gap:8px;margin-top:14px">
           <button class="btn-primary" onclick="saveProductForm()" style="width:auto;padding:8px 22px;font-size:15px">Save</button>
           <button class="btn-ghost" onclick="document.getElementById('admin-product-form').style.display='none'">Cancel</button>
@@ -840,7 +779,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260627g"></script>
+<script src="app.js?v=20260627h"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });
