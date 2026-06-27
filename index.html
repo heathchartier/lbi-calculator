@@ -538,7 +538,13 @@ select option{background:#1e2226}
     <!-- Veneer Species Pricing -->
     <div class="modal-section">
       <h3>Veneer Panel Pricing (per sheet)</h3>
-      <p style="font-size:12px;color:var(--mid);margin-bottom:12px">A3 = Horizontal slats &nbsp;|&nbsp; AA = Vertical slats &nbsp;|&nbsp; Set to $0 to hide from LBI</p>
+      <p style="font-size:12px;color:var(--mid);margin-bottom:10px">A3 = Horizontal slats &nbsp;|&nbsp; AA = Vertical slats &nbsp;|&nbsp; Set to $0 to hide from LBI</p>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+        <button id="vcore-tab-frmdf" class="btn-primary"  onclick="setVeneerCore('frmdf')" style="padding:5px 12px;font-size:12px">FR MDF</button>
+        <button id="vcore-tab-mdf"   class="btn-ghost"    onclick="setVeneerCore('mdf')"   style="padding:5px 12px;font-size:12px">MDF</button>
+        <button id="vcore-tab-pb"    class="btn-ghost"    onclick="setVeneerCore('pb')"    style="padding:5px 12px;font-size:12px">PB</button>
+        <button id="vcore-tab-frpb"  class="btn-ghost"    onclick="setVeneerCore('frpb')"  style="padding:5px 12px;font-size:12px">FR PB</button>
+      </div>
       <div style="overflow-x:auto">
         <table class="pricing-table" id="veneerPricingTable">
           <thead>
@@ -643,6 +649,15 @@ select option{background:#1e2226}
               <option value="4x10">4×10</option>
             </select>
           </div>
+          <div>
+            <label class="field-label">Core</label>
+            <select id="apf-pcore" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+              <option value="Fire Rated MDF">FR MDF</option>
+              <option value="Regular MDF">MDF</option>
+              <option value="Particle Board">PB</option>
+              <option value="Fire Rated PB">FR PB</option>
+            </select>
+          </div>
         </div>
         <!-- Lumber fields -->
         <div id="apf-lumber-fields" style="display:none;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:10px">
@@ -714,7 +729,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260626a"></script>
+<script src="app.js?v=20260626b"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });

@@ -40,27 +40,33 @@ function getSuggestedRoughThick(finishedT){
 }
 
 // --- DEFAULT PRICING -------------------------------------------------
-// veneerSpecies keys: talbert_A3_4x8, talbert_A3_4x10, talbert_AA_4x8, talbert_AA_4x10,
-//                     talbert_eb_roll,  timber_A3_4x8, ..., timber_eb_roll
-function blankVeneerSpecies(xA3_8,xA3_10,xAA_8,xAA_10,xEB){
-  return {
-    talbert_A3_4x8:0, talbert_A3_4x10:0,
-    talbert_AA_4x8:0, talbert_AA_4x10:0, talbert_eb_roll:0,
-    timber_A3_4x8:xA3_8||0, timber_A3_4x10:xA3_10||0,
-    timber_AA_4x8:xAA_8||0, timber_AA_4x10:xAA_10||0, timber_eb_roll:xEB||0,
-  };
+// veneerSpecies keys: {sup}_{grade}_{size}_{core}  e.g. talbert_A3_4x8_frmdf
+// Cores: mdf | frmdf | pb | frpb   EB roll: {sup}_eb_roll (no core suffix)
+function blankVeneerSpecies(overrides){
+  const out = {};
+  ['talbert','timber'].forEach(s => {
+    out[s+'_eb_roll'] = 0;
+    ['A3','AA'].forEach(g => ['4x8','4x10'].forEach(sz => ['mdf','frmdf','pb','frpb'].forEach(c => {
+      out[`${s}_${g}_${sz}_${c}`] = 0;
+    })));
+  });
+  return Object.assign(out, overrides || {});
+}
+
+function coreToKey(core){
+  return { 'Regular MDF':'mdf', 'Fire Rated MDF':'frmdf', 'Particle Board':'pb', 'Fire Rated PB':'frpb' }[core] || 'frmdf';
 }
 
 const DEFAULT_PRICING = {
   veneerSpecies: {
-    'Walnut':         blankVeneerSpecies(258,381,350,515,167),
-    'White Oak':      blankVeneerSpecies(236,338,303,430,147),
-    'Rift White Oak': blankVeneerSpecies(283,431,401,617,167),
+    'Walnut':         blankVeneerSpecies({ timber_A3_4x8_frmdf:258, timber_A3_4x10_frmdf:381, timber_AA_4x8_frmdf:350, timber_AA_4x10_frmdf:515, timber_eb_roll:167 }),
+    'White Oak':      blankVeneerSpecies({ timber_A3_4x8_frmdf:236, timber_A3_4x10_frmdf:338, timber_AA_4x8_frmdf:303, timber_AA_4x10_frmdf:430, timber_eb_roll:147 }),
+    'Rift White Oak': blankVeneerSpecies({ timber_A3_4x8_frmdf:283, timber_A3_4x10_frmdf:431, timber_AA_4x8_frmdf:401, timber_AA_4x10_frmdf:617, timber_eb_roll:167 }),
     'Maple':          blankVeneerSpecies(),
     'Cherry':         blankVeneerSpecies(),
     'Alder':          blankVeneerSpecies(),
     'Beech':          blankVeneerSpecies(),
-    'Custom':         blankVeneerSpecies(185,0,185,0,75),
+    'Custom':         blankVeneerSpecies({ timber_A3_4x8_frmdf:185, timber_AA_4x8_frmdf:185, timber_eb_roll:75 }),
   },
   lumberSpecies: {
     'Flat Cut White Oak': { price:7.25, resaw:false },
@@ -104,6 +110,7 @@ let productCounter = 0;
 let categoryCounter = 0;
 let _dragProdId = null;
 let _dragCatId = null;
+let _adminVeneerCore = 'frmdf';
 
 function deepCopy(o){ return JSON.parse(JSON.stringify(o)); }
 
@@ -197,11 +204,12 @@ function markDirty(){ isDirty = true; }
 function getSupplier(){ return document.getElementById('jobSupplier')?.value || 'talbert'; }
 
 // --- SPECIES VISIBILITY -----------------------------------------------
-function visibleVeneerSpecies(orientation, supplier){
+function visibleVeneerSpecies(orientation, supplier, core){
   const sup = supplier || 'talbert';
   const grade = orientation === 'Vertical' ? 'AA' : 'A3';
+  const c = coreToKey(core || 'Fire Rated MDF');
   return Object.entries(pricing.veneerSpecies).filter(([,p]) => {
-    return (p[sup+'_'+grade+'_4x8']||0) > 0 || (p[sup+'_'+grade+'_4x10']||0) > 0;
+    return (p[`${sup}_${grade}_4x8_${c}`]||0) > 0 || (p[`${sup}_${grade}_4x10_${c}`]||0) > 0;
   }).map(([name]) => name);
 }
 function visibleLumberSpecies(){
@@ -234,7 +242,7 @@ function renderVeneerConfigs(){
   cont.innerHTML = '';
   veneerConfigs.forEach(cfg => {
     if(!cfg.grade) cfg.grade = 'talbert';
-    const species = visibleVeneerSpecies(cfg.orientation, cfg.grade);
+    const species = visibleVeneerSpecies(cfg.orientation, cfg.grade, cfg.core);
     if(!cfg.species && species.length > 0) cfg.species = species[0];
 
     const modeLabels = {sqft:'By Sq Ft', slats:'By Slat Count', panels:'By Panel Count'};
@@ -282,8 +290,10 @@ function renderVeneerConfigs(){
           <div>
             <label class="field-label">Panel Core</label>
             <select id="v-core-${cfg.id}" onchange="vUpdate(${cfg.id})">
-              <option value="Fire Rated MDF" ${cfg.core==='Fire Rated MDF'?'selected':''}>Fire Rated MDF</option>
+              <option value="Fire Rated MDF"  ${cfg.core==='Fire Rated MDF'?'selected':''}>Fire Rated MDF</option>
               <option value="Regular MDF"    ${cfg.core==='Regular MDF'?'selected':''}>Regular MDF</option>
+              <option value="Particle Board" ${cfg.core==='Particle Board'?'selected':''}>Particle Board</option>
+              <option value="Fire Rated PB"  ${cfg.core==='Fire Rated PB'?'selected':''}>Fire Rated PB</option>
             </select>
           </div>
           <div>
@@ -379,7 +389,7 @@ function vUpdate(id){
 
   // update species dropdown when orientation or grade changes — read current selection first
   const selectedSpecies = document.getElementById('v-species-'+id)?.value || cfg.species;
-  const specs = visibleVeneerSpecies(cfg.orientation, cfg.grade);
+  const specs = visibleVeneerSpecies(cfg.orientation, cfg.grade, cfg.core);
   const sel = document.getElementById('v-species-'+id);
   if(sel){
     sel.innerHTML = specs.length === 0
@@ -473,7 +483,8 @@ function calcVeneerCost(cfg){
   const slatsPerSheet = Math.max(1, colsPerSheet * rowsPerSheet);
   const sheetsNeeded  = Math.ceil(totalSlats / slatsPerSheet);
 
-  const sheetPrice = sData[sup+'_'+grade+'_4x8'] || 0;
+  const coreK = coreToKey(cfg.core || 'Fire Rated MDF');
+  const sheetPrice = sData[`${sup}_${grade}_4x8_${coreK}`] || 0;
   const sheetCost  = cfg.species === 'Custom' && cfg.customPricePerPanel
     ? panelQty * cfg.customPricePerPanel
     : sheetsNeeded * sheetPrice;
@@ -1219,22 +1230,14 @@ function renderAdminModal(){
     </div>
   `).join('');
 
-  // Veneer species table — two rows per species (Talbert + Timber)
-  const vb = document.getElementById('veneerPricingBody');
-  vb.innerHTML = Object.entries(pricing.veneerSpecies).map(([name, p]) => {
-    const id = name.replace(/\s/g,'_');
-    const row = (sup, label, color) => `
-      <tr>
-        ${sup === 'talbert' ? `<td rowspan="2" style="font-weight:600;white-space:nowrap;vertical-align:middle">${name}</td>` : ''}
-        <td style="font-size:11px;font-weight:700;letter-spacing:.5px;color:${color};white-space:nowrap">${label}</td>
-        <td><input type="number" class="admin-price-input" value="${p[sup+'_A3_4x8']||0}" step="1" data-species="${name}" data-key="${sup}_A3_4x8"></td>
-        <td><input type="number" class="admin-price-input" value="${p[sup+'_A3_4x10']||0}" step="1" data-species="${name}" data-key="${sup}_A3_4x10"></td>
-        <td><input type="number" class="admin-price-input" value="${p[sup+'_AA_4x8']||0}" step="1" data-species="${name}" data-key="${sup}_AA_4x8"></td>
-        <td><input type="number" class="admin-price-input" value="${p[sup+'_AA_4x10']||0}" step="1" data-species="${name}" data-key="${sup}_AA_4x10"></td>
-        <td><input type="number" class="admin-price-input" value="${p[sup+'_eb_roll']||0}" step="1" data-species="${name}" data-key="${sup}_eb_roll"></td>
-      </tr>`;
-    return row('talbert','Talbert','var(--teal)') + row('timber','Timber','var(--gold)');
-  }).join('');
+  // Veneer species table — core-tabbed
+  _adminVeneerCore = _adminVeneerCore || 'frmdf';
+  renderVeneerPricingTable();
+  // Sync tab button active states
+  ['mdf','frmdf','pb','frpb'].forEach(c => {
+    const btn = document.getElementById('vcore-tab-'+c);
+    if(btn){ btn.classList.toggle('btn-primary', c===_adminVeneerCore); btn.classList.toggle('btn-ghost', c!==_adminVeneerCore); }
+  });
 
   // Lumber pricing
   const lb = document.getElementById('lumberPricingBody');
@@ -1338,7 +1341,8 @@ function saveAdmin(){
 function calcPanelProduct(p){
   const sData = pricing.veneerSpecies[p.species];
   if(!sData) return null;
-  const costPerSheet = sData[`${p.grade}_${p.sheetGrade}_${p.sheetSize}`] || 0;
+  const c = coreToKey(p.core || 'Fire Rated MDF');
+  const costPerSheet = sData[`${p.grade}_${p.sheetGrade}_${p.sheetSize}_${c}`] || 0;
   if(!costPerSheet) return null;
   const sqft = p.sheetSize === '4x10' ? 40 : 32;
   const sellPerSheet = costPerSheet * (1 + (p.markup||0)/100);
@@ -1408,6 +1412,41 @@ function renderProductsTab(){
     if(lumber.length) html += `<div class="product-section-label" style="margin-top:${panels.length?'28px':'0'}">Lumber Products</div><div class="product-grid">${lumber.map(renderLumberCard).join('')}</div>`;
   }
   cont.innerHTML = html;
+}
+
+function renderVeneerPricingTable(){
+  const vb = document.getElementById('veneerPricingBody');
+  if(!vb) return;
+  const c = _adminVeneerCore;
+  vb.innerHTML = Object.entries(pricing.veneerSpecies).map(([name, p]) => {
+    const inp = (key) => `<input type="number" class="admin-price-input" value="${p[key]||0}" step="1" data-species="${name}" data-key="${key}" oninput="vPriceInput(this)">`;
+    const row = (sup, label, color) => `
+      <tr>
+        ${sup==='talbert' ? `<td rowspan="2" style="font-weight:600;white-space:nowrap;vertical-align:middle">${name}</td>` : ''}
+        <td style="font-size:11px;font-weight:700;letter-spacing:.5px;color:${color};white-space:nowrap">${label}</td>
+        <td>${inp(`${sup}_A3_4x8_${c}`)}</td>
+        <td>${inp(`${sup}_A3_4x10_${c}`)}</td>
+        <td>${inp(`${sup}_AA_4x8_${c}`)}</td>
+        <td>${inp(`${sup}_AA_4x10_${c}`)}</td>
+        <td>${inp(`${sup}_eb_roll`)}</td>
+      </tr>`;
+    return row('talbert','Talbert','var(--teal)') + row('timber','Timber','var(--gold)');
+  }).join('');
+}
+
+function setVeneerCore(c){
+  _adminVeneerCore = c;
+  renderVeneerPricingTable();
+  ['mdf','frmdf','pb','frpb'].forEach(core => {
+    const btn = document.getElementById('vcore-tab-'+core);
+    if(btn){ btn.classList.toggle('btn-primary', core===c); btn.classList.toggle('btn-ghost', core!==c); }
+  });
+}
+
+function vPriceInput(el){
+  const s = el.dataset.species, k = el.dataset.key;
+  if(!pricing.veneerSpecies[s]) pricing.veneerSpecies[s] = blankVeneerSpecies();
+  pricing.veneerSpecies[s][k] = parseFloat(el.value) || 0;
 }
 
 function renderAdminProducts(){
@@ -1567,6 +1606,7 @@ function showProductForm(type, p){
     document.getElementById('apf-pgrade').value = p.grade;
     document.getElementById('apf-psheetgrade').value = p.sheetGrade;
     document.getElementById('apf-psheetsize').value = p.sheetSize;
+    document.getElementById('apf-pcore').value = p.core || 'Fire Rated MDF';
   }
   if(type==='lumber' && p){
     document.getElementById('apf-lspecies').value = p.lSpecies;
@@ -1596,7 +1636,8 @@ function saveProductForm(){
       species: document.getElementById('apf-pspecies').value,
       grade: document.getElementById('apf-pgrade').value,
       sheetGrade: document.getElementById('apf-psheetgrade').value,
-      sheetSize: document.getElementById('apf-psheetsize').value };
+      sheetSize: document.getElementById('apf-psheetsize').value,
+      core: document.getElementById('apf-pcore').value };
   } else {
     const slatW = parseFloat(document.getElementById('apf-lslatw').value)||0;
     const slatL = parseFloat(document.getElementById('apf-lslatl').value)||0;
@@ -1702,6 +1743,20 @@ function showToast(msg){
         p['talbert_'+k] = 0;
       });
     }
+
+    // Migrate old keys without core suffix (talbert_A3_4x8) → frmdf (talbert_A3_4x8_frmdf)
+    ['talbert','timber'].forEach(sup => {
+      ['A3','AA'].forEach(grade => {
+        ['4x8','4x10'].forEach(size => {
+          const oldKey = `${sup}_${grade}_${size}`;
+          if(oldKey in p){
+            const newKey = oldKey + '_frmdf';
+            if(!(newKey in p)) p[newKey] = p[oldKey];
+            delete p[oldKey];
+          }
+        });
+      });
+    });
   });
 
   // Merge new default species
