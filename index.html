@@ -389,6 +389,8 @@ select option{background:#1e2226}
 .product-price-item.highlight .ppi-val{color:var(--teal)}
 .ppi-label{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--mid)}
 .ppi-val{font-family:var(--font-head);font-size:21px;font-weight:700;color:var(--ink)}
+.drag-handle{cursor:grab;color:var(--mid);font-size:16px;padding:0 4px;user-select:none;line-height:1}
+.prod-drag-row.drag-over{background:var(--surf2);border-radius:var(--r);outline:2px solid var(--teal)}
 </style>
 </head>
 <body>
@@ -585,6 +587,14 @@ select option{background:#1e2226}
     <div class="modal-section">
       <h3>Standard Products (Price List)</h3>
       <p style="font-size:12px;color:var(--mid);margin-bottom:12px">Products shown on the Price List tab. You see cost + markup; LBI sees sell price only.</p>
+
+      <!-- Category manager -->
+      <div style="margin-bottom:12px">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--mid);margin-bottom:6px">Categories</div>
+        <div id="admin-category-manager"></div>
+        <button class="btn-ghost" onclick="addCategory()" style="margin-top:8px;padding:5px 14px;font-size:12px">+ Add Category</button>
+      </div>
+
       <div id="admin-products-list"></div>
 
       <!-- Inline add/edit form -->
@@ -600,6 +610,10 @@ select option{background:#1e2226}
           <div>
             <label class="field-label">Markup %</label>
             <input type="number" id="apf-markup" value="0" step="1" min="0" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+          </div>
+          <div>
+            <label class="field-label">Category</label>
+            <select id="apf-category" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%"></select>
           </div>
         </div>
         <!-- Panel fields -->
@@ -700,7 +714,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260610e"></script>
+<script src="app.js?v=20260626a"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });

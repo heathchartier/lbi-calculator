@@ -90,6 +90,7 @@ const DEFAULT_PRICING = {
     assembly:0, ebService:0, cutService:0, brackets:0,
   },
   standardProducts: [],
+  productCategories: [],
 };
 
 // --- STATE -----------------------------------------------------------
@@ -100,6 +101,9 @@ let veneerCounter = 0;
 let lumberCounter = 0;
 let isDirty = false;
 let productCounter = 0;
+let categoryCounter = 0;
+let _dragProdId = null;
+let _dragCatId = null;
 
 function deepCopy(o){ return JSON.parse(JSON.stringify(o)); }
 
@@ -1275,6 +1279,7 @@ function renderAdminModal(){
     ${svcField('ebServicePerFt',   'EB Service ($/ft)', '0.01')}
     ${svcField('cutServicePerSqft','Cut Service ($/sqft)', '0.01')}
   `;
+  renderCategoryManager();
   renderAdminProducts();
 }
 
@@ -1356,8 +1361,7 @@ function renderProductsTab(){
   const cont = document.getElementById('tab-products');
   if(!cont) return;
   const products = pricing.standardProducts || [];
-  const panels = products.filter(p => p.type === 'panel');
-  const lumber = products.filter(p => p.type === 'lumber');
+  const cats = pricing.productCategories || [];
   if(!products.length){
     cont.innerHTML = '<div style="text-align:center;padding:48px 0;color:var(--mid);font-size:15px">No standard products have been added yet.</div>';
     return;
@@ -1385,12 +1389,23 @@ function renderProductsTab(){
       </div>
     </div>`;
   };
+  const renderCard = p => p.type === 'panel' ? renderPanelCard(p) : renderLumberCard(p);
   let html = '';
-  if(panels.length){
-    html += `<div class="product-section-label">Panel Products</div><div class="product-grid">${panels.map(renderPanelCard).join('')}</div>`;
-  }
-  if(lumber.length){
-    html += `<div class="product-section-label" style="margin-top:${panels.length?'28px':'0'}">Lumber Products</div><div class="product-grid">${lumber.map(renderLumberCard).join('')}</div>`;
+  if(cats.length){
+    cats.forEach(cat => {
+      const catProds = products.filter(p => p.category === cat.id);
+      if(!catProds.length) return;
+      html += `<div class="product-section-label" style="margin-top:${html?'28px':'0'}">${cat.name}</div><div class="product-grid">${catProds.map(renderCard).join('')}</div>`;
+    });
+    const uncat = products.filter(p => !p.category || !cats.find(c => c.id === p.category));
+    if(uncat.length){
+      html += `<div class="product-section-label" style="margin-top:${html?'28px':'0'}">Other</div><div class="product-grid">${uncat.map(renderCard).join('')}</div>`;
+    }
+  } else {
+    const panels = products.filter(p => p.type === 'panel');
+    const lumber = products.filter(p => p.type === 'lumber');
+    if(panels.length) html += `<div class="product-section-label">Panel Products</div><div class="product-grid">${panels.map(renderPanelCard).join('')}</div>`;
+    if(lumber.length) html += `<div class="product-section-label" style="margin-top:${panels.length?'28px':'0'}">Lumber Products</div><div class="product-grid">${lumber.map(renderLumberCard).join('')}</div>`;
   }
   cont.innerHTML = html;
 }
@@ -1399,14 +1414,21 @@ function renderAdminProducts(){
   const cont = document.getElementById('admin-products-list');
   if(!cont) return;
   const products = pricing.standardProducts || [];
+  const cats = pricing.productCategories || [];
   if(!products.length){
     cont.innerHTML = '<div style="color:var(--mid);font-size:13px;padding:6px 0">No products yet.</div>';
     return;
   }
-  cont.innerHTML = products.map(p => {
+  const renderRow = p => {
     const c = p.type==='panel' ? calcPanelProduct(p) : calcLumberProduct(p);
     const price = c ? (p.type==='panel' ? `${fmt(c.sellPerSheet)}/sheet · ${fmt(c.sellPerSqft)}/sqft` : `${fmt(c.sellPerSqft)}/sqft`) : '—';
-    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bdr)">
+    return `<div class="prod-drag-row" draggable="true"
+      ondragstart="prodDragStart(event,${p.id})"
+      ondragover="prodDragOver(event)"
+      ondrop="prodDrop(event,${p.id})"
+      ondragleave="this.classList.remove('drag-over')"
+      style="display:flex;align-items:center;gap:10px;padding:9px 0 9px 4px;border-bottom:1px solid var(--bdr)">
+      <span class="drag-handle">⠿</span>
       <div style="flex:1;min-width:0">
         <div style="font-weight:600;font-size:14px">${p.name}</div>
         <div style="font-size:12px;color:var(--mid)">${p.type==='panel'?'Panel':'Lumber'} · ${price}</div>
@@ -1414,12 +1436,106 @@ function renderAdminProducts(){
       <button class="btn-ghost" style="padding:5px 10px;font-size:12px;flex-shrink:0" onclick="editStandardProduct(${p.id})">Edit</button>
       <button class="btn-danger" style="padding:5px 10px;font-size:12px;flex-shrink:0" onclick="removeStandardProduct(${p.id})">✕</button>
     </div>`;
-  }).join('');
+  };
+  let html = '';
+  cats.forEach(cat => {
+    const catProds = products.filter(p => p.category === cat.id);
+    if(!catProds.length) return;
+    html += `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--teal);padding:10px 0 2px">${cat.name}</div>`;
+    catProds.forEach(p => { html += renderRow(p); });
+  });
+  const uncat = products.filter(p => !p.category || !cats.find(c => c.id === p.category));
+  if(uncat.length){
+    if(cats.length) html += `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mid);padding:10px 0 2px">Uncategorized</div>`;
+    uncat.forEach(p => { html += renderRow(p); });
+  }
+  cont.innerHTML = html;
+}
+
+function renderCategoryManager(){
+  const cont = document.getElementById('admin-category-manager');
+  if(!cont) return;
+  const cats = pricing.productCategories || [];
+  let html = cats.map(c => `<div class="prod-drag-row" draggable="true"
+    ondragstart="catDragStart(event,${c.id})"
+    ondragover="catDragOver(event)"
+    ondrop="catDrop(event,${c.id})"
+    ondragleave="this.classList.remove('drag-over')"
+    style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bdr)">
+    <span class="drag-handle">⠿</span>
+    <span style="flex:1;font-size:13px;font-weight:600">${c.name}</span>
+    <button class="btn-danger" style="padding:3px 8px;font-size:12px" onclick="removeCategory(${c.id})">✕</button>
+  </div>`).join('');
+  if(!cats.length) html = '<div style="color:var(--mid);font-size:12px;padding:4px 0 6px">No categories yet.</div>';
+  cont.innerHTML = html;
+}
+
+function addCategory(){
+  const name = prompt('Category name:');
+  if(!name || !name.trim()) return;
+  if(!pricing.productCategories) pricing.productCategories = [];
+  pricing.productCategories.push({ id: ++categoryCounter, name: name.trim() });
+  localStorage.setItem('lbiq_pricing', JSON.stringify(pricing));
+  renderCategoryManager();
+  renderAdminProducts();
+  renderProductsTab();
+}
+
+function removeCategory(id){
+  if(!confirm('Remove this category? Products in it will become uncategorized.')) return;
+  pricing.productCategories = (pricing.productCategories||[]).filter(c => c.id !== id);
+  (pricing.standardProducts||[]).forEach(p => { if(p.category === id) p.category = 0; });
+  localStorage.setItem('lbiq_pricing', JSON.stringify(pricing));
+  renderCategoryManager();
+  renderAdminProducts();
+  renderProductsTab();
+}
+
+function prodDragStart(e, id){ _dragProdId = id; e.dataTransfer.effectAllowed = 'move'; }
+function prodDragOver(e){ e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.currentTarget.classList.add('drag-over'); }
+function prodDrop(e, targetId){
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if(_dragProdId === null || _dragProdId === targetId){ _dragProdId = null; return; }
+  const prods = pricing.standardProducts || [];
+  const fromIdx = prods.findIndex(p => p.id === _dragProdId);
+  const toIdx = prods.findIndex(p => p.id === targetId);
+  if(fromIdx < 0 || toIdx < 0){ _dragProdId = null; return; }
+  prods[fromIdx].category = prods[toIdx].category;
+  const [moved] = prods.splice(fromIdx, 1);
+  const newTo = prods.findIndex(p => p.id === targetId);
+  prods.splice(newTo, 0, moved);
+  pricing.standardProducts = prods;
+  localStorage.setItem('lbiq_pricing', JSON.stringify(pricing));
+  _dragProdId = null;
+  renderAdminProducts();
+  renderProductsTab();
+}
+
+function catDragStart(e, id){ _dragCatId = id; e.dataTransfer.effectAllowed = 'move'; }
+function catDragOver(e){ e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.currentTarget.classList.add('drag-over'); }
+function catDrop(e, targetId){
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if(_dragCatId === null || _dragCatId === targetId){ _dragCatId = null; return; }
+  const cats = pricing.productCategories || [];
+  const fromIdx = cats.findIndex(c => c.id === _dragCatId);
+  const toIdx = cats.findIndex(c => c.id === targetId);
+  if(fromIdx < 0 || toIdx < 0){ _dragCatId = null; return; }
+  const [moved] = cats.splice(fromIdx, 1);
+  cats.splice(toIdx, 0, moved);
+  pricing.productCategories = cats;
+  localStorage.setItem('lbiq_pricing', JSON.stringify(pricing));
+  _dragCatId = null;
+  renderCategoryManager();
+  renderAdminProducts();
+  renderProductsTab();
 }
 
 function populateProductFormSelects(){
   const pSel = document.getElementById('apf-pspecies');
   const lSel = document.getElementById('apf-lspecies');
+  const catSel = document.getElementById('apf-category');
   if(pSel){
     const vSpecs = Object.keys(pricing.veneerSpecies).filter(s => s !== 'Custom');
     pSel.innerHTML = vSpecs.map(s=>`<option value="${s}">${s}</option>`).join('');
@@ -1427,6 +1543,10 @@ function populateProductFormSelects(){
   if(lSel){
     const lSpecs = Object.keys(pricing.lumberSpecies).filter(s => s !== 'Custom');
     lSel.innerHTML = lSpecs.map(s=>`<option value="${s}">${s}</option>`).join('');
+  }
+  if(catSel){
+    const cats = pricing.productCategories || [];
+    catSel.innerHTML = '<option value="0">— No Category —</option>' + cats.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
   }
 }
 
@@ -1438,6 +1558,7 @@ function showProductForm(type, p){
   document.getElementById('apf-id').value = p ? p.id : '';
   document.getElementById('apf-name').value = p ? p.name : '';
   document.getElementById('apf-markup').value = p ? (p.markup||0) : 0;
+  document.getElementById('apf-category').value = p ? (p.category||0) : 0;
   document.getElementById('apf-panel-fields').style.display = type==='panel' ? '' : 'none';
   document.getElementById('apf-lumber-fields').style.display = type==='lumber' ? 'grid' : 'none';
   document.getElementById('apf-form-title').textContent = (p ? 'Edit' : 'New') + (type==='panel' ? ' Panel' : ' Lumber') + ' Product';
@@ -1468,9 +1589,10 @@ function saveProductForm(){
   const name = document.getElementById('apf-name').value.trim();
   if(!name){ showToast('Enter a product name'); return; }
   const markup = parseFloat(document.getElementById('apf-markup').value)||0;
+  const category = parseInt(document.getElementById('apf-category').value)||0;
   let product;
   if(type==='panel'){
-    product = { id: existingId||++productCounter, type, name, markup,
+    product = { id: existingId||++productCounter, type, name, markup, category,
       species: document.getElementById('apf-pspecies').value,
       grade: document.getElementById('apf-pgrade').value,
       sheetGrade: document.getElementById('apf-psheetgrade').value,
@@ -1479,7 +1601,7 @@ function saveProductForm(){
     const slatW = parseFloat(document.getElementById('apf-lslatw').value)||0;
     const slatL = parseFloat(document.getElementById('apf-lslatl').value)||0;
     if(!slatW||!slatL){ showToast('Enter slat width and length'); return; }
-    product = { id: existingId||++productCounter, type, name, markup,
+    product = { id: existingId||++productCounter, type, name, markup, category,
       lSpecies: document.getElementById('apf-lspecies').value,
       thickness: parseFloat(document.getElementById('apf-lthick').value)||0.75,
       slatW, slatL };
@@ -1603,7 +1725,9 @@ function showToast(msg){
     if(pricing.services[k] == null) pricing.services[k] = dp.services[k];
   });
   if(!pricing.standardProducts) pricing.standardProducts = [];
+  if(!pricing.productCategories) pricing.productCategories = [];
   productCounter = Math.max(0, ...pricing.standardProducts.map(p => p.id || 0));
+  categoryCounter = Math.max(0, ...pricing.productCategories.map(c => c.id || 0));
   localStorage.setItem('lbiq_pricing', JSON.stringify(pricing));
 
   // Restore session now that pricing is fully merged
