@@ -30,7 +30,7 @@
   --font-mono:'DM Mono',monospace;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html{overflow-x:hidden;overscroll-behavior:none}
+html{overscroll-behavior:none}
 body{font-family:var(--font-body);background:var(--bg);color:var(--ink);min-height:100dvh;font-size:15px;overflow-x:hidden;overscroll-behavior:none}
 
 /* ─── LOCK SCREEN ───────────────────────────────────────────────── */
@@ -736,7 +736,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260627a"></script>
+<script src="app.js?v=20260627b"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });
