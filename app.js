@@ -48,6 +48,7 @@ function blankVeneerSpecies(overrides){
     out[s+'_eb_roll'] = 0;
     ['A3','AA'].forEach(g => ['4x8','4x10'].forEach(sz => ['mdf','frmdf','pb','frpb'].forEach(c => {
       out[`${s}_${g}_${sz}_${c}`] = 0;
+      out[`${s}_${g}_${sz}_${c}_satin`] = 0;
     })));
   });
   return Object.assign(out, overrides || {});
@@ -67,7 +68,8 @@ function ensureAllCoreKeys(){
       if(p[s+'_eb_roll'] === undefined) p[s+'_eb_roll'] = 0;
       ['A3','AA'].forEach(g => ['4x8','4x10'].forEach(sz => cores.forEach(c => {
         const k = `${s}_${g}_${sz}_${c}`;
-        if(p[k] === undefined) p[k] = 0;
+        if(p[k]          === undefined) p[k]          = 0;
+        if(p[k+'_satin'] === undefined) p[k+'_satin'] = 0;
       })));
     });
   });
@@ -132,7 +134,8 @@ let productCounter = 0;
 let categoryCounter = 0;
 let _dragProdId = null;
 let _dragCatId = null;
-let _adminVeneerCore = 'frmdf';
+let _adminVeneerCore   = 'frmdf';
+let _adminVeneerFinish = 'standard';
 
 function deepCopy(o){ return JSON.parse(JSON.stringify(o)); }
 
@@ -503,7 +506,8 @@ function calcVeneerCost(cfg){
   const sheetsNeeded  = Math.ceil(totalSlats / slatsPerSheet);
 
   const coreK = coreToKey(cfg.core || 'Fire Rated MDF');
-  const sheetPrice = sData[`${sup}_${grade}_4x8_${coreK}`] || 0;
+  const finishSuffix = cfg.satinFinish ? '_satin' : '';
+  const sheetPrice = sData[`${sup}_${grade}_4x8_${coreK}${finishSuffix}`] || 0;
   const sheetCost  = cfg.species === 'Custom' && cfg.customPricePerPanel
     ? panelQty * cfg.customPricePerPanel
     : sheetsNeeded * sheetPrice;
@@ -1257,8 +1261,10 @@ function renderAdminModal(){
     </div>
   `).join('');
 
-  // Veneer species table — core-tabbed
-  _adminVeneerCore = _adminVeneerCore || 'frmdf';
+  // Veneer species table — finish + core tabbed
+  _adminVeneerCore   = _adminVeneerCore   || 'frmdf';
+  _adminVeneerFinish = _adminVeneerFinish || 'standard';
+  renderVeneerFinishTabs();
   renderVeneerCoreTabs();
   renderVeneerPricingTable();
 
@@ -1447,6 +1453,23 @@ function renderProductsTab(){
   cont.innerHTML = html;
 }
 
+function renderVeneerFinishTabs(){
+  const wrap = document.getElementById('veneer-finish-tabs');
+  if(!wrap) return;
+  wrap.innerHTML = [
+    { key:'standard', label:'Standard' },
+    { key:'satin',    label:'Satin Finish' }
+  ].map(f => `<button class="${_adminVeneerFinish===f.key?'btn-primary':'btn-ghost'}"
+    onclick="setVeneerFinish('${f.key}')" style="padding:5px 14px;font-size:12px">${f.label}</button>`
+  ).join('');
+}
+
+function setVeneerFinish(f){
+  _adminVeneerFinish = f;
+  renderVeneerFinishTabs();
+  renderVeneerPricingTable();
+}
+
 function renderVeneerCoreTabs(){
   const wrap = document.getElementById('veneer-core-tabs');
   if(!wrap) return;
@@ -1497,16 +1520,17 @@ function renderVeneerPricingTable(){
   const vb = document.getElementById('veneerPricingBody');
   if(!vb) return;
   const c = _adminVeneerCore;
+  const fs = _adminVeneerFinish === 'satin' ? '_satin' : '';
   vb.innerHTML = Object.entries(pricing.veneerSpecies).map(([name, p]) => {
     const inp = (key) => `<input type="number" class="admin-price-input" value="${p[key]||0}" step="1" data-species="${name}" data-key="${key}" oninput="vPriceInput(this)">`;
     const row = (sup, label, color) => `
       <tr>
         ${sup==='talbert' ? `<td rowspan="2" style="font-weight:600;white-space:nowrap;vertical-align:middle">${name}</td>` : ''}
         <td style="font-size:11px;font-weight:700;letter-spacing:.5px;color:${color};white-space:nowrap">${label}</td>
-        <td>${inp(`${sup}_A3_4x8_${c}`)}</td>
-        <td>${inp(`${sup}_A3_4x10_${c}`)}</td>
-        <td>${inp(`${sup}_AA_4x8_${c}`)}</td>
-        <td>${inp(`${sup}_AA_4x10_${c}`)}</td>
+        <td>${inp(`${sup}_A3_4x8_${c}${fs}`)}</td>
+        <td>${inp(`${sup}_A3_4x10_${c}${fs}`)}</td>
+        <td>${inp(`${sup}_AA_4x8_${c}${fs}`)}</td>
+        <td>${inp(`${sup}_AA_4x10_${c}${fs}`)}</td>
         <td>${inp(`${sup}_eb_roll`)}</td>
       </tr>`;
     return row('talbert','Talbert','var(--teal)') + row('timber','Timber','var(--gold)');
