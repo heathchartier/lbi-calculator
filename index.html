@@ -360,6 +360,35 @@ select option{background:#1e2226}
   .config-grid .span3{grid-column:span 2}
   header{padding:0 16px}
 }
+
+/* ─── PRODUCT CARDS ─────────────────────────────────────────────── */
+.product-section-label{
+  font-family:var(--font-head);font-size:13px;font-weight:700;
+  letter-spacing:.8px;text-transform:uppercase;color:var(--teal);
+  margin-bottom:12px;
+}
+.product-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+  gap:14px;
+}
+.product-card{
+  background:var(--surf);border:1px solid var(--bdr2);border-radius:var(--r2);
+  padding:20px;display:flex;flex-direction:column;gap:10px;
+}
+.product-card-name{
+  font-family:var(--font-head);font-size:19px;font-weight:700;
+  color:var(--ink);line-height:1.2;
+}
+.product-card-sub{font-size:12px;color:var(--mid)}
+.product-card-prices{display:flex;flex-direction:column;gap:0}
+.product-price-item{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:8px 0;border-top:1px solid var(--bdr);
+}
+.product-price-item.highlight .ppi-val{color:var(--teal)}
+.ppi-label{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--mid)}
+.ppi-val{font-family:var(--font-head);font-size:21px;font-weight:700;color:var(--ink)}
 </style>
 </head>
 <body>
@@ -441,6 +470,7 @@ select option{background:#1e2226}
     <div class="tab-bar print-hide">
       <button class="tab-btn active" onclick="switchTab('veneer',this)">Veneer Panels</button>
       <button class="tab-btn" onclick="switchTab('lumber',this)">Solid Lumber</button>
+      <button class="tab-btn" onclick="switchTab('products',this)">Price List</button>
     </div>
 
     <!-- Veneer Tab -->
@@ -460,6 +490,9 @@ select option{background:#1e2226}
         Add Lumber Configuration
       </button>
     </div>
+
+    <!-- Products Tab -->
+    <div id="tab-products" class="tab-pane" style="padding:8px 0 24px"></div>
 
     <!-- Results -->
     <div id="resultsPanel">
@@ -548,6 +581,96 @@ select option{background:#1e2226}
       <div id="serviceRatesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px"></div>
     </div>
 
+    <!-- Standard Products -->
+    <div class="modal-section">
+      <h3>Standard Products (Price List)</h3>
+      <p style="font-size:12px;color:var(--mid);margin-bottom:12px">Products shown on the Price List tab. You see cost + markup; LBI sees sell price only.</p>
+      <div id="admin-products-list"></div>
+
+      <!-- Inline add/edit form -->
+      <div id="admin-product-form" style="display:none;background:var(--surf2);border:1px solid var(--bdr2);border-radius:var(--r2);padding:16px;margin-top:14px">
+        <div style="font-family:var(--font-head);font-size:15px;font-weight:700;margin-bottom:12px;color:var(--teal)" id="apf-form-title">New Product</div>
+        <input type="hidden" id="apf-type">
+        <input type="hidden" id="apf-id">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px">
+          <div>
+            <label class="field-label">Product Name</label>
+            <input type="text" id="apf-name" placeholder="e.g. Walnut Panel" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+          </div>
+          <div>
+            <label class="field-label">Markup %</label>
+            <input type="number" id="apf-markup" value="0" step="1" min="0" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+          </div>
+        </div>
+        <!-- Panel fields -->
+        <div id="apf-panel-fields" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:10px">
+          <div>
+            <label class="field-label">Species</label>
+            <select id="apf-pspecies" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%"></select>
+          </div>
+          <div>
+            <label class="field-label">Grade</label>
+            <select id="apf-pgrade" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+              <option value="timber">Standard</option>
+              <option value="talbert">Premium</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Sheet Grade</label>
+            <select id="apf-psheetgrade" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+              <option value="A3">A3 (Horizontal)</option>
+              <option value="AA">AA (Vertical)</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Sheet Size</label>
+            <select id="apf-psheetsize" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+              <option value="4x8">4×8</option>
+              <option value="4x10">4×10</option>
+            </select>
+          </div>
+        </div>
+        <!-- Lumber fields -->
+        <div id="apf-lumber-fields" style="display:none;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:10px">
+          <div>
+            <label class="field-label">Species</label>
+            <select id="apf-lspecies" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%"></select>
+          </div>
+          <div>
+            <label class="field-label">Thickness</label>
+            <select id="apf-lthick" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+              <option value="0.25">1/4"</option>
+              <option value="0.4375">7/16"</option>
+              <option value="0.5">1/2"</option>
+              <option value="0.625">5/8"</option>
+              <option value="0.6875">11/16"</option>
+              <option value="0.75" selected>3/4"</option>
+              <option value="1">1"</option>
+              <option value="1.25">1-1/4"</option>
+              <option value="1.5">1-1/2"</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Slat Width (in)</label>
+            <input type="number" id="apf-lslatw" step="0.0625" min="0.5" placeholder="e.g. 3.25" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+          </div>
+          <div>
+            <label class="field-label">Slat Length (in)</label>
+            <input type="number" id="apf-lslatl" step="1" min="12" placeholder="e.g. 96" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px">
+          <button class="btn-primary" onclick="saveProductForm()" style="width:auto;padding:8px 22px;font-size:15px">Save</button>
+          <button class="btn-ghost" onclick="document.getElementById('admin-product-form').style.display='none'">Cancel</button>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:14px">
+        <button class="btn-ghost" onclick="addStandardProduct('panel')">+ Panel Product</button>
+        <button class="btn-ghost" onclick="addStandardProduct('lumber')">+ Lumber Product</button>
+      </div>
+    </div>
+
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
       <button class="btn-ghost" onclick="closeAdmin()">Cancel</button>
       <button class="btn-primary" onclick="saveAdmin()">Save Changes</button>
@@ -577,7 +700,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260610d"></script>
+<script src="app.js?v=20260610e"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });

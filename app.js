@@ -89,6 +89,7 @@ const DEFAULT_PRICING = {
     panels:0, edgeBand:0, lumber:0, milling:0,
     assembly:0, ebService:0, cutService:0, brackets:0,
   },
+  standardProducts: [],
 };
 
 // --- STATE -----------------------------------------------------------
@@ -98,6 +99,7 @@ let lumberConfigs = [];
 let veneerCounter = 0;
 let lumberCounter = 0;
 let isDirty = false;
+let productCounter = 0;
 
 function deepCopy(o){ return JSON.parse(JSON.stringify(o)); }
 
@@ -132,6 +134,7 @@ function activateApp(isAdmin){
   addVeneerConfig();
   addLumberConfig();
   recalcAll();
+  renderProductsTab();
 }
 
 function unlock(){
@@ -1272,6 +1275,7 @@ function renderAdminModal(){
     ${svcField('ebServicePerFt',   'EB Service ($/ft)', '0.01')}
     ${svcField('cutServicePerSqft','Cut Service ($/sqft)', '0.01')}
   `;
+  renderAdminProducts();
 }
 
 function saveAdmin(){
@@ -1324,6 +1328,179 @@ function saveAdmin(){
   recalcAll();
   closeAdmin();
   showToast('Pricing saved!');
+}
+
+function calcPanelProduct(p){
+  const sData = pricing.veneerSpecies[p.species];
+  if(!sData) return null;
+  const costPerSheet = sData[`${p.grade}_${p.sheetGrade}_${p.sheetSize}`] || 0;
+  if(!costPerSheet) return null;
+  const sqft = p.sheetSize === '4x10' ? 40 : 32;
+  const sellPerSheet = costPerSheet * (1 + (p.markup||0)/100);
+  return { costPerSheet, sellPerSheet, sellPerSqft: sellPerSheet / sqft, sqft };
+}
+
+function calcLumberProduct(p){
+  const sData = pricing.lumberSpecies[p.lSpecies];
+  if(!sData || !sData.price) return null;
+  if(!p.thickness || !p.slatW || !p.slatL) return null;
+  const cfg = { species: p.lSpecies, thickness: p.thickness, slatW: p.slatW, slatL: p.slatL, safetyBuffer: false };
+  const m = millLumberCalc(cfg, 1);
+  const finishedSqft = (p.slatW * p.slatL) / 144;
+  const rawBFPerSqft = m.bfPerSlat / finishedSqft;
+  const costPerSqft = rawBFPerSqft * sData.price;
+  return { costPerSqft, sellPerSqft: costPerSqft * (1 + (p.markup||0)/100), rawBFPerSqft };
+}
+
+function renderProductsTab(){
+  const cont = document.getElementById('tab-products');
+  if(!cont) return;
+  const products = pricing.standardProducts || [];
+  const panels = products.filter(p => p.type === 'panel');
+  const lumber = products.filter(p => p.type === 'lumber');
+  if(!products.length){
+    cont.innerHTML = '<div style="text-align:center;padding:48px 0;color:var(--mid);font-size:15px">No standard products have been added yet.</div>';
+    return;
+  }
+  const renderPanelCard = p => {
+    const c = calcPanelProduct(p);
+    if(!c) return '';
+    return `<div class="product-card">
+      <div class="product-card-name">${p.name}</div>
+      <div class="product-card-sub">${p.sheetGrade === 'A3' ? 'Horizontal' : 'Vertical'} · ${p.sheetSize} · ${p.grade === 'talbert' ? 'Premium' : 'Standard'}</div>
+      <div class="product-card-prices">
+        <div class="product-price-item"><span class="ppi-label">Per Sheet</span><span class="ppi-val">${fmt(c.sellPerSheet)}</span></div>
+        <div class="product-price-item highlight"><span class="ppi-label">Per Sq Ft</span><span class="ppi-val">${fmt(c.sellPerSqft)}</span></div>
+      </div>
+    </div>`;
+  };
+  const renderLumberCard = p => {
+    const c = calcLumberProduct(p);
+    if(!c) return '';
+    return `<div class="product-card">
+      <div class="product-card-name">${p.name}</div>
+      <div class="product-card-sub">${fractionLabel(p.thickness.toString())} × ${p.slatW}" · ${p.lSpecies}</div>
+      <div class="product-card-prices">
+        <div class="product-price-item highlight"><span class="ppi-label">Per Sq Ft</span><span class="ppi-val">${fmt(c.sellPerSqft)}</span></div>
+      </div>
+    </div>`;
+  };
+  let html = '';
+  if(panels.length){
+    html += `<div class="product-section-label">Panel Products</div><div class="product-grid">${panels.map(renderPanelCard).join('')}</div>`;
+  }
+  if(lumber.length){
+    html += `<div class="product-section-label" style="margin-top:${panels.length?'28px':'0'}">Lumber Products</div><div class="product-grid">${lumber.map(renderLumberCard).join('')}</div>`;
+  }
+  cont.innerHTML = html;
+}
+
+function renderAdminProducts(){
+  const cont = document.getElementById('admin-products-list');
+  if(!cont) return;
+  const products = pricing.standardProducts || [];
+  if(!products.length){
+    cont.innerHTML = '<div style="color:var(--mid);font-size:13px;padding:6px 0">No products yet.</div>';
+    return;
+  }
+  cont.innerHTML = products.map(p => {
+    const c = p.type==='panel' ? calcPanelProduct(p) : calcLumberProduct(p);
+    const price = c ? (p.type==='panel' ? `${fmt(c.sellPerSheet)}/sheet · ${fmt(c.sellPerSqft)}/sqft` : `${fmt(c.sellPerSqft)}/sqft`) : '—';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bdr)">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:14px">${p.name}</div>
+        <div style="font-size:12px;color:var(--mid)">${p.type==='panel'?'Panel':'Lumber'} · ${price}</div>
+      </div>
+      <button class="btn-ghost" style="padding:5px 10px;font-size:12px;flex-shrink:0" onclick="editStandardProduct(${p.id})">Edit</button>
+      <button class="btn-danger" style="padding:5px 10px;font-size:12px;flex-shrink:0" onclick="removeStandardProduct(${p.id})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function populateProductFormSelects(){
+  const pSel = document.getElementById('apf-pspecies');
+  const lSel = document.getElementById('apf-lspecies');
+  if(pSel){
+    const vSpecs = Object.keys(pricing.veneerSpecies).filter(s => s !== 'Custom');
+    pSel.innerHTML = vSpecs.map(s=>`<option value="${s}">${s}</option>`).join('');
+  }
+  if(lSel){
+    const lSpecs = Object.keys(pricing.lumberSpecies).filter(s => s !== 'Custom');
+    lSel.innerHTML = lSpecs.map(s=>`<option value="${s}">${s}</option>`).join('');
+  }
+}
+
+function showProductForm(type, p){
+  populateProductFormSelects();
+  const form = document.getElementById('admin-product-form');
+  form.style.display = '';
+  document.getElementById('apf-type').value = type;
+  document.getElementById('apf-id').value = p ? p.id : '';
+  document.getElementById('apf-name').value = p ? p.name : '';
+  document.getElementById('apf-markup').value = p ? (p.markup||0) : 0;
+  document.getElementById('apf-panel-fields').style.display = type==='panel' ? '' : 'none';
+  document.getElementById('apf-lumber-fields').style.display = type==='lumber' ? 'grid' : 'none';
+  document.getElementById('apf-form-title').textContent = (p ? 'Edit' : 'New') + (type==='panel' ? ' Panel' : ' Lumber') + ' Product';
+  if(type==='panel' && p){
+    document.getElementById('apf-pspecies').value = p.species;
+    document.getElementById('apf-pgrade').value = p.grade;
+    document.getElementById('apf-psheetgrade').value = p.sheetGrade;
+    document.getElementById('apf-psheetsize').value = p.sheetSize;
+  }
+  if(type==='lumber' && p){
+    document.getElementById('apf-lspecies').value = p.lSpecies;
+    document.getElementById('apf-lthick').value = p.thickness;
+    document.getElementById('apf-lslatw').value = p.slatW;
+    document.getElementById('apf-lslatl').value = p.slatL;
+  }
+}
+
+function addStandardProduct(type){ showProductForm(type, null); }
+
+function editStandardProduct(id){
+  const p = (pricing.standardProducts||[]).find(x => x.id===id);
+  if(p) showProductForm(p.type, p);
+}
+
+function saveProductForm(){
+  const type = document.getElementById('apf-type').value;
+  const existingId = parseInt(document.getElementById('apf-id').value)||0;
+  const name = document.getElementById('apf-name').value.trim();
+  if(!name){ showToast('Enter a product name'); return; }
+  const markup = parseFloat(document.getElementById('apf-markup').value)||0;
+  let product;
+  if(type==='panel'){
+    product = { id: existingId||++productCounter, type, name, markup,
+      species: document.getElementById('apf-pspecies').value,
+      grade: document.getElementById('apf-pgrade').value,
+      sheetGrade: document.getElementById('apf-psheetgrade').value,
+      sheetSize: document.getElementById('apf-psheetsize').value };
+  } else {
+    const slatW = parseFloat(document.getElementById('apf-lslatw').value)||0;
+    const slatL = parseFloat(document.getElementById('apf-lslatl').value)||0;
+    if(!slatW||!slatL){ showToast('Enter slat width and length'); return; }
+    product = { id: existingId||++productCounter, type, name, markup,
+      lSpecies: document.getElementById('apf-lspecies').value,
+      thickness: parseFloat(document.getElementById('apf-lthick').value)||0.75,
+      slatW, slatL };
+  }
+  if(!pricing.standardProducts) pricing.standardProducts=[];
+  const idx = pricing.standardProducts.findIndex(p => p.id===existingId);
+  if(idx>=0) pricing.standardProducts[idx]=product;
+  else pricing.standardProducts.push(product);
+  localStorage.setItem('lbiq_pricing', JSON.stringify(pricing));
+  document.getElementById('admin-product-form').style.display='none';
+  renderAdminProducts();
+  renderProductsTab();
+  showToast('Product saved!');
+}
+
+function removeStandardProduct(id){
+  if(!confirm('Remove this product?')) return;
+  pricing.standardProducts=(pricing.standardProducts||[]).filter(p=>p.id!==id);
+  localStorage.setItem('lbiq_pricing', JSON.stringify(pricing));
+  renderAdminProducts();
+  renderProductsTab();
 }
 
 function addCustomSpecies(type){
@@ -1425,6 +1602,8 @@ function showToast(msg){
   Object.keys(dp.services).forEach(k => {
     if(pricing.services[k] == null) pricing.services[k] = dp.services[k];
   });
+  if(!pricing.standardProducts) pricing.standardProducts = [];
+  productCounter = Math.max(0, ...pricing.standardProducts.map(p => p.id || 0));
   localStorage.setItem('lbiq_pricing', JSON.stringify(pricing));
 
   // Restore session now that pricing is fully merged

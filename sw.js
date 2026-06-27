@@ -1,4 +1,4 @@
-const CACHE = 'lbiiq-v2';
+const CACHE = 'lbiiq-v3';
 const ASSETS = [
   '/lbi-calculator/',
   '/lbi-calculator/index.html',
