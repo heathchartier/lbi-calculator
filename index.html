@@ -354,6 +354,30 @@ select option{background:#1e2226}
 }
 .cutlistiq-link:hover{background:rgba(0,229,184,.2)}
 
+/* ─── CALCULATORS ────────────────────────────────────────────────── */
+.calc-card{
+  background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r3);padding:20px;
+}
+.calc-title{font-family:var(--font-head);font-size:17px;font-weight:800;color:var(--ink);margin-bottom:2px}
+.calc-subtitle{font-size:12px;color:var(--mid);margin-bottom:16px}
+.calc-fields{display:flex;flex-direction:column;gap:10px}
+.calc-row{display:flex;align-items:center;gap:10px}
+.calc-row label{font-size:13px;color:var(--mid);width:110px;flex-shrink:0}
+.calc-input-wrap{position:relative;flex:1}
+.calc-input-wrap input{
+  width:100%;padding:8px 36px 8px 10px;background:var(--bg);border:1px solid var(--bdr);
+  border-radius:var(--r);color:var(--ink);font-size:14px;font-family:var(--font-mono);
+  box-sizing:border-box;
+}
+.calc-input-wrap input:focus{outline:none;border-color:var(--teal)}
+.calc-unit{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--mid);pointer-events:none}
+.calc-result{
+  font-family:var(--font-head);font-size:36px;font-weight:800;color:var(--teal);
+  text-align:center;margin-top:18px;line-height:1;
+}
+.calc-result-label{text-align:center;font-size:12px;color:var(--mid);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
+.calc-divider{text-align:center;color:var(--teal);font-size:18px;margin:2px 0;font-weight:700}
+
 /* ─── RESPONSIVE ─────────────────────────────────────────────────── */
 @media(max-width:640px){
   main{padding:16px}
@@ -474,6 +498,7 @@ select option{background:#1e2226}
       <button class="tab-btn active" onclick="switchTab('veneer',this)">Veneer Panels</button>
       <button class="tab-btn" onclick="switchTab('lumber',this)">Solid Lumber</button>
       <button class="tab-btn" onclick="switchTab('products',this)">Price List</button>
+      <button class="tab-btn" onclick="switchTab('calcs',this)">Calculators</button>
     </div>
 
     <!-- Veneer Tab -->
@@ -496,6 +521,85 @@ select option{background:#1e2226}
 
     <!-- Products Tab -->
     <div id="tab-products" class="tab-pane" style="padding:8px 0 24px"></div>
+
+    <!-- Calculators Tab -->
+    <div id="tab-calcs" class="tab-pane">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;padding:8px 0 24px">
+
+        <!-- Board Feet -->
+        <div class="calc-card">
+          <div class="calc-title">Board Feet</div>
+          <div class="calc-subtitle">Width × Thickness × Length ÷ 12</div>
+          <div class="calc-fields">
+            <div class="calc-row">
+              <label>Width</label>
+              <div class="calc-input-wrap"><input type="number" id="bf-width" placeholder="0" min="0" oninput="calcBF()"><span class="calc-unit">in</span></div>
+            </div>
+            <div class="calc-row">
+              <label>Thickness</label>
+              <div class="calc-input-wrap"><input type="number" id="bf-thick" placeholder="0" min="0" oninput="calcBF()"><span class="calc-unit">in</span></div>
+            </div>
+            <div class="calc-row">
+              <label>Length</label>
+              <div class="calc-input-wrap"><input type="number" id="bf-len" placeholder="0" min="0" oninput="calcBF()"><span class="calc-unit">ft</span></div>
+            </div>
+            <div class="calc-row">
+              <label>Pieces</label>
+              <div class="calc-input-wrap"><input type="number" id="bf-qty" placeholder="1" min="1" oninput="calcBF()"><span class="calc-unit">pcs</span></div>
+            </div>
+          </div>
+          <div class="calc-result" id="bf-result">—</div>
+          <div class="calc-result-label">Board Feet</div>
+        </div>
+
+        <!-- Sqft ↔ LF -->
+        <div class="calc-card">
+          <div class="calc-title">Sqft ↔ Linear Feet</div>
+          <div class="calc-subtitle">Convert between square footage and linear feet</div>
+          <div class="calc-fields">
+            <div class="calc-row">
+              <label>Board Width</label>
+              <div class="calc-input-wrap"><input type="number" id="lf-width" placeholder="0" min="0" oninput="calcLF()"><span class="calc-unit">in</span></div>
+            </div>
+            <div class="calc-row">
+              <label>Square Feet</label>
+              <div class="calc-input-wrap"><input type="number" id="lf-sqft" placeholder="0" min="0" oninput="calcLFfromSqft()"><span class="calc-unit">sqft</span></div>
+            </div>
+            <div class="calc-divider">↕</div>
+            <div class="calc-row">
+              <label>Linear Feet</label>
+              <div class="calc-input-wrap"><input type="number" id="lf-lf" placeholder="0" min="0" oninput="calcSqftFromLF()"><span class="calc-unit">lf</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel Count ↔ Sqft -->
+        <div class="calc-card">
+          <div class="calc-title">Panel Count ↔ Sqft</div>
+          <div class="calc-subtitle">Convert between panel count and square footage</div>
+          <div class="calc-fields">
+            <div class="calc-row">
+              <label>Panel Width</label>
+              <div class="calc-input-wrap"><input type="number" id="pc-w" placeholder="0" min="0" oninput="calcPC()"><span class="calc-unit">in</span></div>
+            </div>
+            <div class="calc-row">
+              <label>Panel Length</label>
+              <div class="calc-input-wrap"><input type="number" id="pc-l" placeholder="0" min="0" oninput="calcPC()"><span class="calc-unit">in</span></div>
+            </div>
+            <div class="calc-row">
+              <label>Panel Count</label>
+              <div class="calc-input-wrap"><input type="number" id="pc-count" placeholder="0" min="0" oninput="calcPCfromCount()"><span class="calc-unit">pcs</span></div>
+            </div>
+            <div class="calc-divider">↕</div>
+            <div class="calc-row">
+              <label>Square Feet</label>
+              <div class="calc-input-wrap"><input type="number" id="pc-sqft" placeholder="0" min="0" oninput="calcCountFromSqft()"><span class="calc-unit">sqft</span></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
 
     <!-- Results -->
     <div id="resultsPanel">
@@ -736,7 +840,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260627b"></script>
+<script src="app.js?v=20260627c"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });

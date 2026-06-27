@@ -1837,6 +1837,55 @@ function importPricing(input){
   input.value = '';
 }
 
+// --- CALCULATORS ------------------------------------------------------
+function calcBF(){
+  const w = parseFloat(document.getElementById('bf-width').value) || 0;
+  const t = parseFloat(document.getElementById('bf-thick').value) || 0;
+  const l = parseFloat(document.getElementById('bf-len').value) || 0;
+  const q = parseFloat(document.getElementById('bf-qty').value) || 1;
+  const el = document.getElementById('bf-result');
+  if(!w || !t || !l){ el.textContent = '—'; return; }
+  el.textContent = fmtN((w * t * l * q) / 12, 2);
+}
+
+function calcLFfromSqft(){
+  document.getElementById('lf-lf').value = '';
+  const w = parseFloat(document.getElementById('lf-width').value) || 0;
+  const s = parseFloat(document.getElementById('lf-sqft').value) || 0;
+  if(!w || !s) return;
+  document.getElementById('lf-lf').value = fmtN(s * 12 / w, 2);
+}
+
+function calcSqftFromLF(){
+  document.getElementById('lf-sqft').value = '';
+  const w = parseFloat(document.getElementById('lf-width').value) || 0;
+  const l = parseFloat(document.getElementById('lf-lf').value) || 0;
+  if(!w || !l) return;
+  document.getElementById('lf-sqft').value = fmtN(l * w / 12, 2);
+}
+
+function calcLF(){ calcLFfromSqft(); }
+
+function calcPCfromCount(){
+  document.getElementById('pc-sqft').value = '';
+  const w = parseFloat(document.getElementById('pc-w').value) || 0;
+  const l = parseFloat(document.getElementById('pc-l').value) || 0;
+  const c = parseFloat(document.getElementById('pc-count').value) || 0;
+  if(!w || !l || !c) return;
+  document.getElementById('pc-sqft').value = fmtN(c * w * l / 144, 2);
+}
+
+function calcCountFromSqft(){
+  document.getElementById('pc-count').value = '';
+  const w = parseFloat(document.getElementById('pc-w').value) || 0;
+  const l = parseFloat(document.getElementById('pc-l').value) || 0;
+  const s = parseFloat(document.getElementById('pc-sqft').value) || 0;
+  if(!w || !l || !s) return;
+  document.getElementById('pc-count').value = fmtN(s * 144 / (w * l), 2);
+}
+
+function calcPC(){ calcPCfromCount(); }
+
 // --- TOAST ------------------------------------------------------------
 function showToast(msg){
   let t = document.getElementById('toast');
