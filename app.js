@@ -1230,6 +1230,14 @@ function newJob(){
 
 // --- ADMIN MODAL -------------------------------------------------------
 function renderAdminModal(){
+  // Cloud sync badge
+  const hasToken = !!localStorage.getItem('lbiq_gh_token');
+  const badge = document.getElementById('cloud-sync-badge');
+  if(badge){
+    badge.textContent = hasToken ? 'Configured' : 'Not configured';
+    badge.style.background = hasToken ? 'var(--teal-dim)' : 'var(--surf3)';
+    badge.style.color = hasToken ? 'var(--teal)' : 'var(--mid)';
+  }
   // LBI Password
   const lbiPwEl = document.getElementById('admin-lbi-password');
   if(lbiPwEl) lbiPwEl.value = getLBIPassword();
@@ -1345,12 +1353,22 @@ function saveAdmin(){
     if(el) pricing.services[k] = parseFloat(el.value) || 0;
   });
 
+  // Save GitHub token if a new one was entered
+  const ghTokenInput = document.getElementById('admin-gh-token')?.value?.trim();
+  if(ghTokenInput) localStorage.setItem('lbiq_gh_token', ghTokenInput);
+
   localStorage.setItem('lbiq_pricing', JSON.stringify(pricing));
   renderVeneerConfigs();
   renderLumberConfigs();
   recalcAll();
   closeAdmin();
-  showToast('Pricing saved!');
+
+  if(localStorage.getItem('lbiq_gh_token')){
+    showToast('Saving & syncing to cloud…');
+    pushCloudPricing().then(r => showToast(r.ok ? '✓ Synced to cloud — all devices updated' : '⚠ Saved locally. Sync failed: '+r.msg));
+  } else {
+    showToast('Pricing saved!');
+  }
 }
 
 function calcPanelProduct(p){
@@ -1740,6 +1758,57 @@ function addCustomSpecies(type){
   renderAdminModal();
 }
 
+// --- CLOUD SYNC -------------------------------------------------------
+async function fetchCloudPricing(){
+  const resp = await fetch(
+    'https://api.github.com/repos/heathchartier/lbi-calculator/contents/pricing.json',
+    { headers:{ 'Accept':'application/vnd.github.v3+json' }, cache:'no-store' }
+  );
+  if(!resp.ok) return;
+  const file = await resp.json();
+  const imported = JSON.parse(atob(file.content.replace(/\n/g,'')));
+  if(!imported.veneerSpecies || !imported.services) return;
+  localStorage.setItem('lbiq_cloud_sha', file.sha);
+  localStorage.setItem('lbiq_pricing', JSON.stringify(imported));
+  Object.keys(pricing).forEach(k => delete pricing[k]);
+  Object.assign(pricing, imported);
+  if(!pricing.productCategories) pricing.productCategories = [];
+  if(!pricing.veneerCores) pricing.veneerCores = deepCopy(DEFAULT_PRICING.veneerCores);
+  ensureAllCoreKeys();
+  productCounter = Math.max(0, ...((pricing.standardProducts||[]).map(p=>p.id||0)));
+  categoryCounter = Math.max(0, ...((pricing.productCategories||[]).map(c=>c.id||0)));
+}
+
+async function pushCloudPricing(){
+  const token = localStorage.getItem('lbiq_gh_token');
+  if(!token) return { ok:false, msg:'No token' };
+  try {
+    const url = 'https://api.github.com/repos/heathchartier/lbi-calculator/contents/pricing.json';
+    const headers = {
+      'Authorization':`Bearer ${token}`,
+      'Accept':'application/vnd.github.v3+json',
+      'Content-Type':'application/json'
+    };
+    let sha;
+    const getResp = await fetch(url, { headers });
+    if(getResp.ok){ sha = (await getResp.json()).sha; localStorage.setItem('lbiq_cloud_sha', sha); }
+    else if(getResp.status !== 404) return { ok:false, msg:'Could not connect to GitHub' };
+    const body = {
+      message:'Update pricing from admin',
+      content: btoa(unescape(encodeURIComponent(JSON.stringify(pricing, null, 2))))
+    };
+    if(sha) body.sha = sha;
+    const putResp = await fetch(url, { method:'PUT', headers, body:JSON.stringify(body) });
+    if(putResp.ok){
+      const d = await putResp.json();
+      localStorage.setItem('lbiq_cloud_sha', d.content.sha);
+      return { ok:true };
+    }
+    const err = await putResp.json();
+    return { ok:false, msg: err.message || `Error ${putResp.status}` };
+  } catch(e){ return { ok:false, msg:'Network error' }; }
+}
+
 // --- PRICING EXPORT / IMPORT ------------------------------------------
 function exportPricing(){
   const json = JSON.stringify(pricing, null, 2);
@@ -1881,6 +1950,9 @@ function showToast(msg){
   categoryCounter = Math.max(0, ...pricing.productCategories.map(c => c.id || 0));
   localStorage.setItem('lbiq_pricing', JSON.stringify(pricing));
 
-  // Restore session now that pricing is fully merged
-  checkSession();
+  // Fetch cloud pricing then start session (3s timeout so offline never blocks)
+  Promise.race([
+    fetchCloudPricing(),
+    new Promise(r => setTimeout(r, 3000))
+  ]).catch(() => {}).finally(() => checkSession());
 })();

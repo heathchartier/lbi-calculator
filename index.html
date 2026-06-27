@@ -517,6 +517,20 @@ select option{background:#1e2226}
       </button>
     </div>
 
+    <!-- Cloud Sync -->
+    <div class="modal-section">
+      <h3 style="display:flex;align-items:center;gap:10px">Cloud Sync <span id="cloud-sync-badge" style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px;background:var(--surf3);color:var(--mid)">Not configured</span></h3>
+      <p style="font-size:12px;color:var(--mid);margin-bottom:12px">When configured, saving here auto-pushes pricing to the cloud so LBI's phones get it the next time they open the app — no manual steps for them.</p>
+      <div style="max-width:420px">
+        <label class="field-label">GitHub Token</label>
+        <input type="password" id="admin-gh-token" placeholder="Paste token here to update" autocomplete="new-password"
+          style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%;font-family:var(--font-mono);font-size:12px">
+        <p style="font-size:11px;color:var(--mid);margin-top:6px">
+          One-time setup: <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" style="color:var(--teal)">github.com → Settings → Fine-grained token</a> → select repo <strong>heathchartier/lbi-calculator</strong> → Contents: Read &amp; write → paste above &amp; Save.
+        </p>
+      </div>
+    </div>
+
     <!-- LBI Access Password -->
     <div class="modal-section">
       <h3>LBI Access Password</h3>
@@ -722,7 +736,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260626d"></script>
+<script src="app.js?v=20260627a"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });
