@@ -54,7 +54,23 @@ function blankVeneerSpecies(overrides){
 }
 
 function coreToKey(core){
+  const found = (pricing?.veneerCores||[]).find(c => c.label === core);
+  if(found) return found.key;
+  // Fallback map for built-ins before pricing loads
   return { 'Regular MDF':'mdf', 'Fire Rated MDF':'frmdf', 'Particle Board':'pb', 'Fire Rated PB':'frpb' }[core] || 'frmdf';
+}
+
+function ensureAllCoreKeys(){
+  const cores = (pricing.veneerCores||[]).map(c => c.key);
+  Object.values(pricing.veneerSpecies||{}).forEach(p => {
+    ['talbert','timber'].forEach(s => {
+      if(p[s+'_eb_roll'] === undefined) p[s+'_eb_roll'] = 0;
+      ['A3','AA'].forEach(g => ['4x8','4x10'].forEach(sz => cores.forEach(c => {
+        const k = `${s}_${g}_${sz}_${c}`;
+        if(p[k] === undefined) p[k] = 0;
+      })));
+    });
+  });
 }
 
 const DEFAULT_PRICING = {
@@ -97,6 +113,12 @@ const DEFAULT_PRICING = {
   },
   standardProducts: [],
   productCategories: [],
+  veneerCores: [
+    { key:'frmdf', label:'Fire Rated MDF' },
+    { key:'mdf',   label:'Regular MDF' },
+    { key:'pb',    label:'Particle Board' },
+    { key:'frpb',  label:'Fire Rated PB' },
+  ],
 };
 
 // --- STATE -----------------------------------------------------------
@@ -290,10 +312,7 @@ function renderVeneerConfigs(){
           <div>
             <label class="field-label">Panel Core</label>
             <select id="v-core-${cfg.id}" onchange="vUpdate(${cfg.id})">
-              <option value="Fire Rated MDF"  ${cfg.core==='Fire Rated MDF'?'selected':''}>Fire Rated MDF</option>
-              <option value="Regular MDF"    ${cfg.core==='Regular MDF'?'selected':''}>Regular MDF</option>
-              <option value="Particle Board" ${cfg.core==='Particle Board'?'selected':''}>Particle Board</option>
-              <option value="Fire Rated PB"  ${cfg.core==='Fire Rated PB'?'selected':''}>Fire Rated PB</option>
+              ${(pricing.veneerCores||[]).map(c=>`<option value="${c.label}" ${cfg.core===c.label?'selected':''}>${c.label}</option>`).join('')}
             </select>
           </div>
           <div>
@@ -1232,12 +1251,8 @@ function renderAdminModal(){
 
   // Veneer species table — core-tabbed
   _adminVeneerCore = _adminVeneerCore || 'frmdf';
+  renderVeneerCoreTabs();
   renderVeneerPricingTable();
-  // Sync tab button active states
-  ['mdf','frmdf','pb','frpb'].forEach(c => {
-    const btn = document.getElementById('vcore-tab-'+c);
-    if(btn){ btn.classList.toggle('btn-primary', c===_adminVeneerCore); btn.classList.toggle('btn-ghost', c!==_adminVeneerCore); }
-  });
 
   // Lumber pricing
   const lb = document.getElementById('lumberPricingBody');
@@ -1414,6 +1429,52 @@ function renderProductsTab(){
   cont.innerHTML = html;
 }
 
+function renderVeneerCoreTabs(){
+  const wrap = document.getElementById('veneer-core-tabs');
+  if(!wrap) return;
+  const cores = pricing.veneerCores || [];
+  const builtinKeys = ['frmdf','mdf','pb','frpb'];
+  wrap.innerHTML = cores.map(c => {
+    const isActive = c.key === _adminVeneerCore;
+    const canRemove = !builtinKeys.includes(c.key);
+    return `<span style="display:inline-flex;align-items:center;gap:2px">
+      <button id="vcore-tab-${c.key}" class="${isActive?'btn-primary':'btn-ghost'}"
+        onclick="setVeneerCore('${c.key}')" style="padding:5px 12px;font-size:12px">${c.label}</button>${
+      canRemove ? `<button onclick="removeVeneerCore('${c.key}')" title="Remove core" style="background:none;border:none;color:var(--mid);cursor:pointer;padding:0 3px;font-size:13px;line-height:1">✕</button>` : ''
+    }</span>`;
+  }).join('') + `<button class="btn-ghost" onclick="addVeneerCore()" style="padding:5px 12px;font-size:12px">+ Add Core</button>`;
+}
+
+function addVeneerCore(){
+  const label = prompt('New core name (e.g. "Plywood" or "LVL"):');
+  if(!label || !label.trim()) return;
+  const l = label.trim();
+  const key = l.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'') || ('core'+Date.now());
+  if((pricing.veneerCores||[]).find(c => c.key === key || c.label === l)){
+    showToast('A core with that name already exists'); return;
+  }
+  if(!pricing.veneerCores) pricing.veneerCores = [];
+  pricing.veneerCores.push({ key, label: l });
+  ensureAllCoreKeys();
+  localStorage.setItem('lbiq_pricing', JSON.stringify(pricing));
+  _adminVeneerCore = key;
+  renderVeneerCoreTabs();
+  renderVeneerPricingTable();
+  renderVeneerConfigs();
+  showToast('Core "'+l+'" added');
+}
+
+function removeVeneerCore(key){
+  const core = (pricing.veneerCores||[]).find(c => c.key === key);
+  if(!core) return;
+  if(!confirm('Remove core "'+core.label+'"? Pricing data for this core will be kept but hidden.')) return;
+  pricing.veneerCores = pricing.veneerCores.filter(c => c.key !== key);
+  localStorage.setItem('lbiq_pricing', JSON.stringify(pricing));
+  if(_adminVeneerCore === key) _adminVeneerCore = (pricing.veneerCores[0]||{key:'frmdf'}).key;
+  renderVeneerCoreTabs();
+  renderVeneerPricingTable();
+}
+
 function renderVeneerPricingTable(){
   const vb = document.getElementById('veneerPricingBody');
   if(!vb) return;
@@ -1436,11 +1497,8 @@ function renderVeneerPricingTable(){
 
 function setVeneerCore(c){
   _adminVeneerCore = c;
+  renderVeneerCoreTabs();
   renderVeneerPricingTable();
-  ['mdf','frmdf','pb','frpb'].forEach(core => {
-    const btn = document.getElementById('vcore-tab-'+core);
-    if(btn){ btn.classList.toggle('btn-primary', core===c); btn.classList.toggle('btn-ghost', core!==c); }
-  });
 }
 
 function vPriceInput(el){
@@ -1575,6 +1633,7 @@ function populateProductFormSelects(){
   const pSel = document.getElementById('apf-pspecies');
   const lSel = document.getElementById('apf-lspecies');
   const catSel = document.getElementById('apf-category');
+  const pcoreSel = document.getElementById('apf-pcore');
   if(pSel){
     const vSpecs = Object.keys(pricing.veneerSpecies).filter(s => s !== 'Custom');
     pSel.innerHTML = vSpecs.map(s=>`<option value="${s}">${s}</option>`).join('');
@@ -1586,6 +1645,9 @@ function populateProductFormSelects(){
   if(catSel){
     const cats = pricing.productCategories || [];
     catSel.innerHTML = '<option value="0">— No Category —</option>' + cats.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  }
+  if(pcoreSel){
+    pcoreSel.innerHTML = (pricing.veneerCores||[]).map(c=>`<option value="${c.label}">${c.label}</option>`).join('');
   }
 }
 
@@ -1671,7 +1733,7 @@ function addCustomSpecies(type){
   if(!name || !name.trim()) return;
   const n = name.trim();
   if(type === 'veneer'){
-    if(!pricing.veneerSpecies[n]) pricing.veneerSpecies[n] = blankVeneerSpecies();
+    if(!pricing.veneerSpecies[n]){ pricing.veneerSpecies[n] = blankVeneerSpecies(); ensureAllCoreKeys(); }
   } else {
     if(!pricing.lumberSpecies[n]) pricing.lumberSpecies[n] = {price:0, resaw:false};
   }
@@ -1781,6 +1843,12 @@ function showToast(msg){
   });
   if(!pricing.standardProducts) pricing.standardProducts = [];
   if(!pricing.productCategories) pricing.productCategories = [];
+  if(!pricing.veneerCores) pricing.veneerCores = deepCopy(dp.veneerCores);
+  // Add any built-in cores missing from saved data
+  dp.veneerCores.forEach(dc => {
+    if(!pricing.veneerCores.find(c => c.key === dc.key)) pricing.veneerCores.unshift(dc);
+  });
+  ensureAllCoreKeys();
   productCounter = Math.max(0, ...pricing.standardProducts.map(p => p.id || 0));
   categoryCounter = Math.max(0, ...pricing.productCategories.map(c => c.id || 0));
   localStorage.setItem('lbiq_pricing', JSON.stringify(pricing));
