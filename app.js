@@ -1838,6 +1838,8 @@ function importPricing(input){
 }
 
 // --- CALCULATORS ------------------------------------------------------
+function r2(n){ return Math.round(n * 100) / 100; }
+
 function calcBF(){
   const w = parseFloat(document.getElementById('bf-width').value) || 0;
   const t = parseFloat(document.getElementById('bf-thick').value) || 0;
@@ -1853,7 +1855,7 @@ function calcLFfromSqft(){
   const w = parseFloat(document.getElementById('lf-width').value) || 0;
   const s = parseFloat(document.getElementById('lf-sqft').value) || 0;
   if(!w || !s) return;
-  document.getElementById('lf-lf').value = fmtN(s * 12 / w, 2);
+  document.getElementById('lf-lf').value = r2(s * 12 / w);
 }
 
 function calcSqftFromLF(){
@@ -1861,7 +1863,7 @@ function calcSqftFromLF(){
   const w = parseFloat(document.getElementById('lf-width').value) || 0;
   const l = parseFloat(document.getElementById('lf-lf').value) || 0;
   if(!w || !l) return;
-  document.getElementById('lf-sqft').value = fmtN(l * w / 12, 2);
+  document.getElementById('lf-sqft').value = r2(l * w / 12);
 }
 
 function calcLF(){ calcLFfromSqft(); }
@@ -1872,7 +1874,7 @@ function calcPCfromCount(){
   const l = parseFloat(document.getElementById('pc-l').value) || 0;
   const c = parseFloat(document.getElementById('pc-count').value) || 0;
   if(!w || !l || !c) return;
-  document.getElementById('pc-sqft').value = fmtN(c * w * l / 144, 2);
+  document.getElementById('pc-sqft').value = r2(c * w * l / 144);
 }
 
 function calcCountFromSqft(){
@@ -1881,7 +1883,7 @@ function calcCountFromSqft(){
   const l = parseFloat(document.getElementById('pc-l').value) || 0;
   const s = parseFloat(document.getElementById('pc-sqft').value) || 0;
   if(!w || !l || !s) return;
-  document.getElementById('pc-count').value = fmtN(s * 144 / (w * l), 2);
+  document.getElementById('pc-count').value = r2(s * 144 / (w * l));
 }
 
 function calcPC(){ calcPCfromCount(); }
