@@ -1740,6 +1740,34 @@ function addCustomSpecies(type){
   renderAdminModal();
 }
 
+// --- PRICING EXPORT / IMPORT ------------------------------------------
+function exportPricing(){
+  const json = JSON.stringify(pricing, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'lbiq-pricing.json'; a.click();
+  URL.revokeObjectURL(url);
+  showToast('Pricing exported — open on the other device and import');
+}
+
+function importPricing(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if(!imported.veneerSpecies || !imported.services) { showToast('Invalid pricing file'); return; }
+      if(!confirm('Replace all pricing with the imported data? This cannot be undone.')) return;
+      localStorage.setItem('lbiq_pricing', JSON.stringify(imported));
+      location.reload();
+    } catch(err) { showToast('Could not read file — make sure it is a valid pricing export'); }
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
 // --- TOAST ------------------------------------------------------------
 function showToast(msg){
   let t = document.getElementById('toast');

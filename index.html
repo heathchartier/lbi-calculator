@@ -30,7 +30,8 @@
   --font-mono:'DM Mono',monospace;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:var(--font-body);background:var(--bg);color:var(--ink);min-height:100vh;font-size:15px}
+html{overflow-x:hidden;overscroll-behavior:none}
+body{font-family:var(--font-body);background:var(--bg);color:var(--ink);min-height:100dvh;font-size:15px;overflow-x:hidden;overscroll-behavior:none}
 
 /* ─── LOCK SCREEN ───────────────────────────────────────────────── */
 #lockScreen{
@@ -690,7 +691,9 @@ select option{background:#1e2226}
       </div>
     </div>
 
-    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;flex-wrap:wrap">
+      <button class="btn-ghost" onclick="exportPricing()" style="margin-right:auto" title="Download pricing to transfer to another device">⬇ Export Pricing</button>
+      <label class="btn-ghost" style="cursor:pointer" title="Load pricing exported from another device">⬆ Import Pricing<input type="file" accept=".json" style="display:none" onchange="importPricing(this)"></label>
       <button class="btn-ghost" onclick="closeAdmin()">Cancel</button>
       <button class="btn-primary" onclick="saveAdmin()">Save Changes</button>
     </div>
@@ -719,7 +722,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260626c"></script>
+<script src="app.js?v=20260626d"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });
