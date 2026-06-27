@@ -383,7 +383,10 @@ select option{background:#1e2226}
   main{padding:16px}
   .config-grid{grid-template-columns:1fr 1fr}
   .config-grid .span3{grid-column:span 2}
-  header{padding:0 16px}
+  header{padding:0 12px;gap:8px}
+  .header-badge{display:none}
+  .cutlistiq-link span{display:none}
+  .cutlistiq-link{padding:0 6px;gap:0}
 }
 
 /* ─── PRODUCT CARDS ─────────────────────────────────────────────── */
@@ -444,7 +447,7 @@ select option{background:#1e2226}
     <div class="header-actions">
       <a href="https://cutlistiq.pro" target="_blank" class="cutlistiq-link print-hide">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-        CutListIQ
+        <span>CutListIQ</span>
       </a>
       <button class="icon-btn print-hide" onclick="openSavedJobs()" title="Saved Jobs">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
@@ -840,7 +843,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260627c"></script>
+<script src="app.js?v=20260627d"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });
