@@ -530,19 +530,19 @@ select option{background:#1e2226}
         <!-- Board Feet -->
         <div class="calc-card">
           <div class="calc-title">Board Feet</div>
-          <div class="calc-subtitle">Width × Thickness × Length ÷ 12</div>
+          <div class="calc-subtitle">Enter decimals (0.75) or fractions (3/4 or 1-1/4)</div>
           <div class="calc-fields">
             <div class="calc-row">
               <label>Width</label>
-              <div class="calc-input-wrap"><input type="number" id="bf-width" placeholder="0" min="0" oninput="calcBF()"><span class="calc-unit">in</span></div>
+              <div class="calc-input-wrap"><input type="text" inputmode="decimal" id="bf-width" placeholder='e.g. 3.5 or 3-1/2' oninput="calcBF()"><span class="calc-unit">in</span></div>
             </div>
             <div class="calc-row">
               <label>Thickness</label>
-              <div class="calc-input-wrap"><input type="number" id="bf-thick" placeholder="0" min="0" oninput="calcBF()"><span class="calc-unit">in</span></div>
+              <div class="calc-input-wrap"><input type="text" inputmode="decimal" id="bf-thick" placeholder='e.g. 0.75 or 3/4' oninput="calcBF()"><span class="calc-unit">in</span></div>
             </div>
             <div class="calc-row">
               <label>Length</label>
-              <div class="calc-input-wrap"><input type="number" id="bf-len" placeholder="0" min="0" oninput="calcBF()"><span class="calc-unit">ft</span></div>
+              <div class="calc-input-wrap"><input type="text" inputmode="decimal" id="bf-len" placeholder='e.g. 8 or 7-1/2' oninput="calcBF()"><span class="calc-unit">ft</span></div>
             </div>
             <div class="calc-row">
               <label>Pieces</label>
@@ -551,6 +551,8 @@ select option{background:#1e2226}
           </div>
           <div class="calc-result" id="bf-result">—</div>
           <div class="calc-result-label">Board Feet</div>
+          <div id="bf-stock-label" style="text-align:center;font-size:14px;font-weight:700;margin-top:8px;min-height:20px"></div>
+          <div id="bf-boards-label" style="text-align:center;font-size:12px;color:var(--mid);margin-top:4px;min-height:16px"></div>
         </div>
 
         <!-- Sqft ↔ LF -->
@@ -787,7 +789,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260627k"></script>
+<script src="app.js?v=20260628a"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });

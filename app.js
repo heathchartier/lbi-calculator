@@ -22,6 +22,34 @@ const SUPPLIER_LABELS = { talbert: 'Talbert (Premium)', timber: 'Timber (Standar
 
 function getLBIPassword(){ return localStorage.getItem('lbiq_lbi_password') || 'lbi2024'; }
 
+const STOCK_LOOKUP = [
+  { min:0.1875, max:0.3125, stock:1.0,  label:'Resaw from 4/4',   resaw:true  },
+  { min:0.375,  max:0.4375, stock:1.25, label:'Resaw from 5/4',   resaw:true  },
+  { min:0.5,    max:0.5,    stock:1.5,  label:'Resaw from 6/4',   resaw:true  },
+  { min:0.5625, max:0.8125, stock:1.0,  label:'Milled from 4/4',  resaw:false },
+  { min:0.875,  max:1.0625, stock:1.25, label:'Milled from 5/4',  resaw:false },
+  { min:1.125,  max:1.3125, stock:1.5,  label:'Milled from 6/4',  resaw:false },
+  { min:1.375,  max:1.8125, stock:2.0,  label:'Milled from 8/4',  resaw:false },
+  { min:1.875,  max:2.3125, stock:2.5,  label:'Milled from 10/4', resaw:false },
+  { min:2.375,  max:2.8125, stock:3.0,  label:'Milled from 12/4', resaw:false },
+  { min:2.875,  max:3.8125, stock:4.0,  label:'Milled from 16/4', resaw:false },
+];
+
+function parseFraction(str){
+  str = (str||'').trim();
+  if(!str) return NaN;
+  if(!isNaN(str)) return parseFloat(str);
+  // Mixed: "1-1/4" or "1 1/4"
+  const mixed = str.match(/^(\d+)[\s\-]+(\d+)\/(\d+)$/);
+  if(mixed) return parseInt(mixed[1]) + parseInt(mixed[2])/parseInt(mixed[3]);
+  // Simple fraction: "3/4"
+  const frac = str.match(/^(\d+)\/(\d+)$/);
+  if(frac) return parseInt(frac[1])/parseInt(frac[2]);
+  return NaN;
+}
+
+function getStockInfo(t){ return STOCK_LOOKUP.find(s => t >= s.min && t <= s.max) || null; }
+
 // --- MILL LOOKUP TABLES ----------------------------------------------
 // Width waste factor: additional inches lost per rip (includes saw kerf + edge prep)
 // Source: mill production guide
@@ -1885,13 +1913,38 @@ function importPricing(input){
 function r2(n){ return Math.round(n * 100) / 100; }
 
 function calcBF(){
-  const w = parseFloat(document.getElementById('bf-width').value) || 0;
-  const t = parseFloat(document.getElementById('bf-thick').value) || 0;
-  const l = parseFloat(document.getElementById('bf-len').value) || 0;
+  const w = parseFraction(document.getElementById('bf-width').value);
+  const t = parseFraction(document.getElementById('bf-thick').value);
+  const l = parseFraction(document.getElementById('bf-len').value);
   const q = parseFloat(document.getElementById('bf-qty').value) || 1;
-  const el = document.getElementById('bf-result');
-  if(!w || !t || !l){ el.textContent = '—'; return; }
-  el.textContent = fmtN((w * t * l * q) / 12, 2);
+  const el       = document.getElementById('bf-result');
+  const stockEl  = document.getElementById('bf-stock-label');
+  const boardsEl = document.getElementById('bf-boards-label');
+
+  if(!w || !t || !l || isNaN(w) || isNaN(t) || isNaN(l)){
+    el.textContent = '—'; stockEl.textContent = ''; boardsEl.textContent = ''; return;
+  }
+
+  const info = getStockInfo(t);
+  const stockThick = info ? info.stock : t;
+  const boardsNeeded = (info && info.resaw) ? Math.ceil(q / 2) : q;
+  const bf = (w * stockThick * l * boardsNeeded) / 12;
+
+  el.textContent = fmtN(bf, 2);
+
+  if(info){
+    stockEl.textContent = info.label;
+    stockEl.style.color = info.resaw ? 'var(--gold)' : 'var(--teal)';
+    if(info.resaw){
+      boardsEl.textContent = `${q} pcs → ${boardsNeeded} board${boardsNeeded!==1?'s':''} needed (2 pcs per board)`;
+    } else {
+      boardsEl.textContent = '';
+    }
+  } else if(t > 0){
+    stockEl.style.color = 'var(--mid)';
+    stockEl.textContent = 'Thickness not in standard range — using as entered';
+    boardsEl.textContent = '';
+  }
 }
 
 function calcLFfromSqft(){
