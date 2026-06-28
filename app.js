@@ -1,6 +1,6 @@
 
 // --- CONSTANTS -------------------------------------------------------
-const ADMIN_PASSWORD = 'Millwork2024';
+function getAdminPassword(){ return localStorage.getItem('lbiq_admin_password') || 'Millwork2024'; }
 const KERF = 0.125;
 const RESAW_KERF = 0.0625;   // thin-kerf blade for resaw/rip operations on 2x6
 const TWO_X_SIX_T = 1.5;    // 2x6 actual thickness (inches)
@@ -203,15 +203,23 @@ function activateApp(isAdmin){
 
 function unlock(){
   const v = document.getElementById('lockPw').value.trim();
-  const isAdmin = (v === ADMIN_PASSWORD);
+  const isAdmin = (v === getAdminPassword());
   const isUser  = (v === getLBIPassword());
   if(isAdmin || isUser){
     saveSession(isAdmin ? 'admin' : 'user');
     activateApp(isAdmin);
   } else {
-    document.getElementById('lockErr').textContent = 'Incorrect password. Try again.';
-    document.getElementById('lockPw').value = '';
-    setTimeout(() => document.getElementById('lockErr').textContent = '', 3000);
+    const pw = document.getElementById('lockPw');
+    const err = document.getElementById('lockErr');
+    err.textContent = 'Incorrect password — try again.';
+    pw.value = '';
+    pw.classList.add('pw-shake');
+    pw.style.borderColor = 'var(--red)';
+    setTimeout(() => {
+      err.textContent = '';
+      pw.classList.remove('pw-shake');
+      pw.style.borderColor = '';
+    }, 2500);
   }
 }
 document.getElementById('lockPw').addEventListener('keydown', e => { if(e.key === 'Enter') unlock(); });
@@ -1355,7 +1363,9 @@ function renderAdminModal(){
 }
 
 function saveAdmin(){
-  // LBI password
+  // Passwords
+  const adminPw = document.getElementById('admin-admin-password')?.value?.trim();
+  if(adminPw) localStorage.setItem('lbiq_admin_password', adminPw);
   const lbiPw = document.getElementById('admin-lbi-password')?.value?.trim();
   if(lbiPw) localStorage.setItem('lbiq_lbi_password', lbiPw);
 

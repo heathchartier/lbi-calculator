@@ -56,7 +56,9 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--ink);min-heig
   transition:border-color .2s;text-align:center;
 }
 #lockPw:focus{border-color:var(--teal)}
-#lockErr{color:var(--red);font-size:13px;text-align:center;min-height:18px}
+#lockErr{color:var(--red);font-size:14px;font-weight:600;text-align:center;min-height:20px}
+@keyframes pw-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
+.pw-shake{animation:pw-shake .4s ease;border-color:var(--red)!important}
 .btn-primary{
   background:var(--teal);color:#0f1112;border:none;border-radius:var(--r);
   font-family:var(--font-head);font-size:17px;font-weight:700;letter-spacing:.5px;
@@ -636,12 +638,17 @@ select option{background:#1e2226}
 
     <!-- LBI Access Password -->
     <div class="modal-section">
-      <h3>LBI Access Password</h3>
-      <p style="font-size:12px;color:var(--mid);margin-bottom:12px">Change the password LBI uses to log in. Save to apply.</p>
-      <div style="display:flex;gap:12px;align-items:flex-end;max-width:340px">
-        <div style="flex:1">
+      <h3>Passwords</h3>
+      <p style="font-size:12px;color:var(--mid);margin-bottom:12px">Leave blank to keep the current password. Save to apply.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:500px">
+        <div>
+          <label class="field-label">Admin Password (you)</label>
+          <input type="text" id="admin-admin-password" placeholder="Leave blank to keep current" autocomplete="off"
+            style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+        </div>
+        <div>
           <label class="field-label">LBI Password</label>
-          <input type="text" id="admin-lbi-password" placeholder="lbi2024" autocomplete="off"
+          <input type="text" id="admin-lbi-password" placeholder="Leave blank to keep current" autocomplete="off"
             style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
         </div>
       </div>
@@ -780,7 +787,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260627i"></script>
+<script src="app.js?v=20260627j"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });
