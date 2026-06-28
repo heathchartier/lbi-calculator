@@ -47,8 +47,10 @@ function blankVeneerSpecies(overrides){
   ['talbert','timber'].forEach(s => {
     out[s+'_eb_roll'] = 0;
     ['A3','AA'].forEach(g => ['4x8','4x10'].forEach(sz => ['mdf','frmdf','pb','frpb'].forEach(c => {
-      out[`${s}_${g}_${sz}_${c}`] = 0;
-      out[`${s}_${g}_${sz}_${c}_satin`] = 0;
+      THICK_OPTIONS.forEach(({key:t}) => {
+        out[`${s}_${g}_${sz}_${c}_${t}`] = 0;
+        out[`${s}_${g}_${sz}_${c}_${t}_satin`] = 0;
+      });
     })));
   });
   return Object.assign(out, overrides || {});
@@ -67,9 +69,26 @@ function ensureAllCoreKeys(){
     ['talbert','timber'].forEach(s => {
       if(p[s+'_eb_roll'] === undefined) p[s+'_eb_roll'] = 0;
       ['A3','AA'].forEach(g => ['4x8','4x10'].forEach(sz => cores.forEach(c => {
-        const k = `${s}_${g}_${sz}_${c}`;
-        if(p[k]          === undefined) p[k]          = 0;
-        if(p[k+'_satin'] === undefined) p[k+'_satin'] = 0;
+        THICK_OPTIONS.forEach(({key:t}) => {
+          const k = `${s}_${g}_${sz}_${c}_${t}`;
+          if(p[k]          === undefined) p[k]          = 0;
+          if(p[k+'_satin'] === undefined) p[k+'_satin'] = 0;
+        });
+      })));
+    });
+  });
+}
+
+function migrateThicknessKeys(){
+  const cores = (pricing.veneerCores||[]).map(c => c.key);
+  Object.values(pricing.veneerSpecies||{}).forEach(p => {
+    ['talbert','timber'].forEach(s => {
+      ['A3','AA'].forEach(g => ['4x8','4x10'].forEach(sz => cores.forEach(c => {
+        const old = `${s}_${g}_${sz}_${c}`;
+        const nw  = `${s}_${g}_${sz}_${c}_075`;
+        if((p[old]||0) > 0 && !(p[nw]||0)) p[nw] = p[old];
+        const oldS = old+'_satin', nwS = nw+'_satin';
+        if((p[oldS]||0) > 0 && !(p[nwS]||0)) p[nwS] = p[oldS];
       })));
     });
   });
@@ -136,6 +155,15 @@ let _dragProdId = null;
 let _dragCatId = null;
 let _adminVeneerCore   = 'frmdf';
 let _adminVeneerFinish = 'standard';
+let _adminVeneerThick  = '075';
+
+const THICK_OPTIONS = [
+  { key:'025', label:'1/4"' },
+  { key:'050', label:'1/2"' },
+  { key:'075', label:'3/4"' },
+  { key:'100', label:'1"'   },
+];
+function thickToKey(t){ return { '1/4"':'025','1/2"':'050','3/4"':'075','1"':'100' }[t] || '075'; }
 
 function deepCopy(o){ return JSON.parse(JSON.stringify(o)); }
 
@@ -229,12 +257,13 @@ function markDirty(){ isDirty = true; }
 function getSupplier(){ return document.getElementById('jobSupplier')?.value || 'talbert'; }
 
 // --- SPECIES VISIBILITY -----------------------------------------------
-function visibleVeneerSpecies(orientation, supplier, core){
-  const sup = supplier || 'talbert';
+function visibleVeneerSpecies(orientation, supplier, core, thickness){
+  const sup   = supplier || 'talbert';
   const grade = orientation === 'Vertical' ? 'AA' : 'A3';
   const c = coreToKey(core || 'Fire Rated MDF');
+  const t = thickToKey(thickness || '3/4"');
   return Object.entries(pricing.veneerSpecies).filter(([,p]) => {
-    return (p[`${sup}_${grade}_4x8_${c}`]||0) > 0 || (p[`${sup}_${grade}_4x10_${c}`]||0) > 0;
+    return (p[`${sup}_${grade}_4x8_${c}_${t}`]||0) > 0 || (p[`${sup}_${grade}_4x10_${c}_${t}`]||0) > 0;
   }).map(([name]) => name);
 }
 function visibleLumberSpecies(){
@@ -245,7 +274,7 @@ function visibleLumberSpecies(){
 function addVeneerConfig(){
   const id = ++veneerCounter;
   const cfg = {
-    id, orientation:'Horizontal', species:'', core:'Fire Rated MDF',
+    id, orientation:'Horizontal', species:'', core:'Fire Rated MDF', thickness:'3/4"',
     grade:'timber',
     panelW:0, panelL:0, slatW:0, slatL:0, slatsPerPanel:0,
     bracketsPerPanel:0, ebSides:4, assembly:false, satinFinish:false, notes:'',
@@ -267,7 +296,7 @@ function renderVeneerConfigs(){
   cont.innerHTML = '';
   veneerConfigs.forEach(cfg => {
     if(!cfg.grade) cfg.grade = 'talbert';
-    const species = visibleVeneerSpecies(cfg.orientation, cfg.grade, cfg.core);
+    const species = visibleVeneerSpecies(cfg.orientation, cfg.grade, cfg.core, cfg.thickness);
     if(!cfg.species && species.length > 0) cfg.species = species[0];
 
     const modeLabels = {sqft:'By Sq Ft', slats:'By Slat Count', panels:'By Panel Count'};
@@ -316,6 +345,12 @@ function renderVeneerConfigs(){
             <label class="field-label">Panel Core</label>
             <select id="v-core-${cfg.id}" onchange="vUpdate(${cfg.id})">
               ${(pricing.veneerCores||[]).map(c=>`<option value="${c.label}" ${cfg.core===c.label?'selected':''}>${c.label}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Thickness</label>
+            <select id="v-thick-${cfg.id}" onchange="vUpdate(${cfg.id})">
+              ${THICK_OPTIONS.map(({label})=>`<option value="${label}" ${cfg.thickness===label?'selected':''}>${label}</option>`).join('')}
             </select>
           </div>
           <div>
@@ -393,7 +428,8 @@ function vUpdate(id){
   if(!cfg) return;
   cfg.orientation    = document.getElementById('v-orient-'+id)?.value || cfg.orientation;
   cfg.grade          = document.getElementById('v-grade-'+id)?.value || cfg.grade || 'talbert';
-  cfg.core           = document.getElementById('v-core-'+id)?.value || cfg.core;
+  cfg.core           = document.getElementById('v-core-'+id)?.value  || cfg.core;
+  cfg.thickness      = document.getElementById('v-thick-'+id)?.value || cfg.thickness || '3/4"';
   cfg.panelW         = parseFloat(document.getElementById('v-panelW-'+id)?.value) || cfg.panelW;
   cfg.panelL         = parseFloat(document.getElementById('v-panelL-'+id)?.value) || cfg.panelL;
   cfg.slatW          = parseFloat(document.getElementById('v-slatW-'+id)?.value) || cfg.slatW;
@@ -411,7 +447,7 @@ function vUpdate(id){
 
   // update species dropdown when orientation or grade changes — read current selection first
   const selectedSpecies = document.getElementById('v-species-'+id)?.value || cfg.species;
-  const specs = visibleVeneerSpecies(cfg.orientation, cfg.grade, cfg.core);
+  const specs = visibleVeneerSpecies(cfg.orientation, cfg.grade, cfg.core, cfg.thickness);
   const sel = document.getElementById('v-species-'+id);
   if(sel){
     sel.innerHTML = specs.length === 0
@@ -505,9 +541,10 @@ function calcVeneerCost(cfg){
   const slatsPerSheet = Math.max(1, colsPerSheet * rowsPerSheet);
   const sheetsNeeded  = Math.ceil(totalSlats / slatsPerSheet);
 
-  const coreK = coreToKey(cfg.core || 'Fire Rated MDF');
+  const coreK  = coreToKey(cfg.core || 'Fire Rated MDF');
+  const thickK = thickToKey(cfg.thickness || '3/4"');
   const finishSuffix = cfg.satinFinish ? '_satin' : '';
-  const sheetPrice = sData[`${sup}_${grade}_4x8_${coreK}${finishSuffix}`] || 0;
+  const sheetPrice = sData[`${sup}_${grade}_4x8_${coreK}_${thickK}${finishSuffix}`] || 0;
   const sheetCost  = cfg.species === 'Custom' && cfg.customPricePerPanel
     ? panelQty * cfg.customPricePerPanel
     : sheetsNeeded * sheetPrice;
@@ -1264,7 +1301,9 @@ function renderAdminModal(){
   // Veneer species table — finish + core tabbed
   _adminVeneerCore   = _adminVeneerCore   || 'frmdf';
   _adminVeneerFinish = _adminVeneerFinish || 'standard';
+  _adminVeneerThick  = _adminVeneerThick  || '075';
   renderVeneerFinishTabs();
+  renderVeneerThickTabs();
   renderVeneerCoreTabs();
   renderVeneerPricingTable();
 
@@ -1453,6 +1492,21 @@ function renderProductsTab(){
   cont.innerHTML = html;
 }
 
+function renderVeneerThickTabs(){
+  const wrap = document.getElementById('veneer-thick-tabs');
+  if(!wrap) return;
+  wrap.innerHTML = THICK_OPTIONS.map(({key,label}) =>
+    `<button class="${_adminVeneerThick===key?'btn-primary':'btn-ghost'}"
+      onclick="setVeneerThick('${key}')" style="padding:5px 14px;font-size:12px">${label}</button>`
+  ).join('');
+}
+
+function setVeneerThick(t){
+  _adminVeneerThick = t;
+  renderVeneerThickTabs();
+  renderVeneerPricingTable();
+}
+
 function renderVeneerFinishTabs(){
   const wrap = document.getElementById('veneer-finish-tabs');
   if(!wrap) return;
@@ -1519,7 +1573,8 @@ function removeVeneerCore(key){
 function renderVeneerPricingTable(){
   const vb = document.getElementById('veneerPricingBody');
   if(!vb) return;
-  const c = _adminVeneerCore;
+  const c  = _adminVeneerCore;
+  const t  = _adminVeneerThick;
   const fs = _adminVeneerFinish === 'satin' ? '_satin' : '';
   vb.innerHTML = Object.entries(pricing.veneerSpecies).map(([name, p]) => {
     const inp = (key) => `<input type="number" class="admin-price-input" value="${p[key]||0}" step="1" data-species="${name}" data-key="${key}" oninput="vPriceInput(this)">`;
@@ -1527,10 +1582,10 @@ function renderVeneerPricingTable(){
       <tr>
         ${sup==='talbert' ? `<td rowspan="2" style="font-weight:600;white-space:nowrap;vertical-align:middle">${name}</td>` : ''}
         <td style="font-size:11px;font-weight:700;letter-spacing:.5px;color:${color};white-space:nowrap">${label}</td>
-        <td>${inp(`${sup}_A3_4x8_${c}${fs}`)}</td>
-        <td>${inp(`${sup}_A3_4x10_${c}${fs}`)}</td>
-        <td>${inp(`${sup}_AA_4x8_${c}${fs}`)}</td>
-        <td>${inp(`${sup}_AA_4x10_${c}${fs}`)}</td>
+        <td>${inp(`${sup}_A3_4x8_${c}_${t}${fs}`)}</td>
+        <td>${inp(`${sup}_A3_4x10_${c}_${t}${fs}`)}</td>
+        <td>${inp(`${sup}_AA_4x8_${c}_${t}${fs}`)}</td>
+        <td>${inp(`${sup}_AA_4x10_${c}_${t}${fs}`)}</td>
         <td>${inp(`${sup}_eb_roll`)}</td>
       </tr>`;
     return row('talbert','Talbert','var(--teal)') + row('timber','Timber','var(--gold)');
@@ -1754,6 +1809,7 @@ async function fetchCloudPricing(){
   if(!pricing.productCategories) pricing.productCategories = [];
   if(!pricing.veneerCores) pricing.veneerCores = deepCopy(DEFAULT_PRICING.veneerCores);
   ensureAllCoreKeys();
+  migrateThicknessKeys();
   productCounter = Math.max(0, ...((pricing.standardProducts||[]).map(p=>p.id||0)));
   categoryCounter = Math.max(0, ...((pricing.productCategories||[]).map(c=>c.id||0)));
 }
@@ -1976,6 +2032,7 @@ function showToast(msg){
     if(!pricing.veneerCores.find(c => c.key === dc.key)) pricing.veneerCores.unshift(dc);
   });
   ensureAllCoreKeys();
+  migrateThicknessKeys();
   productCounter = Math.max(0, ...pricing.standardProducts.map(p => p.id || 0));
   categoryCounter = Math.max(0, ...pricing.productCategories.map(c => c.id || 0));
   localStorage.setItem('lbiq_pricing', JSON.stringify(pricing));

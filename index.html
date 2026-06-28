@@ -658,6 +658,7 @@ select option{background:#1e2226}
       <h3>Veneer Panel Pricing (per sheet)</h3>
       <p style="font-size:12px;color:var(--mid);margin-bottom:10px">A3 = Horizontal slats &nbsp;|&nbsp; AA = Vertical slats &nbsp;|&nbsp; Set to $0 to hide from LBI</p>
       <div id="veneer-finish-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center"></div>
+      <div id="veneer-thick-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center"></div>
       <div id="veneer-core-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center"></div>
       <div style="overflow-x:auto">
         <table class="pricing-table" id="veneerPricingTable">
@@ -779,7 +780,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260627h"></script>
+<script src="app.js?v=20260627i"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });
