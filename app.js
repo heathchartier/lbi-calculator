@@ -1,6 +1,13 @@
 
 // --- CONSTANTS -------------------------------------------------------
 function getAdminPassword(){ return localStorage.getItem('lbiq_admin_password') || 'Millwork2024'; }
+const THICK_OPTIONS = [
+  { key:'025', label:'1/4"' },
+  { key:'050', label:'1/2"' },
+  { key:'075', label:'3/4"' },
+  { key:'100', label:'1"'   },
+];
+function thickToKey(t){ return { '1/4"':'025','1/2"':'050','3/4"':'075','1"':'100' }[t] || '075'; }
 const KERF = 0.125;
 const RESAW_KERF = 0.0625;   // thin-kerf blade for resaw/rip operations on 2x6
 const TWO_X_SIX_T = 1.5;    // 2x6 actual thickness (inches)
@@ -156,14 +163,6 @@ let _dragCatId = null;
 let _adminVeneerCore   = 'frmdf';
 let _adminVeneerFinish = 'standard';
 let _adminVeneerThick  = '075';
-
-const THICK_OPTIONS = [
-  { key:'025', label:'1/4"' },
-  { key:'050', label:'1/2"' },
-  { key:'075', label:'3/4"' },
-  { key:'100', label:'1"'   },
-];
-function thickToKey(t){ return { '1/4"':'025','1/2"':'050','3/4"':'075','1"':'100' }[t] || '075'; }
 
 function deepCopy(o){ return JSON.parse(JSON.stringify(o)); }
 
