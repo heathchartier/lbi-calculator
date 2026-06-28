@@ -1854,31 +1854,36 @@ async function fetchCloudPricing(){
 async function pushCloudPricing(){
   const token = localStorage.getItem('lbiq_gh_token');
   if(!token) return { ok:false, msg:'No token' };
-  try {
-    const url = 'https://api.github.com/repos/heathchartier/lbi-calculator/contents/pricing.json';
-    const headers = {
-      'Authorization':`Bearer ${token}`,
-      'Accept':'application/vnd.github.v3+json',
-      'Content-Type':'application/json'
-    };
-    let sha;
-    const getResp = await fetch(url, { headers });
-    if(getResp.ok){ sha = (await getResp.json()).sha; localStorage.setItem('lbiq_cloud_sha', sha); }
-    else if(getResp.status !== 404) return { ok:false, msg:'Could not connect to GitHub' };
-    const body = {
-      message:'Update pricing from admin',
-      content: btoa(unescape(encodeURIComponent(JSON.stringify(pricing, null, 2))))
-    };
-    if(sha) body.sha = sha;
-    const putResp = await fetch(url, { method:'PUT', headers, body:JSON.stringify(body) });
-    if(putResp.ok){
-      const d = await putResp.json();
-      localStorage.setItem('lbiq_cloud_sha', d.content.sha);
-      return { ok:true };
-    }
-    const err = await putResp.json();
-    return { ok:false, msg: err.message || `Error ${putResp.status}` };
-  } catch(e){ return { ok:false, msg:'Network error' }; }
+  const url = 'https://api.github.com/repos/heathchartier/lbi-calculator/contents/pricing.json';
+  const headers = {
+    'Authorization':`Bearer ${token}`,
+    'Accept':'application/vnd.github.v3+json',
+    'Content-Type':'application/json'
+  };
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(pricing, null, 2))));
+  async function tryPush(retries){
+    try {
+      let sha;
+      const getResp = await fetch(url, { headers });
+      if(getResp.ok){ sha = (await getResp.json()).sha; }
+      else if(getResp.status === 401) return { ok:false, msg:'Token invalid or expired — re-paste in Admin → Cloud Sync' };
+      else if(getResp.status !== 404) return { ok:false, msg:'Could not reach GitHub' };
+      const body = { message:'Update pricing from admin', content };
+      if(sha) body.sha = sha;
+      const putResp = await fetch(url, { method:'PUT', headers, body:JSON.stringify(body) });
+      if(putResp.ok){
+        const d = await putResp.json();
+        localStorage.setItem('lbiq_cloud_sha', d.content.sha);
+        return { ok:true };
+      }
+      const err = await putResp.json();
+      // SHA mismatch — retry once with a fresh GET
+      if(putResp.status === 409 && retries > 0) return tryPush(retries - 1);
+      if(putResp.status === 401) return { ok:false, msg:'Token invalid or expired — re-paste in Admin → Cloud Sync' };
+      return { ok:false, msg: err.message || `Error ${putResp.status}` };
+    } catch(e){ return { ok:false, msg:'Network error' }; }
+  }
+  return tryPush(1);
 }
 
 // --- PRICING EXPORT / IMPORT ------------------------------------------

@@ -534,15 +534,15 @@ select option{background:#1e2226}
           <div class="calc-fields">
             <div class="calc-row">
               <label>Width</label>
-              <div class="calc-input-wrap"><input type="text" inputmode="decimal" id="bf-width" placeholder='e.g. 3.5 or 3-1/2' oninput="calcBF()"><span class="calc-unit">in</span></div>
+              <div class="calc-input-wrap"><input type="text" id="bf-width" placeholder='e.g. 3.5 or 3-1/2' autocorrect="off" autocapitalize="none" oninput="calcBF()"><span class="calc-unit">in</span></div>
             </div>
             <div class="calc-row">
               <label>Thickness</label>
-              <div class="calc-input-wrap"><input type="text" inputmode="decimal" id="bf-thick" placeholder='e.g. 0.75 or 3/4' oninput="calcBF()"><span class="calc-unit">in</span></div>
+              <div class="calc-input-wrap"><input type="text" id="bf-thick" placeholder='e.g. 0.75 or 3/4' autocorrect="off" autocapitalize="none" oninput="calcBF()"><span class="calc-unit">in</span></div>
             </div>
             <div class="calc-row">
               <label>Length</label>
-              <div class="calc-input-wrap"><input type="text" inputmode="decimal" id="bf-len" placeholder='e.g. 8 or 7-1/2' oninput="calcBF()"><span class="calc-unit">ft</span></div>
+              <div class="calc-input-wrap"><input type="text" id="bf-len" placeholder='e.g. 8 or 7-1/2' autocorrect="off" autocapitalize="none" oninput="calcBF()"><span class="calc-unit">ft</span></div>
             </div>
             <div class="calc-row">
               <label>Pieces</label>
@@ -630,7 +630,7 @@ select option{background:#1e2226}
       <p style="font-size:12px;color:var(--mid);margin-bottom:12px">When configured, saving here auto-pushes pricing to the cloud so LBI's phones get it the next time they open the app — no manual steps for them.</p>
       <div style="max-width:420px">
         <label class="field-label">GitHub Token</label>
-        <input type="password" id="admin-gh-token" placeholder="Paste token here to update" autocomplete="new-password"
+        <input type="text" id="admin-gh-token" placeholder="Paste token here to update" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
           style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%;font-family:var(--font-mono);font-size:12px">
         <p style="font-size:11px;color:var(--mid);margin-top:6px">
           One-time setup: <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" style="color:var(--teal)">github.com → Settings → Fine-grained token</a> → select repo <strong>heathchartier/lbi-calculator</strong> → Contents: Read &amp; write → paste above &amp; Save.
@@ -789,7 +789,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260628a"></script>
+<script src="app.js?v=20260628b"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });
