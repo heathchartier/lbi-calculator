@@ -20,7 +20,7 @@ const EB_ROLL_FEET   = 500;
 const EB_WASTE_FACTOR = 1.1;
 const SUPPLIER_LABELS = { talbert: 'Talbert (Premium)', timber: 'Timber (Standard)' };
 
-function getLBIPassword(){ return localStorage.getItem('lbiq_lbi_password') || 'lbi2024'; }
+function getLBIPassword(){ return pricing?.lbiPassword || localStorage.getItem('lbiq_lbi_password') || 'lbi2024'; }
 
 const STOCK_LOOKUP = [
   { min:0.1875, max:0.3125, stock:1.0,  label:'Resaw from 4/4',   resaw:true  },
@@ -1419,7 +1419,7 @@ function saveAdmin(){
   const adminPw = document.getElementById('admin-admin-password')?.value?.trim();
   if(adminPw) localStorage.setItem('lbiq_admin_password', adminPw);
   const lbiPw = document.getElementById('admin-lbi-password')?.value?.trim();
-  if(lbiPw) localStorage.setItem('lbiq_lbi_password', lbiPw);
+  if(lbiPw){ localStorage.setItem('lbiq_lbi_password', lbiPw); pricing.lbiPassword = lbiPw; }
 
   // Markup
   ['panels','edgeBand','lumber','milling','assembly','ebService','cutService','brackets'].forEach(k => {
@@ -2147,6 +2147,12 @@ function showToast(msg){
   migrateThicknessKeys();
   productCounter = Math.max(0, ...pricing.standardProducts.map(p => p.id || 0));
   categoryCounter = Math.max(0, ...pricing.productCategories.map(c => c.id || 0));
+  // Migrate localStorage LBI password into pricing so it syncs to cloud
+  if(!pricing.lbiPassword){
+    const savedPw = localStorage.getItem('lbiq_lbi_password');
+    if(savedPw) pricing.lbiPassword = savedPw;
+  }
+
   localStorage.setItem('lbiq_pricing', JSON.stringify(pricing));
 
   // Fetch cloud pricing then start session (3s timeout so offline never blocks)
