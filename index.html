@@ -627,7 +627,8 @@ select option{background:#1e2226}
     <!-- Cloud Sync -->
     <div class="modal-section">
       <h3 style="display:flex;align-items:center;gap:10px">Cloud Sync <span id="cloud-sync-badge" style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px;background:var(--surf3);color:var(--mid)">Not configured</span></h3>
-      <p style="font-size:12px;color:var(--mid);margin-bottom:12px">When configured, saving here auto-pushes pricing to the cloud so LBI's phones get it the next time they open the app — no manual steps for them.</p>
+      <p style="font-size:12px;color:var(--mid);margin-bottom:4px">When configured, saving here auto-pushes pricing to the cloud so LBI's phones get it the next time they open the app — no manual steps for them.</p>
+      <p id="cloud-sync-time" style="font-size:12px;color:var(--teal);margin-bottom:12px"></p>
       <div style="max-width:420px">
         <label class="field-label">GitHub Token</label>
         <input type="text" id="admin-gh-token" placeholder="Paste token here to update" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
@@ -679,13 +680,30 @@ select option{background:#1e2226}
               <th>A3 4×10</th>
               <th>AA 4×8</th>
               <th>AA 4×10</th>
-              <th>EB Roll</th>
             </tr>
           </thead>
           <tbody id="veneerPricingBody"></tbody>
         </table>
       </div>
       <button class="btn-ghost" style="margin-top:12px" onclick="addCustomSpecies('veneer')">+ Add Species</button>
+    </div>
+
+    <!-- Edge Banding Roll Costs -->
+    <div class="modal-section">
+      <h3>Edge Banding Roll Costs</h3>
+      <p style="font-size:12px;color:var(--mid);margin-bottom:12px">Your cost per 500-ft roll, by species. Added to estimates when LBI selects edge banding. Adding a new panel species above automatically adds it here too.</p>
+      <div style="overflow-x:auto">
+        <table class="pricing-table">
+          <thead>
+            <tr>
+              <th>Species</th>
+              <th style="color:var(--teal)">Talbert $/roll</th>
+              <th style="color:var(--gold)">Timber $/roll</th>
+            </tr>
+          </thead>
+          <tbody id="ebPricingBody"></tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Lumber Pricing -->
@@ -789,7 +807,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260628b"></script>
+<script src="app.js?v=20260628c"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });

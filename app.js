@@ -273,8 +273,12 @@ function checkSession(){
 function openAdmin(){
   renderAdminModal();
   document.getElementById('adminModal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
 }
-function closeAdmin(){ document.getElementById('adminModal').classList.add('hidden'); }
+function closeAdmin(){
+  document.getElementById('adminModal').classList.add('hidden');
+  document.body.style.overflow = '';
+}
 
 // --- TABS -------------------------------------------------------------
 function switchTab(name, btn){
@@ -1306,7 +1310,7 @@ function newJob(){
 
 // --- ADMIN MODAL -------------------------------------------------------
 function renderAdminModal(){
-  // Cloud sync badge
+  // Cloud sync badge + last sync time
   const hasToken = !!localStorage.getItem('lbiq_gh_token');
   const badge = document.getElementById('cloud-sync-badge');
   if(badge){
@@ -1314,6 +1318,17 @@ function renderAdminModal(){
     badge.style.background = hasToken ? 'var(--teal-dim)' : 'var(--surf3)';
     badge.style.color = hasToken ? 'var(--teal)' : 'var(--mid)';
   }
+  const lastSync = parseInt(localStorage.getItem('lbiq_last_sync') || '0');
+  const syncEl = document.getElementById('cloud-sync-time');
+  if(syncEl){
+    if(lastSync){
+      const mins = Math.round((Date.now() - lastSync) / 60000);
+      syncEl.textContent = mins < 2 ? 'Last synced: just now' : `Last synced: ${mins} min ago`;
+    } else {
+      syncEl.textContent = 'Cloud sync not yet received on this device';
+    }
+  }
+
   // LBI Password
   const lbiPwEl = document.getElementById('admin-lbi-password');
   if(lbiPwEl) lbiPwEl.value = getLBIPassword();
@@ -1341,6 +1356,7 @@ function renderAdminModal(){
   renderVeneerThickTabs();
   renderVeneerCoreTabs();
   renderVeneerPricingTable();
+  renderEBPricingSection();
 
   // Lumber pricing
   const lb = document.getElementById('lumberPricingBody');
@@ -1623,9 +1639,21 @@ function renderVeneerPricingTable(){
         <td>${inp(`${sup}_A3_4x10_${c}_${t}${fs}`)}</td>
         <td>${inp(`${sup}_AA_4x8_${c}_${t}${fs}`)}</td>
         <td>${inp(`${sup}_AA_4x10_${c}_${t}${fs}`)}</td>
-        <td>${inp(`${sup}_eb_roll`)}</td>
       </tr>`;
     return row('talbert','Talbert','var(--teal)') + row('timber','Timber','var(--gold)');
+  }).join('');
+}
+
+function renderEBPricingSection(){
+  const eb = document.getElementById('ebPricingBody');
+  if(!eb) return;
+  eb.innerHTML = Object.entries(pricing.veneerSpecies).map(([name, p]) => {
+    const inp = (key) => `<input type="number" class="admin-price-input" value="${p[key]||0}" step="1" data-species="${name}" data-key="${key}" oninput="vPriceInput(this)">`;
+    return `<tr>
+      <td style="font-weight:600;white-space:nowrap;vertical-align:middle">${name}</td>
+      <td>${inp('talbert_eb_roll')}</td>
+      <td>${inp('timber_eb_roll')}</td>
+    </tr>`;
   }).join('');
 }
 
@@ -1832,14 +1860,13 @@ function addCustomSpecies(type){
 // --- CLOUD SYNC -------------------------------------------------------
 async function fetchCloudPricing(){
   const resp = await fetch(
-    'https://api.github.com/repos/heathchartier/lbi-calculator/contents/pricing.json',
-    { headers:{ 'Accept':'application/vnd.github.v3+json' }, cache:'no-store' }
+    `https://raw.githubusercontent.com/heathchartier/lbi-calculator/main/pricing.json?_=${Date.now()}`,
+    { cache:'no-store' }
   );
   if(!resp.ok) return;
-  const file = await resp.json();
-  const imported = JSON.parse(atob(file.content.replace(/\n/g,'')));
+  const imported = await resp.json();
   if(!imported.veneerSpecies || !imported.services) return;
-  localStorage.setItem('lbiq_cloud_sha', file.sha);
+  localStorage.setItem('lbiq_last_sync', Date.now());
   localStorage.setItem('lbiq_pricing', JSON.stringify(imported));
   Object.keys(pricing).forEach(k => delete pricing[k]);
   Object.assign(pricing, imported);
