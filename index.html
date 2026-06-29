@@ -429,7 +429,13 @@ select option{background:#1e2226}
   <div class="lock-logo">LBI<span>IQ</span> Calculator</div>
   <div class="lock-card">
     <h2>Enter Access Code</h2>
-    <input type="password" id="lockPw" placeholder="••••••••••••" autocomplete="off" autofocus>
+    <div style="position:relative">
+      <input type="password" id="lockPw" placeholder="••••••••••••" autocomplete="off" autofocus style="padding-right:48px">
+      <button type="button" id="lockPwEye" onclick="toggleLockPwVis()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;color:var(--mid);line-height:0">
+        <svg id="eye-show" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        <svg id="eye-hide" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+      </button>
+    </div>
     <div id="lockErr"></div>
     <button class="btn-primary" onclick="unlock()">Unlock</button>
   </div>
@@ -806,7 +812,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260628e"></script>
+<script src="app.js?v=20260628f"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });

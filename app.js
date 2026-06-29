@@ -227,6 +227,17 @@ function activateApp(isAdmin){
   renderProductsTab();
 }
 
+function toggleLockPwVis(){
+  const pw = document.getElementById('lockPw');
+  const show = document.getElementById('eye-show');
+  const hide = document.getElementById('eye-hide');
+  const visible = pw.type === 'text';
+  pw.type = visible ? 'password' : 'text';
+  show.style.display = visible ? '' : 'none';
+  hide.style.display = visible ? 'none' : '';
+  pw.focus();
+}
+
 function unlock(){
   const v = document.getElementById('lockPw').value.trim();
   const isAdmin = (v === getAdminPassword());
