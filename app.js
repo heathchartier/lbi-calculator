@@ -78,9 +78,8 @@ function getSuggestedRoughThick(finishedT){
 // veneerSpecies keys: {sup}_{grade}_{size}_{core}  e.g. talbert_A3_4x8_frmdf
 // Cores: mdf | frmdf | pb | frpb   EB roll: {sup}_eb_roll (no core suffix)
 function blankVeneerSpecies(overrides){
-  const out = {};
+  const out = { eb_roll: 0 };
   ['talbert','timber'].forEach(s => {
-    out[s+'_eb_roll'] = 0;
     ['A3','AA'].forEach(g => ['4x8','4x10'].forEach(sz => ['mdf','frmdf','pb','frpb'].forEach(c => {
       THICK_OPTIONS.forEach(({key:t}) => {
         out[`${s}_${g}_${sz}_${c}_${t}`] = 0;
@@ -101,8 +100,8 @@ function coreToKey(core){
 function ensureAllCoreKeys(){
   const cores = (pricing.veneerCores||[]).map(c => c.key);
   Object.values(pricing.veneerSpecies||{}).forEach(p => {
+    if(p['eb_roll'] === undefined) p['eb_roll'] = 0;
     ['talbert','timber'].forEach(s => {
-      if(p[s+'_eb_roll'] === undefined) p[s+'_eb_roll'] = 0;
       ['A3','AA'].forEach(g => ['4x8','4x10'].forEach(sz => cores.forEach(c => {
         THICK_OPTIONS.forEach(({key:t}) => {
           const k = `${s}_${g}_${sz}_${c}_${t}`;
@@ -138,7 +137,7 @@ const DEFAULT_PRICING = {
     'Cherry':         blankVeneerSpecies(),
     'Alder':          blankVeneerSpecies(),
     'Beech':          blankVeneerSpecies(),
-    'Custom':         blankVeneerSpecies({ timber_A3_4x8_frmdf:185, timber_AA_4x8_frmdf:185, timber_eb_roll:75 }),
+    'Custom':         blankVeneerSpecies(),
   },
   lumberSpecies: {
     'Flat Cut White Oak': { price:7.25, resaw:false },
@@ -301,7 +300,8 @@ function visibleVeneerSpecies(orientation, supplier, core, thickness){
   const grade = orientation === 'Vertical' ? 'AA' : 'A3';
   const c = coreToKey(core || 'Fire Rated MDF');
   const t = thickToKey(thickness || '3/4"');
-  return Object.entries(pricing.veneerSpecies).filter(([,p]) => {
+  return Object.entries(pricing.veneerSpecies).filter(([name, p]) => {
+    if(name === 'Custom') return true;
     return (p[`${sup}_${grade}_4x8_${c}_${t}`]||0) > 0 || (p[`${sup}_${grade}_4x10_${c}_${t}`]||0) > 0;
   }).map(([name]) => name);
 }
@@ -377,8 +377,12 @@ function renderVeneerConfigs(){
             </select>
           </div>
           <div id="v-customprice-wrap-${cfg.id}" style="${cfg.species==='Custom'?'':'display:none'}">
-            <label class="field-label">Price / Panel ($)</label>
+            <label class="field-label">Panel Sell Price / Panel ($)</label>
             <input type="number" id="v-customprice-${cfg.id}" value="${cfg.customPricePerPanel||''}" step="0.01" min="0" placeholder="e.g. 250.00" oninput="vUpdate(${cfg.id})">
+          </div>
+          <div id="v-customeb-wrap-${cfg.id}" style="${cfg.species==='Custom'?'':'display:none'}">
+            <label class="field-label">EB Sell Price / Roll ($)</label>
+            <input type="number" id="v-customeb-${cfg.id}" value="${cfg.customEBRollPrice||''}" step="0.01" min="0" placeholder="e.g. 75.00" oninput="vUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Panel Core</label>
@@ -483,6 +487,7 @@ function vUpdate(id){
   cfg.sqft               = parseFloat(document.getElementById('v-sqft-'+id)?.value) || 0;
   cfg.manualQty          = parseInt(document.getElementById('v-manualQty-'+id)?.value) || 0;
   cfg.customPricePerPanel = parseFloat(document.getElementById('v-customprice-'+id)?.value) || 0;
+  cfg.customEBRollPrice   = parseFloat(document.getElementById('v-customeb-'+id)?.value)    || 0;
 
   // update species dropdown when orientation or grade changes — read current selection first
   const selectedSpecies = document.getElementById('v-species-'+id)?.value || cfg.species;
@@ -497,6 +502,8 @@ function vUpdate(id){
 
   const vCustWrap = document.getElementById('v-customprice-wrap-'+id);
   if(vCustWrap) vCustWrap.style.display = cfg.species === 'Custom' ? '' : 'none';
+  const vCustomEbWrap = document.getElementById('v-customeb-wrap-'+id);
+  if(vCustomEbWrap) vCustomEbWrap.style.display = cfg.species === 'Custom' ? '' : 'none';
 
   const titleEl = document.getElementById('vtitle-'+id);
   if(titleEl) titleEl.textContent = cfg.species || 'New Configuration';
@@ -592,7 +599,8 @@ function calcVeneerCost(cfg){
   const ebShort = (cfg.slatW/12) * totalSlats * (cfg.ebSides>=4?2:cfg.ebSides===3?1:0);
   const ebFt    = ebLong + ebShort;
   const ebRolls     = Math.ceil(ebFt * EB_WASTE_FACTOR / EB_ROLL_FEET);
-  const ebRollPrice = sData[sup+'_eb_roll'] || 0;
+  const isCustom    = cfg.species === 'Custom';
+  const ebRollPrice = isCustom ? (cfg.customEBRollPrice || 0) : (sData['eb_roll'] || 0);
   const ebMaterialCost = ebRolls * ebRollPrice;
   const ebServiceCost  = ebFt * pricing.services.ebServicePerFt;
 
@@ -601,8 +609,9 @@ function calcVeneerCost(cfg){
   const bracketCount = panelQty * cfg.bracketsPerPanel;
   const bracketCost  = bracketCount * pricing.services.bracketPrice;
 
-  const panelLine = withMarkup(sheetCost,      'panels');
-  const ebMatLine = withMarkup(ebMaterialCost, 'edgeBand');
+  // Custom prices are already sell prices — skip markup on panels and EB material
+  const panelLine = isCustom ? sheetCost      : withMarkup(sheetCost,      'panels');
+  const ebMatLine = isCustom ? ebMaterialCost : withMarkup(ebMaterialCost, 'edgeBand');
   const ebSvcLine = withMarkup(ebServiceCost,  'ebService');
   const cutLine   = withMarkup(cutCost,        'cutService');
   const asmLine   = withMarkup(assemblyCost,   'assembly');
@@ -1629,7 +1638,7 @@ function renderVeneerPricingTable(){
   const c  = _adminVeneerCore;
   const t  = _adminVeneerThick;
   const fs = _adminVeneerFinish === 'satin' ? '_satin' : '';
-  vb.innerHTML = Object.entries(pricing.veneerSpecies).map(([name, p]) => {
+  vb.innerHTML = Object.entries(pricing.veneerSpecies).filter(([name]) => name !== 'Custom').map(([name, p]) => {
     const inp = (key) => `<input type="number" class="admin-price-input" value="${p[key]||0}" step="1" data-species="${name}" data-key="${key}" oninput="vPriceInput(this)">`;
     const row = (sup, label, color) => `
       <tr>
@@ -1647,14 +1656,15 @@ function renderVeneerPricingTable(){
 function renderEBPricingSection(){
   const eb = document.getElementById('ebPricingBody');
   if(!eb) return;
-  eb.innerHTML = Object.entries(pricing.veneerSpecies).map(([name, p]) => {
-    const inp = (key) => `<input type="number" class="admin-price-input" value="${p[key]||0}" step="1" data-species="${name}" data-key="${key}" oninput="vPriceInput(this)">`;
-    return `<tr>
-      <td style="font-weight:600;white-space:nowrap;vertical-align:middle">${name}</td>
-      <td>${inp('talbert_eb_roll')}</td>
-      <td>${inp('timber_eb_roll')}</td>
-    </tr>`;
-  }).join('');
+  eb.innerHTML = Object.entries(pricing.veneerSpecies)
+    .filter(([name]) => name !== 'Custom')
+    .map(([name, p]) => {
+      const inp = `<input type="number" class="admin-price-input" value="${p['eb_roll']||0}" step="1" data-species="${name}" data-key="eb_roll" oninput="vPriceInput(this)">`;
+      return `<tr>
+        <td style="font-weight:600;white-space:nowrap;vertical-align:middle">${name}</td>
+        <td>${inp}</td>
+      </tr>`;
+    }).join('');
 }
 
 function setVeneerCore(c){
@@ -1874,6 +1884,9 @@ async function fetchCloudPricing(){
   if(!pricing.veneerCores) pricing.veneerCores = deepCopy(DEFAULT_PRICING.veneerCores);
   ensureAllCoreKeys();
   migrateThicknessKeys();
+  Object.values(pricing.veneerSpecies).forEach(p => {
+    if(!p['eb_roll']) p['eb_roll'] = p['timber_eb_roll'] || p['talbert_eb_roll'] || 0;
+  });
   productCounter = Math.max(0, ...((pricing.standardProducts||[]).map(p=>p.id||0)));
   categoryCounter = Math.max(0, ...((pricing.productCategories||[]).map(c=>c.id||0)));
 }
@@ -2096,6 +2109,11 @@ function showToast(msg){
         });
       });
     });
+
+    // Migrate talbert_eb_roll / timber_eb_roll → single eb_roll
+    if(!p['eb_roll']){
+      p['eb_roll'] = p['timber_eb_roll'] || p['talbert_eb_roll'] || 0;
+    }
   });
 
   // Merge new default species
