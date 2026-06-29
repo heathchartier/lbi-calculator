@@ -14,8 +14,8 @@ const TWO_X_SIX_T = 1.5;    // 2x6 actual thickness (inches)
 const TWO_X_SIX_W = 6.0;    // 2x6 nominal width (inches, rough/green)
 const END_TRIM = 4.0;
 const STOCK_LENGTHS = [96, 120, 144, 168, 192];
-const SHEET_WIDTHS  = { '4x8': 48.5, '4x10': 48.5 };
-const SHEET_LENGTHS = { '4x8': 96.5, '4x10': 120.5 };
+const SHEET_WIDTHS  = { '4x8': 49, '4x10': 49 };
+const SHEET_LENGTHS = { '4x8': 97, '4x10': 121 };
 const EB_ROLL_FEET   = 500;
 const EB_WASTE_FACTOR = 1.1;
 const SUPPLIER_LABELS = { talbert: 'Talbert (Premium)', timber: 'Timber (Standard)' };
@@ -552,6 +552,37 @@ function resolveVeneerQty(cfg){
   }
 }
 
+// Returns { size, slatsPerSheet, sheetPrice } — picks 4x8 vs 4x10 by cost-per-slat
+// (or by yield if prices are 0). Tries both normal and rotated orientation.
+function chooseVeneerSheet(slatW, slatL, price4x8, price4x10){
+  function yieldFor(sheetW, sheetL){
+    const cA = Math.floor((sheetW + KERF) / (slatW + KERF));
+    const rA = Math.floor((sheetL + KERF) / (slatL + KERF));
+    const cB = (slatL + KERF <= sheetW + KERF) ? Math.floor((sheetW + KERF) / (slatL + KERF)) : 0;
+    const rB = cB > 0 ? Math.floor((sheetL + KERF) / (slatW + KERF)) : 0;
+    return Math.max(1, cA * rA, cB * rB);
+  }
+  const sw8 = SHEET_WIDTHS['4x8'], sl8 = SHEET_LENGTHS['4x8'];
+  const sw10 = SHEET_WIDTHS['4x10'], sl10 = SHEET_LENGTHS['4x10'];
+  const sps8  = yieldFor(sw8,  sl8);
+  const sps10 = yieldFor(sw10, sl10);
+  const fits8  = (slatW <= sw8  && slatL <= sl8)  || (slatL <= sw8  && slatW <= sl8);
+  const fits10 = (slatW <= sw10 && slatL <= sl10) || (slatL <= sw10 && slatW <= sl10);
+  if(!fits8 && !fits10) return { size: '4x8',  slatsPerSheet: 1,    sheetPrice: price4x8  || 0 };
+  if(!fits8)            return { size: '4x10', slatsPerSheet: sps10, sheetPrice: price4x10 || 0 };
+  if(!fits10)           return { size: '4x8',  slatsPerSheet: sps8,  sheetPrice: price4x8  || 0 };
+  if(price4x8 && price4x10){
+    return (price4x10 / sps10) < (price4x8 / sps8)
+      ? { size: '4x10', slatsPerSheet: sps10, sheetPrice: price4x10 }
+      : { size: '4x8',  slatsPerSheet: sps8,  sheetPrice: price4x8  };
+  }
+  if(price4x10 && !price4x8) return { size: '4x10', slatsPerSheet: sps10, sheetPrice: price4x10 };
+  if(price4x8  && !price4x10) return { size: '4x8',  slatsPerSheet: sps8,  sheetPrice: price4x8  };
+  return sps10 >= sps8
+    ? { size: '4x10', slatsPerSheet: sps10, sheetPrice: 0 }
+    : { size: '4x8',  slatsPerSheet: sps8,  sheetPrice: 0 };
+}
+
 function calcVeneerPreview(cfg){
   const preview = document.getElementById('v-preview-'+cfg.id);
   if(!preview) return;
@@ -562,10 +593,9 @@ function calcVeneerPreview(cfg){
   const { panelQty, totalSlats } = qty;
 
   const grade = cfg.orientation === 'Vertical' ? 'AA' : 'A3';
-  const colsPerSheet = Math.floor((SHEET_WIDTHS['4x8'] + KERF) / (cfg.slatW + KERF));
-  const rowsPerSheet = Math.floor((SHEET_LENGTHS['4x8'] + KERF) / (cfg.slatL + KERF));
-  const slatsPerSheet = Math.max(1, colsPerSheet * rowsPerSheet);
-  const sheetsNeeded  = Math.ceil(totalSlats / slatsPerSheet);
+  const opt = chooseVeneerSheet(cfg.slatW, cfg.slatL, 0, 0);
+  const { size, slatsPerSheet } = opt;
+  const sheetsNeeded = Math.ceil(totalSlats / slatsPerSheet);
   const ebLong  = (cfg.slatL / 12) * totalSlats * 2;
   const ebShort = (cfg.slatW / 12) * totalSlats * (cfg.ebSides >= 3 ? (cfg.ebSides === 4 ? 2 : 1) : 0);
   const ebFt    = ebLong + ebShort;
@@ -576,7 +606,7 @@ function calcVeneerPreview(cfg){
     <div class="calc-preview-item"><div class="calc-preview-label">Panels Needed</div><div class="calc-preview-val">${fmtN(panelQty)}</div></div>
     <div class="calc-preview-item"><div class="calc-preview-label">Total Slats</div><div class="calc-preview-val">${fmtN(totalSlats)}</div></div>
     <div class="calc-preview-item"><div class="calc-preview-label">Slats / Sheet</div><div class="calc-preview-val">${fmtN(slatsPerSheet)}</div></div>
-    <div class="calc-preview-item"><div class="calc-preview-label">Sheets Needed</div><div class="calc-preview-val">${fmtN(sheetsNeeded)} <span style="font-size:11px;color:var(--mid)">(${grade})</span></div></div>
+    <div class="calc-preview-item"><div class="calc-preview-label">Sheets Needed</div><div class="calc-preview-val">${fmtN(sheetsNeeded)} <span style="font-size:11px;color:var(--mid)">(${grade} ${size})</span></div></div>
     <div class="calc-preview-item"><div class="calc-preview-label">EB Footage</div><div class="calc-preview-val">${fmtN(ebFt,0)} ft</div></div>
     <div class="calc-preview-item"><div class="calc-preview-label">EB Rolls</div><div class="calc-preview-val">${fmtN(ebRolls)}</div></div>
     <div class="calc-preview-item"><div class="calc-preview-label">Brackets</div><div class="calc-preview-val">${fmtN(panelQty * cfg.bracketsPerPanel)}</div></div>
@@ -594,15 +624,14 @@ function calcVeneerCost(cfg){
 
   const sup   = cfg.grade || 'talbert';
   const grade = cfg.orientation === 'Vertical' ? 'AA' : 'A3';
-  const colsPerSheet = Math.floor((SHEET_WIDTHS['4x8'] + KERF) / (cfg.slatW + KERF));
-  const rowsPerSheet = Math.floor((SHEET_LENGTHS['4x8'] + KERF) / (cfg.slatL + KERF));
-  const slatsPerSheet = Math.max(1, colsPerSheet * rowsPerSheet);
-  const sheetsNeeded  = Math.ceil(totalSlats / slatsPerSheet);
-
   const coreK  = coreToKey(cfg.core || 'Fire Rated MDF');
   const thickK = thickToKey(cfg.thickness || '3/4"');
   const finishSuffix = cfg.satinFinish ? '_satin' : '';
-  const sheetPrice = sData[`${sup}_${grade}_4x8_${coreK}_${thickK}${finishSuffix}`] || 0;
+  const p8  = sData[`${sup}_${grade}_4x8_${coreK}_${thickK}${finishSuffix}`]  || 0;
+  const p10 = sData[`${sup}_${grade}_4x10_${coreK}_${thickK}${finishSuffix}`] || 0;
+  const opt = chooseVeneerSheet(cfg.slatW, cfg.slatL, p8, p10);
+  const { size: sheetSize, slatsPerSheet, sheetPrice } = opt;
+  const sheetsNeeded = Math.ceil(totalSlats / slatsPerSheet);
   const sheetCost  = cfg.species === 'Custom' && cfg.customPricePerPanel
     ? panelQty * cfg.customPricePerPanel
     : sheetsNeeded * sheetPrice;
@@ -637,7 +666,7 @@ function calcVeneerCost(cfg){
     sqftPerPanel:qty.sqftPerPanel, panelQty, totalSlats, sheetsNeeded,
     sheetPrice, slatsPerSheet, ebFt, ebRolls, ebRollPrice, bracketCount, effectiveSqft,
     lines:{
-      [cfg.species==='Custom' ? 'Panel Material ('+fmtN(panelQty)+' panels)' : 'Panel Sheets ('+fmtN(sheetsNeeded)+' x '+grade+' 4x8)']: panelLine,
+      [cfg.species==='Custom' ? 'Panel Material ('+fmtN(panelQty)+' panels)' : 'Panel Sheets ('+fmtN(sheetsNeeded)+' x '+grade+' '+sheetSize+')']: panelLine,
       ['Edge Band Material ('+fmtN(ebRolls)+' rolls)']: ebMatLine,
       ['Edge Band Service ('+fmtN(ebFt,0)+' ft)']: ebSvcLine,
       'Cut Service': cutLine,
