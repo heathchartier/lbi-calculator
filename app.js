@@ -374,10 +374,29 @@ function renderVeneerConfigs(){
             </select>
           </div>
           <div>
+            <label class="field-label">Finish</label>
+            <select id="v-satin-${cfg.id}" onchange="vUpdate(${cfg.id})">
+              <option value="standard" ${!cfg.satinFinish?'selected':''}>Standard</option>
+              <option value="satin"    ${cfg.satinFinish?'selected':''}>Satin</option>
+            </select>
+          </div>
+          <div>
             <label class="field-label">Grade</label>
             <select id="v-grade-${cfg.id}" onchange="vUpdate(${cfg.id})">
               <option value="talbert" ${(cfg.grade||'talbert')==='talbert'?'selected':''}>Premium</option>
               <option value="timber"  ${(cfg.grade||'talbert')==='timber'?'selected':''}>Standard</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Panel Core</label>
+            <select id="v-core-${cfg.id}" onchange="vUpdate(${cfg.id})">
+              ${(pricing.veneerCores||[]).map(c=>`<option value="${c.label}" ${cfg.core===c.label?'selected':''}>${c.label}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Thickness</label>
+            <select id="v-thick-${cfg.id}" onchange="vUpdate(${cfg.id})">
+              ${THICK_OPTIONS.map(({label})=>`<option value="${label}" ${cfg.thickness===label?'selected':''}>${label}</option>`).join('')}
             </select>
           </div>
           <div>
@@ -395,18 +414,6 @@ function renderVeneerConfigs(){
           <div id="v-customeb-wrap-${cfg.id}" style="${cfg.species==='Custom'?'':'display:none'}">
             <label class="field-label">EB Sell Price / Roll ($)</label>
             <input type="number" id="v-customeb-${cfg.id}" value="${cfg.customEBRollPrice||''}" step="0.01" min="0" placeholder="e.g. 75.00" oninput="vUpdate(${cfg.id})">
-          </div>
-          <div>
-            <label class="field-label">Panel Core</label>
-            <select id="v-core-${cfg.id}" onchange="vUpdate(${cfg.id})">
-              ${(pricing.veneerCores||[]).map(c=>`<option value="${c.label}" ${cfg.core===c.label?'selected':''}>${c.label}</option>`).join('')}
-            </select>
-          </div>
-          <div>
-            <label class="field-label">Thickness</label>
-            <select id="v-thick-${cfg.id}" onchange="vUpdate(${cfg.id})">
-              ${THICK_OPTIONS.map(({label})=>`<option value="${label}" ${cfg.thickness===label?'selected':''}>${label}</option>`).join('')}
-            </select>
           </div>
           <div>
             <label class="field-label">Calculate By</label>
@@ -466,10 +473,6 @@ function renderVeneerConfigs(){
             <label class="toggle"><input type="checkbox" id="v-assembly-${cfg.id}" ${cfg.assembly?'checked':''} onchange="vUpdate(${cfg.id})"><span class="toggle-slider"></span></label>
             <span class="toggle-label">Assembly included</span>
           </div>
-          <div class="toggle-row">
-            <label class="toggle"><input type="checkbox" id="v-satin-${cfg.id}" ${cfg.satinFinish?'checked':''} onchange="vUpdate(${cfg.id})"><span class="toggle-slider"></span></label>
-            <span class="toggle-label">Satin finish</span>
-          </div>
         </div>
         <div id="v-preview-${cfg.id}" class="calc-preview" style="margin-top:16px"></div>
       </div>
@@ -493,7 +496,7 @@ function vUpdate(id){
   cfg.bracketsPerPanel = parseInt(document.getElementById('v-brackets-'+id)?.value) || 0;
   cfg.ebSides        = parseInt(document.getElementById('v-ebsides-'+id)?.value) || 4;
   cfg.assembly       = document.getElementById('v-assembly-'+id)?.checked ?? true;
-  cfg.satinFinish    = document.getElementById('v-satin-'+id)?.checked ?? true;
+  cfg.satinFinish    = document.getElementById('v-satin-'+id)?.value === 'satin';
   const prevMode     = cfg.calcMode;
   cfg.calcMode       = document.getElementById('v-mode-'+id)?.value || cfg.calcMode;
   cfg.sqft               = parseFloat(document.getElementById('v-sqft-'+id)?.value) || 0;
