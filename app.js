@@ -393,12 +393,8 @@ function renderVeneerConfigs(){
             <input type="number" id="v-customprice-${cfg.id}" value="${cfg.customPricePerPanel||''}" step="0.01" min="0" placeholder="e.g. 250.00" oninput="vUpdate(${cfg.id})">
           </div>
           <div id="v-customeb-wrap-${cfg.id}" style="${cfg.species==='Custom'?'':'display:none'}">
-            <label class="field-label">EB Sell Price / Roll — Standard ($)</label>
+            <label class="field-label">EB Sell Price / Roll ($)</label>
             <input type="number" id="v-customeb-${cfg.id}" value="${cfg.customEBRollPrice||''}" step="0.01" min="0" placeholder="e.g. 75.00" oninput="vUpdate(${cfg.id})">
-          </div>
-          <div id="v-customebsatin-wrap-${cfg.id}" style="${cfg.species==='Custom'?'':'display:none'}">
-            <label class="field-label">EB Sell Price / Roll — Satin ($)</label>
-            <input type="number" id="v-customebsatin-${cfg.id}" value="${cfg.customEBSatinRollPrice||''}" step="0.01" min="0" placeholder="e.g. 90.00" oninput="vUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Panel Core</label>
@@ -503,8 +499,7 @@ function vUpdate(id){
   cfg.sqft               = parseFloat(document.getElementById('v-sqft-'+id)?.value) || 0;
   cfg.manualQty          = parseInt(document.getElementById('v-manualQty-'+id)?.value) || 0;
   cfg.customPricePerPanel = parseFloat(document.getElementById('v-customprice-'+id)?.value) || 0;
-  cfg.customEBRollPrice      = parseFloat(document.getElementById('v-customeb-'+id)?.value)      || 0;
-  cfg.customEBSatinRollPrice = parseFloat(document.getElementById('v-customebsatin-'+id)?.value) || 0;
+  cfg.customEBRollPrice = parseFloat(document.getElementById('v-customeb-'+id)?.value) || 0;
 
   // update species dropdown when orientation or grade changes — read current selection first
   const selectedSpecies = document.getElementById('v-species-'+id)?.value || cfg.species;
@@ -521,8 +516,6 @@ function vUpdate(id){
   if(vCustWrap) vCustWrap.style.display = cfg.species === 'Custom' ? '' : 'none';
   const vCustomEbWrap = document.getElementById('v-customeb-wrap-'+id);
   if(vCustomEbWrap) vCustomEbWrap.style.display = cfg.species === 'Custom' ? '' : 'none';
-  const vCustomEbSatinWrap = document.getElementById('v-customebsatin-wrap-'+id);
-  if(vCustomEbSatinWrap) vCustomEbSatinWrap.style.display = cfg.species === 'Custom' ? '' : 'none';
 
   const titleEl = document.getElementById('vtitle-'+id);
   if(titleEl) titleEl.textContent = cfg.species || 'New Configuration';
@@ -620,7 +613,7 @@ function calcVeneerCost(cfg){
   const ebRolls     = Math.ceil(ebFt * EB_WASTE_FACTOR / EB_ROLL_FEET);
   const isCustom    = cfg.species === 'Custom';
   const ebRollPrice = isCustom
-    ? (cfg.satinFinish ? (cfg.customEBSatinRollPrice || cfg.customEBRollPrice || 0) : (cfg.customEBRollPrice || 0))
+    ? (cfg.customEBRollPrice || 0)
     : (cfg.satinFinish ? (sData['eb_roll_satin'] || sData['eb_roll'] || 0) : (sData['eb_roll'] || 0));
   const ebMaterialCost = ebRolls * ebRollPrice;
   const ebServiceCost  = ebFt * pricing.services.ebServicePerFt;
