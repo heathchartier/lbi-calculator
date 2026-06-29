@@ -556,18 +556,16 @@ function resolveVeneerQty(cfg){
 // (or by yield if prices are 0). Tries both normal and rotated orientation.
 function chooseVeneerSheet(slatW, slatL, price4x8, price4x10){
   function yieldFor(sheetW, sheetL){
-    const cA = Math.floor((sheetW + KERF) / (slatW + KERF));
-    const rA = Math.floor((sheetL + KERF) / (slatL + KERF));
-    const cB = (slatL + KERF <= sheetW + KERF) ? Math.floor((sheetW + KERF) / (slatL + KERF)) : 0;
-    const rB = cB > 0 ? Math.floor((sheetL + KERF) / (slatW + KERF)) : 0;
-    return Math.max(1, cA * rA, cB * rB);
+    const cols = Math.floor((sheetW + KERF) / (slatW + KERF));
+    const rows = Math.floor((sheetL + KERF) / (slatL + KERF));
+    return Math.max(1, cols * rows);
   }
   const sw8 = SHEET_WIDTHS['4x8'], sl8 = SHEET_LENGTHS['4x8'];
   const sw10 = SHEET_WIDTHS['4x10'], sl10 = SHEET_LENGTHS['4x10'];
   const sps8  = yieldFor(sw8,  sl8);
   const sps10 = yieldFor(sw10, sl10);
-  const fits8  = (slatW <= sw8  && slatL <= sl8)  || (slatL <= sw8  && slatW <= sl8);
-  const fits10 = (slatW <= sw10 && slatL <= sl10) || (slatL <= sw10 && slatW <= sl10);
+  const fits8  = slatW <= sw8  && slatL <= sl8;
+  const fits10 = slatW <= sw10 && slatL <= sl10;
   if(!fits8 && !fits10) return { size: '4x8',  slatsPerSheet: 1,    sheetPrice: price4x8  || 0 };
   if(!fits8)            return { size: '4x10', slatsPerSheet: sps10, sheetPrice: price4x10 || 0 };
   if(!fits10)           return { size: '4x8',  slatsPerSheet: sps8,  sheetPrice: price4x8  || 0 };
