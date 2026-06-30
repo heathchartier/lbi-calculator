@@ -39,7 +39,7 @@
       "talbert_A3_4x8_frmdf_025_satin": 0,
       "talbert_A3_4x8_frmdf_050": 0,
       "talbert_A3_4x8_frmdf_050_satin": 0,
-      "talbert_A3_4x8_frmdf_075": 0,
+      "talbert_A3_4x8_frmdf_075": 274.16,
       "talbert_A3_4x8_frmdf_075_satin": 314.16,
       "talbert_A3_4x8_frmdf_100": 0,
       "talbert_A3_4x8_frmdf_100_satin": 0,
@@ -103,7 +103,7 @@
       "talbert_AA_4x8_frmdf_025_satin": 0,
       "talbert_AA_4x8_frmdf_050": 0,
       "talbert_AA_4x8_frmdf_050_satin": 0,
-      "talbert_AA_4x8_frmdf_075": 0,
+      "talbert_AA_4x8_frmdf_075": 398.8,
       "talbert_AA_4x8_frmdf_075_satin": 478.8,
       "talbert_AA_4x8_frmdf_100": 0,
       "talbert_AA_4x8_frmdf_100_satin": 0,
@@ -175,7 +175,7 @@
       "timber_A3_4x8_mdf_025_satin": 0,
       "timber_A3_4x8_mdf_050": 0,
       "timber_A3_4x8_mdf_050_satin": 0,
-      "timber_A3_4x8_mdf_075": 0,
+      "timber_A3_4x8_mdf_075": 106.83,
       "timber_A3_4x8_mdf_075_satin": 111.63,
       "timber_A3_4x8_mdf_100": 0,
       "timber_A3_4x8_mdf_100_satin": 0,
@@ -360,7 +360,7 @@
       "talbert_A3_4x8_fr_black_mdf_050": 0,
       "talbert_A3_4x8_fr_black_mdf_050_satin": 0,
       "talbert_A3_4x8_fr_black_mdf_075": 646.8,
-      "talbert_A3_4x8_fr_black_mdf_075_satin": 0,
+      "talbert_A3_4x8_fr_black_mdf_075_satin": 686.8,
       "talbert_A3_4x8_fr_black_mdf_100": 0,
       "talbert_A3_4x8_fr_black_mdf_100_satin": 0,
       "talbert_A3_4x10_fr_black_mdf_025": 0,
@@ -419,7 +419,8 @@
       "timber_AA_4x10_fr_black_mdf_075_satin": 0,
       "timber_AA_4x10_fr_black_mdf_100": 0,
       "timber_AA_4x10_fr_black_mdf_100_satin": 0,
-      "eb_roll": 0
+      "eb_roll": 0,
+      "eb_roll_satin": 0
     },
     "White Oak": {
       "talbert_eb_roll": 0,
@@ -493,7 +494,7 @@
       "talbert_A3_4x10_frmdf_050": 0,
       "talbert_A3_4x10_frmdf_050_satin": 0,
       "talbert_A3_4x10_frmdf_075": 319.2,
-      "talbert_A3_4x10_frmdf_075_satin": 0,
+      "talbert_A3_4x10_frmdf_075_satin": 369.2,
       "talbert_A3_4x10_frmdf_100": 0,
       "talbert_A3_4x10_frmdf_100_satin": 0,
       "talbert_A3_4x10_mdf_025": 0,
@@ -523,7 +524,7 @@
       "talbert_AA_4x8_frmdf_025": 0,
       "talbert_AA_4x8_frmdf_025_satin": 0,
       "talbert_AA_4x8_frmdf_050": 324.24,
-      "talbert_AA_4x8_frmdf_050_satin": 0,
+      "talbert_AA_4x8_frmdf_050_satin": 404.24,
       "talbert_AA_4x8_frmdf_075": 0,
       "talbert_AA_4x8_frmdf_075_satin": 0,
       "talbert_AA_4x8_frmdf_100": 0,
@@ -549,7 +550,7 @@
       "talbert_AA_4x8_frpb_050": 0,
       "talbert_AA_4x8_frpb_050_satin": 0,
       "talbert_AA_4x8_frpb_075": 288.96,
-      "talbert_AA_4x8_frpb_075_satin": 0,
+      "talbert_AA_4x8_frpb_075_satin": 368.96,
       "talbert_AA_4x8_frpb_100": 0,
       "talbert_AA_4x8_frpb_100_satin": 0,
       "talbert_AA_4x10_frmdf_025": 0,
@@ -840,7 +841,8 @@
       "timber_AA_4x10_fr_black_mdf_075_satin": 0,
       "timber_AA_4x10_fr_black_mdf_100": 0,
       "timber_AA_4x10_fr_black_mdf_100_satin": 0,
-      "eb_roll": 0
+      "eb_roll": 0,
+      "eb_roll_satin": 0
     },
     "Rift White Oak": {
       "talbert_eb_roll": 0,
@@ -1081,7 +1083,7 @@
       "timber_AA_4x8_mdf_025_satin": 0,
       "timber_AA_4x8_mdf_050": 0,
       "timber_AA_4x8_mdf_050_satin": 0,
-      "timber_AA_4x8_mdf_075": 0,
+      "timber_AA_4x8_mdf_075": 183.43,
       "timber_AA_4x8_mdf_075_satin": 193.03,
       "timber_AA_4x8_mdf_100": 0,
       "timber_AA_4x8_mdf_100_satin": 0,
@@ -1261,7 +1263,8 @@
       "timber_AA_4x10_fr_black_mdf_075_satin": 0,
       "timber_AA_4x10_fr_black_mdf_100": 0,
       "timber_AA_4x10_fr_black_mdf_100_satin": 0,
-      "eb_roll": 0
+      "eb_roll": 0,
+      "eb_roll_satin": 0
     },
     "Maple": {
       "talbert_eb_roll": 0,
@@ -1391,7 +1394,7 @@
       "talbert_AA_4x8_frpb_050": 0,
       "talbert_AA_4x8_frpb_050_satin": 0,
       "talbert_AA_4x8_frpb_075": 285.6,
-      "talbert_AA_4x8_frpb_075_satin": 0,
+      "talbert_AA_4x8_frpb_075_satin": 365.6,
       "talbert_AA_4x8_frpb_100": 0,
       "talbert_AA_4x8_frpb_100_satin": 0,
       "talbert_AA_4x10_frmdf_025": 0,
@@ -1682,7 +1685,8 @@
       "timber_AA_4x10_fr_black_mdf_075_satin": 0,
       "timber_AA_4x10_fr_black_mdf_100": 0,
       "timber_AA_4x10_fr_black_mdf_100_satin": 0,
-      "eb_roll": 0
+      "eb_roll": 0,
+      "eb_roll_satin": 0
     },
     "Cherry": {
       "talbert_eb_roll": 0,
@@ -1851,7 +1855,7 @@
       "timber_A3_4x8_frmdf_025_satin": 0,
       "timber_A3_4x8_frmdf_050": 0,
       "timber_A3_4x8_frmdf_050_satin": 0,
-      "timber_A3_4x8_frmdf_075": 0,
+      "timber_A3_4x8_frmdf_075": 129.8,
       "timber_A3_4x8_frmdf_075_satin": 134,
       "timber_A3_4x8_frmdf_100": 0,
       "timber_A3_4x8_frmdf_100_satin": 0,
@@ -2103,7 +2107,8 @@
       "timber_AA_4x10_fr_black_mdf_075_satin": 0,
       "timber_AA_4x10_fr_black_mdf_100": 0,
       "timber_AA_4x10_fr_black_mdf_100_satin": 0,
-      "eb_roll": 0
+      "eb_roll": 0,
+      "eb_roll_satin": 0
     },
     "Alder": {
       "talbert_eb_roll": 0,
@@ -2524,7 +2529,8 @@
       "timber_AA_4x10_fr_black_mdf_075_satin": 0,
       "timber_AA_4x10_fr_black_mdf_100": 0,
       "timber_AA_4x10_fr_black_mdf_100_satin": 0,
-      "eb_roll": 0
+      "eb_roll": 0,
+      "eb_roll_satin": 0
     },
     "Beech": {
       "talbert_eb_roll": 0,
@@ -2945,7 +2951,8 @@
       "timber_AA_4x10_fr_black_mdf_075_satin": 0,
       "timber_AA_4x10_fr_black_mdf_100": 0,
       "timber_AA_4x10_fr_black_mdf_100_satin": 0,
-      "eb_roll": 0
+      "eb_roll": 0,
+      "eb_roll_satin": 0
     },
     "Custom": {
       "talbert_eb_roll": 0,
@@ -3366,7 +3373,8 @@
       "timber_AA_4x10_fr_black_mdf_075_satin": 0,
       "timber_AA_4x10_fr_black_mdf_100": 0,
       "timber_AA_4x10_fr_black_mdf_100_satin": 0,
-      "eb_roll": 0
+      "eb_roll": 0,
+      "eb_roll_satin": 0
     },
     "Qtr Cherry": {
       "talbert_eb_roll": 0,
@@ -3471,7 +3479,7 @@
       "talbert_AA_4x8_frmdf_025_satin": 0,
       "talbert_AA_4x8_frmdf_050": 0,
       "talbert_AA_4x8_frmdf_050_satin": 0,
-      "talbert_AA_4x8_frmdf_075": 0,
+      "talbert_AA_4x8_frmdf_075": 301.36,
       "talbert_AA_4x8_frmdf_075_satin": 381.36,
       "talbert_AA_4x8_frmdf_100": 0,
       "talbert_AA_4x8_frmdf_100_satin": 0,
@@ -3787,7 +3795,8 @@
       "timber_AA_4x10_fr_black_mdf_075_satin": 0,
       "timber_AA_4x10_fr_black_mdf_100": 0,
       "timber_AA_4x10_fr_black_mdf_100_satin": 0,
-      "eb_roll": 0
+      "eb_roll": 0,
+      "eb_roll_satin": 0
     },
     "Qtr Maple": {
       "talbert_eb_roll": 0,
@@ -3892,7 +3901,7 @@
       "talbert_AA_4x8_frmdf_025_satin": 0,
       "talbert_AA_4x8_frmdf_050": 0,
       "talbert_AA_4x8_frmdf_050_satin": 0,
-      "talbert_AA_4x8_frmdf_075": 0,
+      "talbert_AA_4x8_frmdf_075": 311.78,
       "talbert_AA_4x8_frmdf_075_satin": 391.78,
       "talbert_AA_4x8_frmdf_100": 0,
       "talbert_AA_4x8_frmdf_100_satin": 0,
@@ -4208,7 +4217,8 @@
       "timber_AA_4x10_fr_black_mdf_075_satin": 0,
       "timber_AA_4x10_fr_black_mdf_100": 0,
       "timber_AA_4x10_fr_black_mdf_100_satin": 0,
-      "eb_roll": 0
+      "eb_roll": 0,
+      "eb_roll_satin": 0
     },
     "Qtr White Oak": {
       "talbert_eb_roll": 0,
@@ -4313,7 +4323,7 @@
       "talbert_AA_4x8_frmdf_025_satin": 0,
       "talbert_AA_4x8_frmdf_050": 0,
       "talbert_AA_4x8_frmdf_050_satin": 0,
-      "talbert_AA_4x8_frmdf_075": 0,
+      "talbert_AA_4x8_frmdf_075": 321.52,
       "talbert_AA_4x8_frmdf_075_satin": 401.52,
       "talbert_AA_4x8_frmdf_100": 0,
       "talbert_AA_4x8_frmdf_100_satin": 0,
@@ -4629,7 +4639,8 @@
       "timber_AA_4x10_fr_black_mdf_075_satin": 0,
       "timber_AA_4x10_fr_black_mdf_100": 0,
       "timber_AA_4x10_fr_black_mdf_100_satin": 0,
-      "eb_roll": 0
+      "eb_roll": 0,
+      "eb_roll_satin": 0
     },
     "Qtr Walnut": {
       "talbert_eb_roll": 0,
@@ -4671,7 +4682,7 @@
       "talbert_A3_4x8_frmdf_050": 0,
       "talbert_A3_4x8_frmdf_050_satin": 0,
       "talbert_A3_4x8_frmdf_075": 288.96,
-      "talbert_A3_4x8_frmdf_075_satin": 0,
+      "talbert_A3_4x8_frmdf_075_satin": 328.96,
       "talbert_A3_4x8_frmdf_100": 0,
       "talbert_A3_4x8_frmdf_100_satin": 0,
       "talbert_A3_4x8_mdf_025": 0,
@@ -4703,7 +4714,7 @@
       "talbert_A3_4x10_frmdf_050": 0,
       "talbert_A3_4x10_frmdf_050_satin": 0,
       "talbert_A3_4x10_frmdf_075": 394.8,
-      "talbert_A3_4x10_frmdf_075_satin": 0,
+      "talbert_A3_4x10_frmdf_075_satin": 444.8,
       "talbert_A3_4x10_frmdf_100": 0,
       "talbert_A3_4x10_frmdf_100_satin": 0,
       "talbert_A3_4x10_mdf_025": 0,
@@ -4734,7 +4745,7 @@
       "talbert_AA_4x8_frmdf_025_satin": 0,
       "talbert_AA_4x8_frmdf_050": 0,
       "talbert_AA_4x8_frmdf_050_satin": 0,
-      "talbert_AA_4x8_frmdf_075": 0,
+      "talbert_AA_4x8_frmdf_075": 321.52,
       "talbert_AA_4x8_frmdf_075_satin": 401.52,
       "talbert_AA_4x8_frmdf_100": 0,
       "talbert_AA_4x8_frmdf_100_satin": 0,
@@ -5050,12 +5061,13 @@
       "timber_AA_4x10_fr_black_mdf_075_satin": 0,
       "timber_AA_4x10_fr_black_mdf_100": 0,
       "timber_AA_4x10_fr_black_mdf_100_satin": 0,
-      "eb_roll": 0
+      "eb_roll": 0,
+      "eb_roll_satin": 0
     },
     "Rift Ash": {
       "talbert_eb_roll": 0,
       "talbert_A3_4x8_mdf_025": 210,
-      "talbert_A3_4x8_mdf_025_satin": 0,
+      "talbert_A3_4x8_mdf_025_satin": 250,
       "talbert_A3_4x8_mdf_050": 0,
       "talbert_A3_4x8_mdf_050_satin": 0,
       "talbert_A3_4x8_mdf_075": 0,
@@ -5121,9 +5133,9 @@
       "talbert_AA_4x8_mdf_025": 0,
       "talbert_AA_4x8_mdf_025_satin": 0,
       "talbert_AA_4x8_mdf_050": 320.88,
-      "talbert_AA_4x8_mdf_050_satin": 0,
+      "talbert_AA_4x8_mdf_050_satin": 400.88,
       "talbert_AA_4x8_mdf_075": 327.6,
-      "talbert_AA_4x8_mdf_075_satin": 0,
+      "talbert_AA_4x8_mdf_075_satin": 407.6,
       "talbert_AA_4x8_mdf_100": 0,
       "talbert_AA_4x8_mdf_100_satin": 0,
       "talbert_AA_4x8_frmdf_025": 0,
@@ -5137,9 +5149,9 @@
       "talbert_AA_4x8_pb_025": 0,
       "talbert_AA_4x8_pb_025_satin": 0,
       "talbert_AA_4x8_pb_050": 304.08,
-      "talbert_AA_4x8_pb_050_satin": 0,
+      "talbert_AA_4x8_pb_050_satin": 384.08,
       "talbert_AA_4x8_pb_075": 310.8,
-      "talbert_AA_4x8_pb_075_satin": 0,
+      "talbert_AA_4x8_pb_075_satin": 390.8,
       "talbert_AA_4x8_pb_100": 0,
       "talbert_AA_4x8_pb_100_satin": 0,
       "talbert_AA_4x8_frpb_025": 0,
@@ -5439,7 +5451,8 @@
       "timber_AA_4x10_fr_black_mdf_075_satin": 0,
       "timber_AA_4x10_fr_black_mdf_100": 0,
       "timber_AA_4x10_fr_black_mdf_100_satin": 0,
-      "eb_roll": 0
+      "eb_roll": 0,
+      "eb_roll_satin": 0
     },
     "Qtr Doug Fir": {
       "talbert_eb_roll": 0,
@@ -5520,7 +5533,7 @@
       "talbert_AA_4x8_frmdf_050": 0,
       "talbert_AA_4x8_frmdf_050_satin": 0,
       "talbert_AA_4x8_frmdf_075": 465.36,
-      "talbert_AA_4x8_frmdf_075_satin": 0,
+      "talbert_AA_4x8_frmdf_075_satin": 545.36,
       "talbert_AA_4x8_frmdf_100": 0,
       "talbert_AA_4x8_frmdf_100_satin": 0,
       "talbert_AA_4x8_pb_025": 0,
@@ -5828,7 +5841,8 @@
       "timber_AA_4x10_fr_black_mdf_075_satin": 0,
       "timber_AA_4x10_fr_black_mdf_100": 0,
       "timber_AA_4x10_fr_black_mdf_100_satin": 0,
-      "eb_roll": 0
+      "eb_roll": 0,
+      "eb_roll_satin": 0
     },
     "Qtr/Fig Spanish Cedar": {
       "talbert_eb_roll": 0,
@@ -5869,7 +5883,7 @@
       "talbert_A3_4x10_mdf_050": 0,
       "talbert_A3_4x10_mdf_050_satin": 0,
       "talbert_A3_4x10_mdf_075": 441,
-      "talbert_A3_4x10_mdf_075_satin": 0,
+      "talbert_A3_4x10_mdf_075_satin": 491,
       "talbert_A3_4x10_mdf_100": 0,
       "talbert_A3_4x10_mdf_100_satin": 0,
       "talbert_A3_4x10_frmdf_025": 0,
@@ -6217,7 +6231,8 @@
       "timber_AA_4x10_black_mdf_075_satin": 0,
       "timber_AA_4x10_black_mdf_100": 0,
       "timber_AA_4x10_black_mdf_100_satin": 0,
-      "eb_roll": 0
+      "eb_roll": 0,
+      "eb_roll_satin": 0
     },
     "Qtr Hemlock": {
       "talbert_eb_roll": 0,
@@ -6355,7 +6370,7 @@
       "timber_A3_4x8_mdf_050": 0,
       "timber_A3_4x8_mdf_050_satin": 0,
       "timber_A3_4x8_mdf_075": 98.17,
-      "timber_A3_4x8_mdf_075_satin": 0,
+      "timber_A3_4x8_mdf_075_satin": 102.97,
       "timber_A3_4x8_mdf_100": 0,
       "timber_A3_4x8_mdf_100_satin": 0,
       "timber_A3_4x8_frmdf_025": 0,
@@ -6606,7 +6621,8 @@
       "timber_AA_4x10_black_mdf_075_satin": 0,
       "timber_AA_4x10_black_mdf_100": 0,
       "timber_AA_4x10_black_mdf_100_satin": 0,
-      "eb_roll": 0
+      "eb_roll": 0,
+      "eb_roll_satin": 0
     },
     "Rustic White Oak": {
       "talbert_eb_roll": 0,
@@ -6784,7 +6800,7 @@
       "timber_A3_4x10_frmdf_050": 0,
       "timber_A3_4x10_frmdf_050_satin": 0,
       "timber_A3_4x10_frmdf_075": 189.5,
-      "timber_A3_4x10_frmdf_075_satin": 0,
+      "timber_A3_4x10_frmdf_075_satin": 195.58,
       "timber_A3_4x10_frmdf_100": 0,
       "timber_A3_4x10_frmdf_100_satin": 0,
       "timber_A3_4x10_pb_025": 0,
@@ -6995,7 +7011,8 @@
       "timber_AA_4x10_black_mdf_075_satin": 0,
       "timber_AA_4x10_black_mdf_100": 0,
       "timber_AA_4x10_black_mdf_100_satin": 0,
-      "eb_roll": 0
+      "eb_roll": 0,
+      "eb_roll_satin": 0
     }
   },
   "lumberSpecies": {
