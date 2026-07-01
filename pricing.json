@@ -419,8 +419,8 @@
       "timber_AA_4x10_fr_black_mdf_075_satin": 0,
       "timber_AA_4x10_fr_black_mdf_100": 0,
       "timber_AA_4x10_fr_black_mdf_100_satin": 0,
-      "eb_roll": 0,
-      "eb_roll_satin": 0
+      "eb_roll": 63,
+      "eb_roll_satin": 130
     },
     "White Oak": {
       "talbert_eb_roll": 0,
@@ -841,8 +841,8 @@
       "timber_AA_4x10_fr_black_mdf_075_satin": 0,
       "timber_AA_4x10_fr_black_mdf_100": 0,
       "timber_AA_4x10_fr_black_mdf_100_satin": 0,
-      "eb_roll": 0,
-      "eb_roll_satin": 0
+      "eb_roll": 80,
+      "eb_roll_satin": 115
     },
     "Rift White Oak": {
       "talbert_eb_roll": 0,
@@ -1263,7 +1263,7 @@
       "timber_AA_4x10_fr_black_mdf_075_satin": 0,
       "timber_AA_4x10_fr_black_mdf_100": 0,
       "timber_AA_4x10_fr_black_mdf_100_satin": 0,
-      "eb_roll": 0,
+      "eb_roll": 98,
       "eb_roll_satin": 0
     },
     "Maple": {
@@ -1685,8 +1685,8 @@
       "timber_AA_4x10_fr_black_mdf_075_satin": 0,
       "timber_AA_4x10_fr_black_mdf_100": 0,
       "timber_AA_4x10_fr_black_mdf_100_satin": 0,
-      "eb_roll": 0,
-      "eb_roll_satin": 0
+      "eb_roll": 34,
+      "eb_roll_satin": 49
     },
     "Cherry": {
       "talbert_eb_roll": 0,
@@ -2107,7 +2107,7 @@
       "timber_AA_4x10_fr_black_mdf_075_satin": 0,
       "timber_AA_4x10_fr_black_mdf_100": 0,
       "timber_AA_4x10_fr_black_mdf_100_satin": 0,
-      "eb_roll": 0,
+      "eb_roll": 43,
       "eb_roll_satin": 0
     },
     "Alder": {
@@ -2529,7 +2529,7 @@
       "timber_AA_4x10_fr_black_mdf_075_satin": 0,
       "timber_AA_4x10_fr_black_mdf_100": 0,
       "timber_AA_4x10_fr_black_mdf_100_satin": 0,
-      "eb_roll": 0,
+      "eb_roll": 34,
       "eb_roll_satin": 0
     },
     "Beech": {
@@ -3796,7 +3796,7 @@
       "timber_AA_4x10_fr_black_mdf_100": 0,
       "timber_AA_4x10_fr_black_mdf_100_satin": 0,
       "eb_roll": 0,
-      "eb_roll_satin": 0
+      "eb_roll_satin": 120
     },
     "Qtr Maple": {
       "talbert_eb_roll": 0,
@@ -4218,7 +4218,7 @@
       "timber_AA_4x10_fr_black_mdf_100": 0,
       "timber_AA_4x10_fr_black_mdf_100_satin": 0,
       "eb_roll": 0,
-      "eb_roll_satin": 0
+      "eb_roll_satin": 97
     },
     "Qtr White Oak": {
       "talbert_eb_roll": 0,
@@ -4640,7 +4640,7 @@
       "timber_AA_4x10_fr_black_mdf_100": 0,
       "timber_AA_4x10_fr_black_mdf_100_satin": 0,
       "eb_roll": 0,
-      "eb_roll_satin": 0
+      "eb_roll_satin": 138
     },
     "Qtr Walnut": {
       "talbert_eb_roll": 0,
@@ -5062,7 +5062,7 @@
       "timber_AA_4x10_fr_black_mdf_100": 0,
       "timber_AA_4x10_fr_black_mdf_100_satin": 0,
       "eb_roll": 0,
-      "eb_roll_satin": 0
+      "eb_roll_satin": 157
     },
     "Rift Ash": {
       "talbert_eb_roll": 0,
@@ -5841,7 +5841,7 @@
       "timber_AA_4x10_fr_black_mdf_075_satin": 0,
       "timber_AA_4x10_fr_black_mdf_100": 0,
       "timber_AA_4x10_fr_black_mdf_100_satin": 0,
-      "eb_roll": 0,
+      "eb_roll": 113,
       "eb_roll_satin": 0
     },
     "Qtr/Fig Spanish Cedar": {
@@ -7011,7 +7011,7 @@
       "timber_AA_4x10_black_mdf_075_satin": 0,
       "timber_AA_4x10_black_mdf_100": 0,
       "timber_AA_4x10_black_mdf_100_satin": 0,
-      "eb_roll": 0,
+      "eb_roll": 43,
       "eb_roll_satin": 0
     }
   },
@@ -7074,15 +7074,15 @@
     }
   },
   "services": {
-    "ebServicePerFt": 0.5,
-    "cutServicePerSqft": 0.19,
-    "bracketPrice": 2.5,
-    "millingFlat": 780,
+    "ebServicePerFt": 0.425,
+    "cutServicePerSqft": 0.1615,
+    "bracketPrice": 2.125,
+    "millingFlat": 665,
     "sandingFlat": 240,
     "cutFlat": 630,
     "assembly": 1.5,
     "millingThreshold": 3000,
-    "millingPerLF": 0.21,
+    "millingPerLF": 0.17,
     "seriesChange": 115,
     "sandingThreshold": 1700,
     "sandingPerLF": 0.19,
