@@ -152,6 +152,7 @@ const DEFAULT_PRICING = {
   },
   services: {
     ebServicePerFt: 0.50, cutServicePerSqft: 0.19,
+    cutFlatVeneer: 0, cutVeneerThreshold: 20,
     assembly: 1.50, bracketPrice: 2.50,
     millingFlat: 780, millingThreshold: 3000, millingPerLF: 0.21, seriesChange: 115,
     sandingFlat: 240, sandingThreshold: 1700, sandingPerLF: 0.19,
@@ -608,7 +609,7 @@ function calcVeneerPreview(cfg){
   `;
 }
 
-function calcVeneerCost(cfg){
+function calcVeneerCost(cfg, cutCostOverride){
   if(!cfg.species || !cfg.slatW || !cfg.panelW || !cfg.panelL) return null;
   const sData = pricing.veneerSpecies[cfg.species];
   if(!sData) return null;
@@ -642,7 +643,7 @@ function calcVeneerCost(cfg){
   const ebMaterialCost = ebRolls * ebRollPrice;
   const ebServiceCost  = ebFt * pricing.services.ebServicePerFt;
 
-  const cutCost      = effectiveSqft * pricing.services.cutServicePerSqft;
+  const cutCost      = cutCostOverride !== undefined ? cutCostOverride : effectiveSqft * pricing.services.cutServicePerSqft;
   const assemblyCost = cfg.assembly ? effectiveSqft * pricing.services.assembly : 0;
   const bracketCount = panelQty * cfg.bracketsPerPanel;
   const bracketCost  = bracketCount * pricing.services.bracketPrice;
@@ -664,7 +665,7 @@ function calcVeneerCost(cfg){
       [cfg.species==='Custom' ? 'Panel Material ('+fmtN(panelQty)+' panels)' : 'Panel Sheets ('+fmtN(sheetsNeeded)+' x '+grade+' '+sheetSize+')']: panelLine,
       ['Edge Band Material ('+fmtN(ebRolls)+' rolls)']: ebMatLine,
       ['Edge Band Service ('+fmtN(ebFt,0)+' ft)']: ebSvcLine,
-      'Cut Service': cutLine,
+      [cutCostOverride !== undefined ? 'Cut Service (flat)' : 'Cut Service']: cutLine,
       ...(cfg.assembly ? {'Assembly / Packing': asmLine} : {}),
       ['Black Brackets ('+fmtN(bracketCount)+')']: bktLine,
     },
@@ -1175,8 +1176,34 @@ function renderResults(){
   const cont = document.getElementById('resultsContent');
   const allResults = [];
 
+  // Pre-compute total sheets across all veneer configs to decide flat vs per-sqft cut
+  let totalVeneerSheets = 0, totalVeneerSqft = 0;
+  const veneerSqfts = veneerConfigs.map(cfg => {
+    const qty = resolveVeneerQty(cfg);
+    if(!qty || !cfg.slatW || !cfg.slatL) return 0;
+    const sData = pricing.veneerSpecies[cfg.species] || {};
+    const sup = cfg.grade || 'talbert';
+    const gr  = cfg.orientation === 'Vertical' ? 'AA' : 'A3';
+    const ck  = coreToKey(cfg.core || 'Fire Rated MDF');
+    const tk  = thickToKey(cfg.thickness || '3/4"');
+    const fin = cfg.satinFinish ? '_satin' : '';
+    const p8  = sData[`${sup}_${gr}_4x8_${ck}_${tk}${fin}`]  || 0;
+    const p10 = sData[`${sup}_${gr}_4x10_${ck}_${tk}${fin}`] || 0;
+    const opt = chooseVeneerSheet(cfg.slatW, cfg.slatL, p8, p10);
+    totalVeneerSheets += Math.ceil(qty.totalSlats / opt.slatsPerSheet);
+    totalVeneerSqft   += qty.effectiveSqft;
+    return qty.effectiveSqft;
+  });
+  const flatCharge   = pricing.services.cutFlatVeneer     || 0;
+  const flatThresh   = pricing.services.cutVeneerThreshold || 20;
+  const useVeneerFlat = flatCharge > 0 && totalVeneerSheets > 0 && totalVeneerSheets <= flatThresh;
+
   veneerConfigs.forEach((cfg,i) => {
-    const r = calcVeneerCost(cfg);
+    let cutOverride;
+    if(useVeneerFlat && totalVeneerSqft > 0){
+      cutOverride = flatCharge * ((veneerSqfts[i] || 0) / totalVeneerSqft);
+    }
+    const r = calcVeneerCost(cfg, cutOverride);
     if(r) allResults.push({...r, label:`Panel Config ${i+1} — ${r.species} (${r.orientation})`});
   });
   lumberConfigs.forEach((cfg,i) => {
@@ -1473,8 +1500,10 @@ function renderAdminModal(){
     ${svcField('bracketPrice', 'Black Bracket ($/ea)', '0.25')}
 
     ${svcHead('Veneer Services', 'var(--gold)')}
-    ${svcField('ebServicePerFt',   'EB Service ($/ft)', '0.01')}
-    ${svcField('cutServicePerSqft','Cut Service ($/sqft)', '0.01')}
+    ${svcField('ebServicePerFt',    'EB Service ($/ft)', '0.01')}
+    ${svcField('cutServicePerSqft', 'Cut Service ($/sqft) — over threshold', '0.01')}
+    ${svcField('cutFlatVeneer',     'Cut Service Flat Charge ($) — ≤ threshold', '1')}
+    ${svcField('cutVeneerThreshold','Flat Charge Threshold (sheets)', '1')}
   `;
   renderCategoryManager();
   renderAdminProducts();
@@ -1519,7 +1548,7 @@ function saveAdmin(){
     'millingFlat','millingThreshold','millingPerLF','seriesChange',
     'sandingFlat','sandingThreshold','sandingPerLF',
     'cutFlat','cutThreshold','cutPerLF',
-    'assembly','bracketPrice','ebServicePerFt','cutServicePerSqft',
+    'assembly','bracketPrice','ebServicePerFt','cutServicePerSqft','cutFlatVeneer','cutVeneerThreshold',
   ];
   svcKeys.forEach(k => {
     const el = document.getElementById('svc-'+k);
