@@ -63,15 +63,9 @@ function getWidthWasteFactor(finishedW){
   return 2.500;                          // 6-1/2" – 8-3/4"+
 }
 
-// Rough thickness to purchase for a given finished thickness
-// Source: mill thickness chart
 function getSuggestedRoughThick(finishedT){
-  if(finishedT <= 0.8125) return 1.00;   // ≤ 13/16" → 4/4
-  if(finishedT <= 1.0625) return 1.25;   // 7/8" – 1-1/16" → 5/4
-  if(finishedT <= 1.3125) return 1.50;   // 1-1/8" – 1-5/16" → 6/4
-  if(finishedT <= 1.8125) return 2.00;   // 1-3/8" – 1-13/16" → 8/4
-  if(finishedT <= 2.0000) return 2.50;   // 1-7/8" – 2" → 10/4
-  return 3.00;                           // > 2" → 12/4
+  const info = getStockInfo(finishedT);
+  return info ? info.stock : 1.0;
 }
 
 // --- DEFAULT PRICING -------------------------------------------------
@@ -813,9 +807,8 @@ function renderLumberConfigs(){
         <div class="config-grid">
           <div>
             <label class="field-label">Finished Thickness</label>
-            <select id="l-thick-${cfg.id}" onchange="lUpdate(${cfg.id})">
-              ${['0.25','0.4375','0.5','0.625','0.6875','0.75','1','1.25','1.5','1.75'].map(t=>`<option value="${t}" ${Math.abs(cfg.thickness-parseFloat(t))<0.001?'selected':''}>${fractionLabel(t)}</option>`).join('')}
-            </select>
+            <input type="text" id="l-thick-${cfg.id}" value="${cfg.thickness}" autocorrect="off" autocapitalize="none" placeholder="e.g. 7/16 or 0.4375" oninput="lUpdate(${cfg.id})">
+            <span class="stock-tag" id="l-thick-tag-${cfg.id}" style="${getStockInfo(cfg.thickness)?'':'display:none'}">${getStockInfo(cfg.thickness)?.label||''}</span>
           </div>
           <div>
             <label class="field-label">Finished Width</label>
@@ -880,7 +873,7 @@ function lUpdate(id){
   if(!cfg) return;
   cfg.species      = document.getElementById('l-species-'+id)?.value || cfg.species;
   cfg.orientation  = document.getElementById('l-orient-'+id)?.value || cfg.orientation;
-  cfg.thickness    = parseFloat(document.getElementById('l-thick-'+id)?.value) || cfg.thickness;
+  cfg.thickness    = parseFraction(document.getElementById('l-thick-'+id)?.value) || cfg.thickness;
   cfg.slatW        = parseFloat(document.getElementById('l-slatW-'+id)?.value) || cfg.slatW;
   cfg.slatL        = parseFloat(document.getElementById('l-slatL-'+id)?.value) || cfg.slatL;
   cfg.slatsPerPanel = parseInt(document.getElementById('l-slats-'+id)?.value) || cfg.slatsPerPanel;
@@ -914,6 +907,13 @@ function lUpdate(id){
     } else {
       stockTag.style.display = 'none';
     }
+  }
+
+  const thickTag = document.getElementById('l-thick-tag-'+id);
+  if(thickTag){
+    const si = getStockInfo(cfg.thickness);
+    thickTag.textContent = si ? si.label : '';
+    thickTag.style.display = si ? '' : 'none';
   }
 
   if(prevMode !== cfg.calcMode) renderLumberConfigs();
@@ -991,16 +991,35 @@ function millLumberCalc(cfg, totalSlats){
     };
 
   } else {
-    roughT     = getSuggestedRoughThick(cfg.thickness);
+    const stockInfo = getStockInfo(cfg.thickness);
+    roughT     = stockInfo ? stockInfo.stock : getSuggestedRoughThick(cfg.thickness);
     widthWaste = getWidthWasteFactor(cfg.slatW);
-    pcsWide    = null;
 
-    // Heath's formula: roughThick × (slatW + wasteFactor) × stockLength / 144
-    // Divided by pieces per length if multiple fit (only applies when slatL < 72")
-    bfPerSlat = roughT * (cfg.slatW + widthWaste) * stockIn / (144 * piecesPerLen);
+    if(stockInfo?.resaw){
+      // Resaw: multiple finished slats from one board's thickness
+      const pcsFromThick = Math.floor((roughT + RESAW_KERF) / (cfg.thickness + RESAW_KERF));
+      pcsWide  = Math.max(1, pcsFromThick);
+      bfPerSlat = roughT * (cfg.slatW + widthWaste) * stockIn / (144 * pcsWide * piecesPerLen);
+    } else {
+      pcsWide    = null;
+      bfPerSlat = roughT * (cfg.slatW + widthWaste) * stockIn / (144 * piecesPerLen);
+    }
+
+    const rawBFExact = bfPerSlat * totalSlats;
+    const safetyMult = cfg.safetyBuffer ? 1.10 : 1;
+    const rawBFTotal = Math.ceil(rawBFExact * safetyMult);
+    return {
+      isVGResaw, vgWarning,
+      stockIn, stockFt, piecesPerLen,
+      roughT, widthWaste, pcsWide,
+      bfPerSlat, rawBFTotal, defectPct,
+      safetyBuffer: cfg.safetyBuffer,
+      stockLabel: stockInfo?.label || null,
+      isThickResaw: !!(stockInfo?.resaw),
+    };
   }
 
-  // Total BF = BF/slat × count, apply optional safety buffer, round up
+  // (VG path returns early above — this line is unreachable)
   const rawBFExact  = bfPerSlat * totalSlats;
   const safetyMult  = cfg.safetyBuffer ? 1.10 : 1;
   const rawBFTotal  = Math.ceil(rawBFExact * safetyMult);
@@ -1011,6 +1030,7 @@ function millLumberCalc(cfg, totalSlats){
     roughT, widthWaste, pcsWide,
     bfPerSlat, rawBFTotal, defectPct,
     safetyBuffer: cfg.safetyBuffer,
+    stockLabel: null, isThickResaw: false,
   };
 }
 
@@ -1040,7 +1060,9 @@ function calcLumberPreview(cfg){
 
   const roughLabel = m.isVGResaw
     ? `2×6 (${m.pcsWide} pcs/board)`
-    : (ROUGH_THICKNESSES.find(r=>Math.abs(r.val-m.roughT)<0.001)?.label || m.roughT+'"');
+    : m.stockLabel
+      ? `${m.stockLabel}${m.isThickResaw ? ' · '+m.pcsWide+' pcs/board' : ''}`
+      : (ROUGH_THICKNESSES.find(r=>Math.abs(r.val-m.roughT)<0.001)?.label || m.roughT+'"');
 
   const vgWarnHTML = m.vgWarning ? `
     <div style="grid-column:1/-1;background:#3a1a00;border:1px solid var(--gold);border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--gold);line-height:1.5">
