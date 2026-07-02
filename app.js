@@ -808,8 +808,7 @@ function renderLumberConfigs(){
         <div class="config-grid">
           <div>
             <label class="field-label">Finished Thickness</label>
-            <input type="text" id="l-thick-${cfg.id}" value="${cfg.thickness}" autocorrect="off" autocapitalize="none" placeholder="e.g. 7/16 or 0.4375" oninput="lUpdate(${cfg.id})">
-            <span style="font-size:11px;color:var(--mid)">e.g. 3/4 or .75</span>
+            <input type="text" id="l-thick-${cfg.id}" value="${cfg.thickness}" autocorrect="off" autocapitalize="none" placeholder="e.g. 3/4 or .75" oninput="lUpdate(${cfg.id})">
             <span class="stock-tag" id="l-thick-tag-${cfg.id}" style="${getStockInfo(cfg.thickness)?'':'display:none'}">${getStockInfo(cfg.thickness)?.label||''}</span>
           </div>
           <div>
