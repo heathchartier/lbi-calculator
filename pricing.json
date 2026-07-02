@@ -7087,7 +7087,9 @@
     "sandingThreshold": 1700,
     "sandingPerLF": 0.19,
     "cutThreshold": 3000,
-    "cutPerLF": 0.21
+    "cutPerLF": 0.21,
+    "cutFlatVeneer": 100,
+    "cutVeneerThreshold": 20
   },
   "markup": {
     "panels": 15,
