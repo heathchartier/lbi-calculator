@@ -1454,6 +1454,32 @@ async function openSavedJobs(){
 
 function closeSavedJobs(){ document.getElementById('savedModal').classList.add('hidden'); }
 
+function toggleCloudConnect(){
+  const panel = document.getElementById('cloudConnectPanel');
+  const toggle = document.getElementById('cloudConnectToggle');
+  if(!panel) return;
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  if(!isOpen){
+    const hasToken = !!localStorage.getItem('lbiq_gh_token');
+    const status = document.getElementById('cloudTokenStatus');
+    if(status) status.textContent = hasToken ? '✓ Already connected' : '';
+    if(status) status.style.color = 'var(--teal)';
+  }
+}
+
+function saveCloudToken(){
+  const val = document.getElementById('cloudTokenInput')?.value?.trim();
+  const status = document.getElementById('cloudTokenStatus');
+  if(!val){ if(status){ status.textContent = 'Please paste a token first'; status.style.color='var(--red)'; } return; }
+  localStorage.setItem('lbiq_gh_token', val);
+  document.getElementById('cloudTokenInput').value = '';
+  if(status){ status.textContent = '✓ Connected! You can now save and sync jobs.'; status.style.color='var(--teal)'; }
+  setTimeout(() => {
+    document.getElementById('cloudConnectPanel').style.display = 'none';
+  }, 2000);
+}
+
 function updateJobEditStatus(){
   const btn    = document.getElementById('saveJobBtn');
   const status = document.getElementById('jobEditStatus');
@@ -1675,13 +1701,9 @@ function saveAdmin(){
     if(el) pricing.services[k] = parseFloat(el.value) || 0;
   });
 
-  // Save GitHub token if a new one was entered, and include it in cloud pricing
-  // so all devices receive it automatically on next pricing fetch
+  // Save GitHub token to localStorage only — never stored in pricing.json
   const ghTokenInput = document.getElementById('admin-gh-token')?.value?.trim();
-  if(ghTokenInput){
-    localStorage.setItem('lbiq_gh_token', ghTokenInput);
-    pricing.ghToken = ghTokenInput;
-  }
+  if(ghTokenInput) localStorage.setItem('lbiq_gh_token', ghTokenInput);
 
   localStorage.setItem('lbiq_pricing', JSON.stringify(pricing));
   renderVeneerConfigs();
@@ -2567,10 +2589,6 @@ async function fetchCloudPricing(){
   localStorage.setItem('lbiq_pricing', JSON.stringify(imported));
   Object.keys(pricing).forEach(k => delete pricing[k]);
   Object.assign(pricing, imported);
-  // Auto-distribute token so all devices get write access without manual entry
-  if(imported.ghToken && !localStorage.getItem('lbiq_gh_token')){
-    localStorage.setItem('lbiq_gh_token', imported.ghToken);
-  }
   if(!pricing.productCategories) pricing.productCategories = [];
   if(!pricing.laminationFaces)   pricing.laminationFaces = {};
   if(!pricing.laminationCores)   pricing.laminationCores = {};
