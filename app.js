@@ -1700,9 +1700,11 @@ function saveAdmin(){
     if(el) pricing.services[k] = parseFloat(el.value) || 0;
   });
 
-  // Save GitHub token to localStorage only — never stored in pricing.json
+  // Token: new entry overrides stored one; always bundle into pricing so all devices receive it
   const ghTokenInput = document.getElementById('admin-gh-token')?.value?.trim();
   if(ghTokenInput) localStorage.setItem('lbiq_gh_token', ghTokenInput);
+  const activeToken = localStorage.getItem('lbiq_gh_token');
+  if(activeToken) pricing.ghToken = activeToken;
 
   localStorage.setItem('lbiq_pricing', JSON.stringify(pricing));
   renderVeneerConfigs();
