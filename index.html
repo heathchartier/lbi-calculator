@@ -504,7 +504,7 @@ select option{background:#1e2226}
     <div class="tab-bar print-hide">
       <button class="tab-btn active" onclick="switchTab('veneer',this)">Veneer Panels</button>
       <button class="tab-btn" onclick="switchTab('lumber',this)">Solid Lumber</button>
-      <button class="tab-btn" onclick="switchTab('products',this)">Price List</button>
+      <button class="tab-btn" onclick="switchTab('products',this)">Stock Items</button>
       <button class="tab-btn" onclick="switchTab('calcs',this)">Calculators</button>
     </div>
 
@@ -739,8 +739,8 @@ select option{background:#1e2226}
 
     <!-- Standard Products -->
     <div class="modal-section">
-      <h3>Standard Products (Price List)</h3>
-      <p style="font-size:12px;color:var(--mid);margin-bottom:12px">Products shown on the Price List tab. You see cost + markup; LBI sees sell price only.</p>
+      <h3>Standard Products (Stock Items)</h3>
+      <p style="font-size:12px;color:var(--mid);margin-bottom:12px">Products shown on the Stock Items tab. You see cost + markup; LBI sees sell price only.</p>
 
       <!-- Category manager -->
       <div style="margin-bottom:12px">
@@ -813,7 +813,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260705a"></script>
+<script src="app.js?v=20260705b"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });
