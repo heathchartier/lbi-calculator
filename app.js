@@ -1445,7 +1445,6 @@ async function openSavedJobs(){
           <div class="saved-job-meta">${j.customer||''} ${j.po?'| '+j.po:''} | ${j.date||''}</div>
         </div>
         <button class="btn-secondary" onclick="loadJob(${JSON.stringify(j).replace(/"/g,'&quot;')})">Load</button>
-        <button class="btn-ghost" onclick="copyJobCode(${JSON.stringify(j).replace(/"/g,'&quot;')})">Share</button>
         ${canDelete ? `<button class="btn-danger" onclick="deleteJob(${j.id})">✕</button>` : ''}
       </div>
     `).join('');
