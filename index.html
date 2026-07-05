@@ -418,6 +418,9 @@ select option{background:#1e2226}
 .ppi-val{font-family:var(--font-head);font-size:21px;font-weight:700;color:var(--ink)}
 .drag-handle{cursor:grab;color:var(--mid);font-size:16px;padding:0 4px;user-select:none;line-height:1}
 .prod-drag-row.drag-over{background:var(--surf2);border-radius:var(--r);outline:2px solid var(--teal)}
+.product-qty-row{display:flex;align-items:center;gap:8px;padding-top:8px;border-top:1px solid var(--bdr)}
+.product-qty-row input{width:80px;flex-shrink:0;background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:6px 8px;font-size:14px}
+.product-line-total{margin-left:auto;font-family:var(--font-head);font-weight:700;color:var(--teal);font-size:16px}
 </style>
 </head>
 <body>
@@ -505,6 +508,7 @@ select option{background:#1e2226}
       <button class="tab-btn active" onclick="switchTab('veneer',this)">Veneer Panels</button>
       <button class="tab-btn" onclick="switchTab('lumber',this)">Solid Lumber</button>
       <button class="tab-btn" onclick="switchTab('products',this)">Stock Items</button>
+      <button class="tab-btn" onclick="switchTab('lam',this)">Lamination</button>
       <button class="tab-btn" onclick="switchTab('calcs',this)">Calculators</button>
     </div>
 
@@ -528,6 +532,15 @@ select option{background:#1e2226}
 
     <!-- Products Tab -->
     <div id="tab-products" class="tab-pane" style="padding:8px 0 24px"></div>
+
+    <!-- Lamination Tab -->
+    <div id="tab-lam" class="tab-pane">
+      <div class="configs-container" id="laminationConfigs"></div>
+      <button class="add-config-btn print-hide" onclick="addLaminationConfig()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Lamination Configuration
+      </button>
+    </div>
 
     <!-- Calculators Tab -->
     <div id="tab-calcs" class="tab-pane">
@@ -737,6 +750,13 @@ select option{background:#1e2226}
       <div id="serviceRatesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px"></div>
     </div>
 
+    <!-- Lamination Pricing -->
+    <div class="modal-section">
+      <h3>Lamination Pricing</h3>
+      <p style="font-size:12px;color:var(--mid);margin-bottom:12px">Faces and cores used in the Lamination tab. Only items with a price set are shown to LBI.</p>
+      <div id="laminationAdminSection" style="display:grid;grid-template-columns:1fr;gap:12px"></div>
+    </div>
+
     <!-- Standard Products -->
     <div class="modal-section">
       <h3>Standard Products (Stock Items)</h3>
@@ -813,7 +833,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260705b"></script>
+<script src="app.js?v=20260705c"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });

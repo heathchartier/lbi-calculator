@@ -153,7 +153,7 @@ const DEFAULT_PRICING = {
   services: {
     ebServicePerFt: 0.50, cutServicePerSqft: 0.19,
     cutFlatVeneer: 0, cutVeneerThreshold: 20,
-    assembly: 1.50, bracketPrice: 2.50,
+    assembly: 1.50, bracketPrice: 2.50, glueLine: 0,
     millingFlat: 780, millingThreshold: 3000, millingPerLF: 0.21, seriesChange: 115,
     sandingFlat: 240, sandingThreshold: 1700, sandingPerLF: 0.19,
     cutFlat: 500, cutThreshold: 3000, cutPerLF: 0.21,
@@ -164,6 +164,8 @@ const DEFAULT_PRICING = {
   },
   standardProducts: [],
   productCategories: [],
+  laminationFaces: {},
+  laminationCores: {},
   veneerCores: [
     { key:'frmdf', label:'Fire Rated MDF' },
     { key:'mdf',   label:'Regular MDF' },
@@ -176,9 +178,12 @@ const DEFAULT_PRICING = {
 let pricing = JSON.parse(localStorage.getItem('lbiq_pricing') || 'null') || deepCopy(DEFAULT_PRICING);
 let veneerConfigs = [];
 let lumberConfigs = [];
+let laminationConfigs = [];
 let veneerCounter = 0;
 let lumberCounter = 0;
+let laminationCounter = 0;
 let isDirty = false;
+let productCart = {};
 let productCounter = 0;
 let categoryCounter = 0;
 let _dragProdId = null;
@@ -221,6 +226,7 @@ function activateApp(isAdmin){
   addLumberConfig();
   recalcAll();
   renderProductsTab();
+  renderLaminationConfigs();
 }
 
 function toggleLockPwVis(){
@@ -1181,6 +1187,7 @@ function calcJobServices(){
 function recalcAll(){
   veneerConfigs.forEach(cfg => calcVeneerPreview(cfg));
   lumberConfigs.forEach(cfg => calcLumberPreview(cfg));
+  laminationConfigs.forEach(cfg => calcLaminationPreview(cfg));
   renderResults();
 }
 
@@ -1222,8 +1229,30 @@ function renderResults(){
     const r = calcLumberCost(cfg);
     if(r) allResults.push({...r, label:`Lumber Config ${i+1} — ${r.species}`});
   });
+  laminationConfigs.forEach((cfg,i) => {
+    const r = calcLaminationCost(cfg);
+    if(r) allResults.push({...r, label:`Lam Config ${i+1} — ${cfg.face||'New Config'}`, isLam:true});
+  });
 
-  if(!allResults.length){
+  // Stock items lines
+  const stockLines = [];
+  let stockTotal = 0;
+  (pricing.standardProducts || []).forEach(p => {
+    const qty = productCart[p.name];
+    if(!qty) return;
+    let lineVal = 0;
+    if(p.type === 'panel'){
+      const c = calcPanelProduct(p);
+      if(c) lineVal = qty * c.sellPerSheet;
+    } else {
+      const c = calcLumberProduct(p);
+      if(c) lineVal = qty * c.sellPerSqft;
+    }
+    if(lineVal > 0){ stockLines.push({ label:`${p.name} × ${fmtN(qty,2)}`, val:lineVal }); stockTotal += lineVal; }
+  });
+
+  const hasStock = stockLines.length > 0;
+  if(!allResults.length && !hasStock){
     cont.innerHTML = '<div class="results-empty">Fill in job details and add a configuration above to see results.</div>';
     return;
   }
@@ -1256,6 +1285,18 @@ function renderResults(){
     grandTotal += r.subtotal;
   });
 
+  // Stock Items block
+  if(hasStock){
+    html += `<div class="result-config">`;
+    html += `<div class="result-config-title" style="color:var(--teal)">STOCK ITEMS</div>`;
+    stockLines.forEach(line => {
+      html += `<div class="result-row"><span class="result-label">${line.label}</span><span class="result-value">${fmt(line.val)}</span></div>`;
+    });
+    html += `<div class="result-row" style="font-weight:600"><span>Stock Items Subtotal</span><span class="result-value">${fmt(stockTotal)}</span></div>`;
+    html += '</div>';
+    grandTotal += stockTotal;
+  }
+
   // Combined mill services block
   if(hasLumber && millSvc){
     const millingRate = millSvc.totalLF > pricing.services.millingThreshold ? 'at $/LF rate' : 'flat rate';
@@ -1277,12 +1318,15 @@ function renderResults(){
   }
 
   html += `<div class="result-total-card">`;
-  if(allResults.length > 1 || (hasLumber && millSvc)){
+  if(allResults.length > 1 || (hasLumber && millSvc) || hasStock){
     allResults.forEach(r => {
       html += `<div class="result-total-row"><span class="result-label">${r.label}</span><span style="font-family:var(--font-mono)">${fmt(r.subtotal)}</span></div>`;
     });
     if(hasLumber && millSvc){
       html += `<div class="result-total-row"><span class="result-label">Mill Services</span><span style="font-family:var(--font-mono)">${fmt(svcTotal)}</span></div>`;
+    }
+    if(hasStock){
+      html += `<div class="result-total-row"><span class="result-label">Stock Items</span><span style="font-family:var(--font-mono)">${fmt(stockTotal)}</span></div>`;
     }
   }
   const totalEffSqft = allResults.reduce((s,r) => s + (r.effectiveSqft||0), 0);
@@ -1322,8 +1366,10 @@ function buildJobObject(){
     po:       document.getElementById('jobPO')?.value || '',
     date:     document.getElementById('jobDate')?.value || '',
     notes:    document.getElementById('jobNotes')?.value || '',
-    veneerConfigs: deepCopy(veneerConfigs),
-    lumberConfigs: deepCopy(lumberConfigs),
+    veneerConfigs:    deepCopy(veneerConfigs),
+    lumberConfigs:    deepCopy(lumberConfigs),
+    laminationConfigs:deepCopy(laminationConfigs),
+    productCart:      {...productCart},
     savedAt: new Date().toISOString(),
   };
 }
@@ -1331,12 +1377,17 @@ function buildJobObject(){
 function saveJob(){
   const job  = buildJobObject();
   const jobs = JSON.parse(localStorage.getItem('lbiq_jobs') || '[]');
-  const idx  = jobs.findIndex(j => j.name===job.name && j.date===job.date);
-  if(idx >= 0) jobs[idx] = {...jobs[idx], ...job, id:jobs[idx].id};
+  const idx  = jobs.findIndex(j => j.id === job.id || (j.name===job.name && j.customer===job.customer && j.date===job.date));
+  if(idx >= 0) jobs[idx] = {...jobs[idx], ...job};
   else jobs.unshift(job);
   localStorage.setItem('lbiq_jobs', JSON.stringify(jobs));
   isDirty = false;
-  showToast('Job saved!');
+  if(localStorage.getItem('lbiq_gh_token')){
+    showToast('Saving job to cloud…');
+    pushJobsToCloud(jobs).then(r => showToast(r.ok ? '✓ Job saved — visible on all devices' : '⚠ Saved locally. Cloud sync failed: '+r.msg));
+  } else {
+    showToast('Job saved locally');
+  }
 }
 
 function loadJob(job){
@@ -1350,20 +1401,32 @@ function loadJob(job){
     (job.veneerConfigs||[]).forEach(c => { if(!c.sqft) c.sqft = parseFloat(job.sqft)||0; });
     (job.lumberConfigs||[]).forEach(c => { if(!c.sqft) c.sqft = parseFloat(job.sqft)||0; });
   }
-  veneerConfigs  = job.veneerConfigs || [];
-  lumberConfigs  = job.lumberConfigs || [];
-  veneerCounter  = veneerConfigs.reduce((m,c) => Math.max(m,c.id), 0);
-  lumberCounter  = lumberConfigs.reduce((m,c) => Math.max(m,c.id), 0);
+  veneerConfigs     = job.veneerConfigs  || [];
+  lumberConfigs     = job.lumberConfigs  || [];
+  laminationConfigs = job.laminationConfigs || [];
+  veneerCounter     = veneerConfigs.reduce((m,c) => Math.max(m,c.id), 0);
+  lumberCounter     = lumberConfigs.reduce((m,c) => Math.max(m,c.id), 0);
+  laminationCounter = laminationConfigs.reduce((m,c) => Math.max(m,c.id), 0);
+  Object.keys(productCart).forEach(k => delete productCart[k]);
+  Object.assign(productCart, job.productCart || {});
   renderVeneerConfigs();
   renderLumberConfigs();
+  renderLaminationConfigs();
   recalcAll();
+  renderProductsTab();
   closeSavedJobs();
   isDirty = false;
 }
 
-function openSavedJobs(){
-  const jobs = JSON.parse(localStorage.getItem('lbiq_jobs') || '[]');
+async function openSavedJobs(){
+  document.getElementById('savedModal').classList.remove('hidden');
   const list = document.getElementById('savedJobsList');
+  if(localStorage.getItem('lbiq_gh_token')){
+    list.innerHTML = '<p style="color:var(--mid);font-size:14px">Loading from cloud…</p>';
+    const cloudJobs = await fetchJobsFromCloud();
+    if(cloudJobs) localStorage.setItem('lbiq_jobs', JSON.stringify(cloudJobs));
+  }
+  const jobs = JSON.parse(localStorage.getItem('lbiq_jobs') || '[]');
   if(!jobs.length){
     list.innerHTML = '<p style="color:var(--mid);font-size:14px">No saved jobs yet.</p>';
   } else {
@@ -1373,13 +1436,12 @@ function openSavedJobs(){
           <div class="saved-job-name">${j.name||'Untitled'}</div>
           <div class="saved-job-meta">${j.customer||''} ${j.po?'| '+j.po:''} | ${j.date||''}</div>
         </div>
-        <button class="btn-secondary" onclick="loadJob(${JSON.stringify(j).replace(/"/g,'"')})">Load</button>
-        <button class="btn-ghost" onclick="copyJobCode(${JSON.stringify(j).replace(/"/g,'"')})">Share</button>
+        <button class="btn-secondary" onclick="loadJob(${JSON.stringify(j).replace(/"/g,'&quot;')})">Load</button>
+        <button class="btn-ghost" onclick="copyJobCode(${JSON.stringify(j).replace(/"/g,'&quot;')})">Share</button>
         <button class="btn-danger" onclick="deleteJob(${j.id})">✕</button>
       </div>
     `).join('');
   }
-  document.getElementById('savedModal').classList.remove('hidden');
 }
 
 function closeSavedJobs(){ document.getElementById('savedModal').classList.add('hidden'); }
@@ -1388,6 +1450,9 @@ function deleteJob(id){
   let jobs = JSON.parse(localStorage.getItem('lbiq_jobs') || '[]');
   jobs = jobs.filter(j => j.id !== id);
   localStorage.setItem('lbiq_jobs', JSON.stringify(jobs));
+  if(localStorage.getItem('lbiq_gh_token')){
+    pushJobsToCloud(jobs).then(r => { if(!r.ok) showToast('⚠ Deleted locally. Cloud sync failed: '+r.msg); });
+  }
   openSavedJobs();
 }
 
@@ -1415,9 +1480,10 @@ function newJob(){
   document.getElementById('jobPO').value       = '';
   document.getElementById('jobDate').value     = new Date().toISOString().split('T')[0];
   document.getElementById('jobNotes').value    = '';
-  veneerConfigs = []; lumberConfigs = [];
-  veneerCounter = 0; lumberCounter = 0;
-  renderVeneerConfigs(); renderLumberConfigs();
+  veneerConfigs = []; lumberConfigs = []; laminationConfigs = [];
+  veneerCounter = 0; lumberCounter = 0; laminationCounter = 0;
+  Object.keys(productCart).forEach(k => delete productCart[k]);
+  renderVeneerConfigs(); renderLumberConfigs(); renderLaminationConfigs();
   addVeneerConfig();
   recalcAll(); isDirty = false;
 }
@@ -1516,9 +1582,15 @@ function renderAdminModal(){
     ${svcField('cutServicePerSqft', 'Cut Service ($/sqft) — over threshold', '0.01')}
     ${svcField('cutFlatVeneer',     'Cut Service Flat Charge ($) — ≤ threshold', '1')}
     ${svcField('cutVeneerThreshold','Flat Charge Threshold (sheets)', '1')}
+
+    ${svcHead('Lamination Services', '#c084fc')}
+    ${svcField('glueLine', 'Glue Line ($/sqft)', '0.01')}
   `;
   renderCategoryManager();
   renderAdminProducts();
+  if(!pricing.laminationFaces) pricing.laminationFaces = {};
+  if(!pricing.laminationCores) pricing.laminationCores = {};
+  renderLaminationAdmin();
 }
 
 function saveAdmin(){
@@ -1555,12 +1627,27 @@ function saveAdmin(){
     if(pricing.lumberSpecies[s]) pricing.lumberSpecies[s].resaw = el.checked;
   });
 
+  // Lamination faces
+  document.querySelectorAll('#lamFacesBody input[data-lamface]').forEach(el => {
+    const name = el.dataset.lamface, key = el.dataset.key;
+    if(!pricing.laminationFaces[name]) pricing.laminationFaces[name] = { pricePerSheet:0, ebRoll:0 };
+    pricing.laminationFaces[name][key] = parseFloat(el.value) || 0;
+  });
+
+  // Lamination cores
+  document.querySelectorAll('#lamCoresBody input[data-lamcore]').forEach(el => {
+    const name = el.dataset.lamcore, key = el.dataset.key;
+    if(!pricing.laminationCores[name]) pricing.laminationCores[name] = { pricePerSheet:0 };
+    pricing.laminationCores[name][key] = parseFloat(el.value) || 0;
+  });
+
   // Services
   const svcKeys = [
     'millingFlat','millingThreshold','millingPerLF','seriesChange',
     'sandingFlat','sandingThreshold','sandingPerLF',
     'cutFlat','cutThreshold','cutPerLF',
     'assembly','bracketPrice','ebServicePerFt','cutServicePerSqft','cutFlatVeneer','cutVeneerThreshold',
+    'glueLine',
   ];
   svcKeys.forEach(k => {
     const el = document.getElementById('svc-'+k);
@@ -1574,6 +1661,7 @@ function saveAdmin(){
   localStorage.setItem('lbiq_pricing', JSON.stringify(pricing));
   renderVeneerConfigs();
   renderLumberConfigs();
+  renderLaminationConfigs();
   recalcAll();
   closeAdmin();
 
@@ -1583,6 +1671,449 @@ function saveAdmin(){
   } else {
     showToast('Pricing saved!');
   }
+}
+
+// --- CLOUD JOB SYNC ---------------------------------------------------
+async function pushJobsToCloud(jobs){
+  const token = localStorage.getItem('lbiq_gh_token');
+  if(!token) return { ok:false, msg:'No token' };
+  const url = 'https://api.github.com/repos/heathchartier/lbi-calculator/contents/jobs.json';
+  const headers = {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
+    'Accept': 'application/vnd.github.v3+json',
+  };
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(jobs, null, 2))));
+  async function tryPush(retries){
+    let sha;
+    const getResp = await fetch(url, { headers });
+    if(getResp.ok) sha = (await getResp.json()).sha;
+    else if(getResp.status === 401) return { ok:false, msg:'Token invalid or expired' };
+    else if(getResp.status !== 404) return { ok:false, msg:'Could not reach GitHub ('+getResp.status+')' };
+    const body = { message:'Update jobs', content };
+    if(sha) body.sha = sha;
+    const putResp = await fetch(url, { method:'PUT', headers, body:JSON.stringify(body) });
+    if(putResp.ok) return { ok:true };
+    if(putResp.status === 409 && retries > 0) return tryPush(retries - 1);
+    if(putResp.status === 401) return { ok:false, msg:'Token invalid or expired' };
+    return { ok:false, msg:'Push failed ('+putResp.status+')' };
+  }
+  try { return await tryPush(1); }
+  catch(e){ return { ok:false, msg:e.message }; }
+}
+
+async function fetchJobsFromCloud(){
+  try {
+    const resp = await fetch(
+      `https://raw.githubusercontent.com/heathchartier/lbi-calculator/main/jobs.json?_=${Date.now()}`,
+      { cache:'no-store' }
+    );
+    if(!resp.ok) return null;
+    const jobs = await resp.json();
+    return Array.isArray(jobs) ? jobs : null;
+  } catch(e){ return null; }
+}
+
+// --- LAMINATION -------------------------------------------------------
+function addLaminationConfig(){
+  laminationCounter++;
+  const faceKeys = Object.keys(pricing.laminationFaces || {});
+  const coreKeys = Object.keys(pricing.laminationCores || {});
+  laminationConfigs.push({
+    id: laminationCounter,
+    face: faceKeys[0] || '',
+    core: coreKeys[0] || '',
+    panelW:0, panelL:0, slatW:0, slatL:0,
+    slatsPerPanel:0, bracketsPerPanel:0,
+    ebSides:4, assembly:false, wasteOn:true,
+    calcMode:'sqft', manualQty:0, sqft:0,
+  });
+  renderLaminationConfigs();
+}
+
+function removeLaminationConfig(id){
+  laminationConfigs = laminationConfigs.filter(c => c.id !== id);
+  renderLaminationConfigs();
+  recalcAll();
+  markDirty();
+}
+
+function renderLaminationConfigs(){
+  const cont = document.getElementById('laminationConfigs');
+  if(!cont) return;
+  cont.innerHTML = '';
+  const faces = pricing.laminationFaces || {};
+  const cores = pricing.laminationCores || {};
+  // Only show items with a price set (same rule as veneer species / lumber)
+  const faceKeys = Object.keys(faces).filter(k => (faces[k].pricePerSheet || 0) > 0);
+  const coreKeys = Object.keys(cores).filter(k => (cores[k].pricePerSheet || 0) > 0);
+
+  laminationConfigs.forEach(cfg => {
+    const modeLabels = {sqft:'By Sq Ft', slats:'By Slat Count', panels:'By Panel Count'};
+    const qtyLabel   = cfg.calcMode === 'slats' ? 'Total Slats' : 'Number of Panels';
+    const div = document.createElement('div');
+    div.className = 'config-card';
+    div.id = 'lcfg-' + cfg.id;
+    div.innerHTML = `
+      <div class="config-header" onclick="toggleCollapse('lcfg-${cfg.id}')">
+        <span class="config-num">LAM ${laminationConfigs.indexOf(cfg)+1}</span>
+        <span class="config-title" id="ltitle-${cfg.id}">${cfg.face||'New Configuration'}</span>
+        <span class="config-chevron">▼</span>
+        <button class="btn-danger print-hide" onclick="event.stopPropagation();removeLaminationConfig(${cfg.id})" style="margin-left:8px">Remove</button>
+      </div>
+      <div class="config-body">
+        <div class="config-grid">
+          <div>
+            <label class="field-label">Laminated Face</label>
+            <select id="l2-face-${cfg.id}" onchange="lamUpdate(${cfg.id})">
+              ${faceKeys.length
+                ? ['Customer Supplied',...faceKeys].map(f=>`<option value="${f}" ${cfg.face===f?'selected':''}>${f}</option>`).join('')
+                : '<option value="Customer Supplied">Customer Supplied (no faces priced — see admin)</option>'}
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Core</label>
+            <select id="l2-core-${cfg.id}" onchange="lamUpdate(${cfg.id})">
+              ${coreKeys.length
+                ? coreKeys.map(c=>`<option value="${c}" ${cfg.core===c?'selected':''}>${c}</option>`).join('')
+                : '<option value="">No cores priced — see admin</option>'}
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Calculate By</label>
+            <select id="l2-mode-${cfg.id}" onchange="lamUpdate(${cfg.id})">
+              <option value="sqft"   ${cfg.calcMode==='sqft'?'selected':''}>By Sq Ft</option>
+              <option value="slats"  ${cfg.calcMode==='slats'?'selected':''}>By Slat Count</option>
+              <option value="panels" ${cfg.calcMode==='panels'?'selected':''}>By Panel Count</option>
+            </select>
+          </div>
+          ${cfg.calcMode==='sqft' ? `<div>
+            <label class="field-label">Ceiling Sq Ft</label>
+            <input type="number" id="l2-sqft-${cfg.id}" value="${cfg.sqft||''}" step="1" min="1" placeholder="e.g. 500" oninput="lamUpdate(${cfg.id})">
+          </div>` : `<div>
+            <label class="field-label">${qtyLabel}</label>
+            <input type="number" id="l2-manualQty-${cfg.id}" value="${cfg.manualQty||''}" step="1" min="1" placeholder="Enter count" oninput="lamUpdate(${cfg.id})">
+          </div>`}
+        </div>
+        <hr class="config-divider">
+        <span class="section-label">Panel & Slat Dimensions (inches)</span>
+        <div class="config-grid">
+          <div>
+            <label class="field-label">Panel Width</label>
+            <input type="number" id="l2-panelW-${cfg.id}" value="${cfg.panelW||''}" step="0.25" min="1" placeholder="e.g. 12" oninput="lamUpdate(${cfg.id})">
+          </div>
+          <div>
+            <label class="field-label">Panel Length</label>
+            <input type="number" id="l2-panelL-${cfg.id}" value="${cfg.panelL||''}" step="0.25" min="1" placeholder="e.g. 96" oninput="lamUpdate(${cfg.id})">
+          </div>
+          <div>
+            <label class="field-label">Slat Width</label>
+            <input type="number" id="l2-slatW-${cfg.id}" value="${cfg.slatW||''}" step="0.0625" min="0.5" placeholder="e.g. 3.25" oninput="lamUpdate(${cfg.id})">
+          </div>
+          <div>
+            <label class="field-label">Slat Length</label>
+            <input type="number" id="l2-slatL-${cfg.id}" value="${cfg.slatL||''}" step="0.25" min="1" placeholder="e.g. 96" oninput="lamUpdate(${cfg.id})">
+          </div>
+          <div>
+            <label class="field-label">Slats / Panel</label>
+            <input type="number" id="l2-slats-${cfg.id}" value="${cfg.slatsPerPanel||''}" step="1" min="1" placeholder="e.g. 4" oninput="lamUpdate(${cfg.id})">
+          </div>
+          <div>
+            <label class="field-label">Brackets / Panel</label>
+            <input type="number" id="l2-brackets-${cfg.id}" value="${cfg.bracketsPerPanel||''}" step="1" min="0" placeholder="e.g. 8" oninput="lamUpdate(${cfg.id})">
+          </div>
+          <div>
+            <label class="field-label">Edge Band Sides</label>
+            <select id="l2-ebsides-${cfg.id}" onchange="lamUpdate(${cfg.id})">
+              <option value="4" ${cfg.ebSides===4?'selected':''}>4 sides</option>
+              <option value="3" ${cfg.ebSides===3?'selected':''}>3 sides</option>
+              <option value="2" ${cfg.ebSides===2?'selected':''}>2 long sides</option>
+              <option value="1" ${cfg.ebSides===1?'selected':''}>1 long side</option>
+              <option value="0" ${cfg.ebSides===0?'selected':''}>No edge banding</option>
+            </select>
+          </div>
+        </div>
+        <hr class="config-divider">
+        <div style="display:flex;gap:24px;flex-wrap:wrap">
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="l2-assembly-${cfg.id}" ${cfg.assembly?'checked':''} onchange="lamUpdate(${cfg.id})"><span class="toggle-slider"></span></label>
+            <span class="toggle-label">Assembly included</span>
+          </div>
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="l2-waste-${cfg.id}" ${cfg.wasteOn!==false?'checked':''} onchange="lamUpdate(${cfg.id})"><span class="toggle-slider"></span></label>
+            <span class="toggle-label">+10% waste</span>
+          </div>
+        </div>
+        <div id="l2-preview-${cfg.id}" class="calc-preview" style="margin-top:16px"></div>
+      </div>
+    `;
+    cont.appendChild(div);
+  });
+}
+
+function lamUpdate(id){
+  const cfg = laminationConfigs.find(c => c.id === id);
+  if(!cfg) return;
+  cfg.face    = document.getElementById('l2-face-'+id)?.value || cfg.face;
+  cfg.core    = document.getElementById('l2-core-'+id)?.value || cfg.core;
+  cfg.panelW  = parseFloat(document.getElementById('l2-panelW-'+id)?.value) || 0;
+  cfg.panelL  = parseFloat(document.getElementById('l2-panelL-'+id)?.value) || 0;
+  cfg.slatW   = parseFloat(document.getElementById('l2-slatW-'+id)?.value) || 0;
+  cfg.slatL   = parseFloat(document.getElementById('l2-slatL-'+id)?.value) || 0;
+  cfg.slatsPerPanel   = parseInt(document.getElementById('l2-slats-'+id)?.value) || 0;
+  cfg.bracketsPerPanel= parseInt(document.getElementById('l2-brackets-'+id)?.value) || 0;
+  cfg.ebSides  = parseInt(document.getElementById('l2-ebsides-'+id)?.value) || 0;
+  cfg.assembly = document.getElementById('l2-assembly-'+id)?.checked ?? false;
+  cfg.wasteOn  = document.getElementById('l2-waste-'+id)?.checked ?? true;
+  const prevMode = cfg.calcMode;
+  cfg.calcMode = document.getElementById('l2-mode-'+id)?.value || cfg.calcMode;
+  cfg.sqft     = parseFloat(document.getElementById('l2-sqft-'+id)?.value) || 0;
+  cfg.manualQty= parseInt(document.getElementById('l2-manualQty-'+id)?.value) || 0;
+  const titleEl = document.getElementById('ltitle-'+id);
+  if(titleEl) titleEl.textContent = cfg.face || 'New Configuration';
+  if(prevMode !== cfg.calcMode) renderLaminationConfigs();
+  calcLaminationPreview(cfg);
+  recalcAll();
+  markDirty();
+}
+
+function resolveLaminationQty(cfg){
+  if(!cfg.slatW || !cfg.slatL || !cfg.slatsPerPanel || !cfg.panelW || !cfg.panelL) return null;
+  const sqftPerPanel = (cfg.panelW * cfg.panelL) / 144;
+  if(cfg.calcMode === 'sqft'){
+    if(!cfg.sqft) return null;
+    const panelQty   = Math.ceil(cfg.sqft / sqftPerPanel);
+    const totalSlats = panelQty * cfg.slatsPerPanel;
+    return { panelQty, totalSlats, effectiveSqft: cfg.sqft };
+  } else if(cfg.calcMode === 'slats'){
+    if(!cfg.manualQty) return null;
+    const totalSlats = cfg.manualQty;
+    const panelQty   = Math.ceil(totalSlats / cfg.slatsPerPanel);
+    return { panelQty, totalSlats, effectiveSqft: panelQty * sqftPerPanel };
+  } else {
+    if(!cfg.manualQty) return null;
+    const panelQty   = cfg.manualQty;
+    const totalSlats = panelQty * cfg.slatsPerPanel;
+    return { panelQty, totalSlats, effectiveSqft: panelQty * sqftPerPanel };
+  }
+}
+
+function calcLaminationCost(cfg){
+  const qty = resolveLaminationQty(cfg);
+  if(!qty) return null;
+  const { panelQty, totalSlats, effectiveSqft } = qty;
+
+  const isCustomer = cfg.face === 'Customer Supplied';
+  const faceData   = isCustomer ? null : (pricing.laminationFaces||{})[cfg.face];
+  const coreData   = (pricing.laminationCores||{})[cfg.core];
+  const wasteMult  = cfg.wasteOn !== false ? 1.10 : 1.0;
+
+  // Face sheets
+  const facePPS = isCustomer ? 0 : (faceData?.pricePerSheet || 0);
+  const faceOpt = chooseVeneerSheet(cfg.slatW, cfg.slatL, facePPS, facePPS);
+  const faceSheets = isCustomer ? 0 : Math.ceil(totalSlats / faceOpt.slatsPerSheet * wasteMult);
+  const faceMat  = isCustomer ? 0 : faceSheets * facePPS;
+
+  // Core sheets
+  const corePPS = coreData?.pricePerSheet || 0;
+  const coreOpt = chooseVeneerSheet(cfg.slatW, cfg.slatL, corePPS, corePPS);
+  const coreSheets = Math.ceil(totalSlats / coreOpt.slatsPerSheet * wasteMult);
+  const coreMat  = coreSheets * corePPS;
+
+  // Glue line
+  const glueCost = effectiveSqft * (pricing.services.glueLine || 0);
+
+  // EB
+  const longSides = cfg.ebSides >= 2 ? 2 : cfg.ebSides;
+  const ebLong  = (cfg.slatL / 12) * totalSlats * longSides;
+  const ebShort = (cfg.slatW / 12) * totalSlats * (cfg.ebSides===4?2:cfg.ebSides===3?1:0);
+  const ebFt    = ebLong + ebShort;
+  const ebRolls = cfg.ebSides > 0 ? Math.ceil(ebFt * EB_WASTE_FACTOR / EB_ROLL_FEET) : 0;
+  const ebRollPrice   = isCustomer ? 0 : (faceData?.ebRoll || 0);
+  const ebMaterialCost= ebRolls * ebRollPrice;
+  const ebServiceCost = ebFt * (pricing.services.ebServicePerFt || 0);
+
+  // Cut service
+  const cutCost = effectiveSqft * (pricing.services.cutServicePerSqft || 0);
+
+  // Assembly + brackets
+  const assemblyCost = cfg.assembly ? effectiveSqft * (pricing.services.assembly || 0) : 0;
+  const bracketCount = panelQty * (cfg.bracketsPerPanel || 0);
+  const bracketCost  = bracketCount * (pricing.services.bracketPrice || 0);
+
+  // Apply markup
+  const faceMatLine = isCustomer ? 0 : withMarkup(faceMat,      'panels');
+  const coreMatLine = withMarkup(coreMat,       'panels');
+  const glueLineAmt = withMarkup(glueCost,      'cutService');
+  const ebMatLine   = withMarkup(ebMaterialCost,'edgeBand');
+  const ebSvcLine   = withMarkup(ebServiceCost, 'ebService');
+  const cutLine     = withMarkup(cutCost,       'cutService');
+  const asmLine     = withMarkup(assemblyCost,  'assembly');
+  const bktLine     = withMarkup(bracketCost,   'brackets');
+
+  const lines = {};
+  if(!isCustomer && faceMat > 0) lines[`Face Sheets (${fmtN(faceSheets)} × ${cfg.face})`] = faceMatLine;
+  if(isCustomer)                 lines['Face Material (Customer Supplied)'] = 0;
+  if(coreMat > 0)  lines[`Core Sheets (${fmtN(coreSheets)} × ${cfg.core})`]  = coreMatLine;
+  if(glueCost > 0) lines['Glue Line']      = glueLineAmt;
+  if(cfg.ebSides > 0){
+    if(ebMaterialCost > 0) lines[`Edge Band Material (${fmtN(ebRolls)} rolls)`] = ebMatLine;
+    if(ebServiceCost  > 0) lines[`Edge Band Service (${fmtN(ebFt,0)} ft)`]      = ebSvcLine;
+  }
+  if(cutCost > 0)      lines['Cut Service']             = cutLine;
+  if(assemblyCost > 0) lines['Assembly / Packing']       = asmLine;
+  if(bracketCost  > 0) lines[`Black Brackets (${fmtN(bracketCount)})`] = bktLine;
+
+  const subtotal = Object.values(lines).reduce((s,v)=>s+v, 0);
+  return {
+    face:cfg.face, core:cfg.core,
+    effectiveSqft, panelQty, totalSlats,
+    faceSheets, coreSheets, ebFt, ebRolls, bracketCount,
+    lines, subtotal,
+    sqftCost: effectiveSqft > 0 && subtotal > 0 ? subtotal/effectiveSqft : null,
+  };
+}
+
+function calcLaminationPreview(cfg){
+  const el = document.getElementById('l2-preview-'+cfg.id);
+  if(!el) return;
+  const qty = resolveLaminationQty(cfg);
+  if(!qty){ el.innerHTML=''; return; }
+  const { panelQty, totalSlats, effectiveSqft } = qty;
+  const isCustomer = cfg.face === 'Customer Supplied';
+  const faceData  = isCustomer ? null : (pricing.laminationFaces||{})[cfg.face];
+  const coreData  = (pricing.laminationCores||{})[cfg.core];
+  const wasteMult = cfg.wasteOn !== false ? 1.10 : 1.0;
+  const facePPS   = isCustomer ? 0 : (faceData?.pricePerSheet||0);
+  const faceOpt   = chooseVeneerSheet(cfg.slatW, cfg.slatL, facePPS, facePPS);
+  const faceSheets= isCustomer ? 0 : Math.ceil(totalSlats/faceOpt.slatsPerSheet*wasteMult);
+  const corePPS   = coreData?.pricePerSheet||0;
+  const coreOpt   = chooseVeneerSheet(cfg.slatW, cfg.slatL, corePPS, corePPS);
+  const coreSheets= Math.ceil(totalSlats/coreOpt.slatsPerSheet*wasteMult);
+  const longSides = cfg.ebSides>=2?2:cfg.ebSides;
+  const ebLong    = (cfg.slatL/12)*totalSlats*longSides;
+  const ebShort   = (cfg.slatW/12)*totalSlats*(cfg.ebSides===4?2:cfg.ebSides===3?1:0);
+  const ebRolls   = cfg.ebSides>0?Math.ceil((ebLong+ebShort)*EB_WASTE_FACTOR/EB_ROLL_FEET):0;
+  let rows = `<div class="preview-row"><span>${fmtN(totalSlats)} slats · ${fmtN(effectiveSqft,1)} sqft · ${fmtN(panelQty)} panels</span></div>`;
+  if(!isCustomer && facePPS>0)
+    rows += `<div class="preview-row"><span>${isCustomer?'Customer Supplied':cfg.face}</span><span>${fmtN(faceSheets)} sheets (${faceOpt.size})</span></div>`;
+  else if(!isCustomer)
+    rows += `<div class="preview-row"><span>${cfg.face||'Face'}</span><span>${fmtN(faceSheets)} sheets — no price set</span></div>`;
+  else
+    rows += `<div class="preview-row"><span>Face: Customer Supplied</span></div>`;
+  if(cfg.core)
+    rows += `<div class="preview-row"><span>${cfg.core}</span><span>${fmtN(coreSheets)} sheets (${coreOpt.size})</span></div>`;
+  if(ebRolls>0)
+    rows += `<div class="preview-row"><span>EB Material</span><span>${fmtN(ebRolls)} rolls</span></div>`;
+  el.innerHTML = `<div class="preview-grid">${rows}</div>`;
+}
+
+function renderLaminationAdmin(){
+  const el = document.getElementById('laminationAdminSection');
+  if(!el) return;
+  const faces = pricing.laminationFaces || {};
+  const cores = pricing.laminationCores || {};
+
+  el.innerHTML = `
+    <div style="grid-column:1/-1;margin-top:12px;padding-bottom:6px;border-bottom:1px solid var(--bdr2)">
+      <span style="font-size:13px;font-weight:700;color:#c084fc;letter-spacing:.5px;text-transform:uppercase">Lamination Faces</span>
+    </div>
+    <div style="grid-column:1/-1">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr>
+          <th style="text-align:left;padding:4px 8px;color:var(--mid)">Face Name</th>
+          <th style="text-align:center;padding:4px 8px;color:var(--mid)">Price/Sheet ($)</th>
+          <th style="text-align:center;padding:4px 8px;color:var(--mid)">EB Roll Price ($)</th>
+          <th style="width:36px"></th>
+        </tr></thead>
+        <tbody id="lamFacesBody">
+          ${Object.entries(faces).map(([name,d]) => `<tr>
+            <td style="padding:4px 8px;font-weight:600">${name}</td>
+            <td style="padding:4px 8px;text-align:center">
+              <input type="number" class="admin-price-input" value="${d.pricePerSheet||0}" step="0.01"
+                data-lamface="${name}" data-key="pricePerSheet">
+            </td>
+            <td style="padding:4px 8px;text-align:center">
+              <input type="number" class="admin-price-input" value="${d.ebRoll||0}" step="0.01"
+                data-lamface="${name}" data-key="ebRoll">
+            </td>
+            <td style="padding:4px 8px">
+              <button onclick="removeLaminationFace(${JSON.stringify(name)})" class="btn-danger" style="padding:2px 8px;font-size:12px">✕</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input type="text" id="newLamFaceName" placeholder="Face name (e.g. Maple 2-ply)"
+          style="flex:1;background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px">
+        <button class="btn-secondary" onclick="addLaminationFace()">+ Add Face</button>
+      </div>
+    </div>
+
+    <div style="grid-column:1/-1;margin-top:12px;padding-bottom:6px;border-bottom:1px solid var(--bdr2)">
+      <span style="font-size:13px;font-weight:700;color:#c084fc;letter-spacing:.5px;text-transform:uppercase">Lamination Cores</span>
+    </div>
+    <div style="grid-column:1/-1">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr>
+          <th style="text-align:left;padding:4px 8px;color:var(--mid)">Core Name</th>
+          <th style="text-align:center;padding:4px 8px;color:var(--mid)">Price/Sheet ($)</th>
+          <th style="width:36px"></th>
+        </tr></thead>
+        <tbody id="lamCoresBody">
+          ${Object.entries(cores).map(([name,d]) => `<tr>
+            <td style="padding:4px 8px;font-weight:600">${name}</td>
+            <td style="padding:4px 8px;text-align:center">
+              <input type="number" class="admin-price-input" value="${d.pricePerSheet||0}" step="0.01"
+                data-lamcore="${name}" data-key="pricePerSheet">
+            </td>
+            <td style="padding:4px 8px">
+              <button onclick="removeLaminationCore(${JSON.stringify(name)})" class="btn-danger" style="padding:2px 8px;font-size:12px">✕</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input type="text" id="newLamCoreName" placeholder="Core name (e.g. MDF Core)"
+          style="flex:1;background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px">
+        <button class="btn-secondary" onclick="addLaminationCore()">+ Add Core</button>
+      </div>
+    </div>
+  `;
+}
+
+function addLaminationFace(){
+  const input = document.getElementById('newLamFaceName');
+  const name = input?.value?.trim();
+  if(!name){ showToast('Enter a face name'); return; }
+  if(!pricing.laminationFaces) pricing.laminationFaces = {};
+  if(pricing.laminationFaces[name]){ showToast('Face already exists'); return; }
+  pricing.laminationFaces[name] = { pricePerSheet:0, ebRoll:0 };
+  input.value = '';
+  renderLaminationAdmin();
+}
+
+function removeLaminationFace(name){
+  if(!pricing.laminationFaces) return;
+  delete pricing.laminationFaces[name];
+  renderLaminationAdmin();
+}
+
+function addLaminationCore(){
+  const input = document.getElementById('newLamCoreName');
+  const name = input?.value?.trim();
+  if(!name){ showToast('Enter a core name'); return; }
+  if(!pricing.laminationCores) pricing.laminationCores = {};
+  if(pricing.laminationCores[name]){ showToast('Core already exists'); return; }
+  pricing.laminationCores[name] = { pricePerSheet:0 };
+  input.value = '';
+  renderLaminationAdmin();
+}
+
+function removeLaminationCore(name){
+  if(!pricing.laminationCores) return;
+  delete pricing.laminationCores[name];
+  renderLaminationAdmin();
 }
 
 function calcPanelProduct(p){
@@ -1620,6 +2151,8 @@ function renderProductsTab(){
   const renderPanelCard = p => {
     const c = calcPanelProduct(p);
     if(!c) return '';
+    const qty = productCart[p.name] || 0;
+    const lineTotal = qty > 0 ? `<span class="product-line-total">${fmt(qty * c.sellPerSheet)}</span>` : '';
     return `<div class="product-card">
       <div class="product-card-name">${p.name}</div>
       <div class="product-card-sub">${p.sheetGrade === 'A3' ? 'Horizontal' : 'Vertical'} · ${p.sheetSize} · ${p.grade === 'talbert' ? 'Premium' : 'Standard'}</div>
@@ -1627,16 +2160,30 @@ function renderProductsTab(){
         <div class="product-price-item"><span class="ppi-label">Per Sheet</span><span class="ppi-val">${fmt(c.sellPerSheet)}</span></div>
         <div class="product-price-item highlight"><span class="ppi-label">Per Sq Ft</span><span class="ppi-val">${fmt(c.sellPerSqft)}</span></div>
       </div>
+      <div class="product-qty-row">
+        <label class="field-label" style="margin:0;white-space:nowrap">Qty (sheets)</label>
+        <input type="number" min="0" step="1" value="${qty||''}" placeholder="0"
+          oninput="updateProductQty(${JSON.stringify(p.name)},parseInt(this.value)||0)">
+        ${lineTotal}
+      </div>
     </div>`;
   };
   const renderLumberCard = p => {
     const c = calcLumberProduct(p);
     if(!c) return '';
+    const qty = productCart[p.name] || 0;
+    const lineTotal = qty > 0 ? `<span class="product-line-total">${fmt(qty * c.sellPerSqft)}</span>` : '';
     return `<div class="product-card">
       <div class="product-card-name">${p.name}</div>
       <div class="product-card-sub">${fractionLabel(p.thickness.toString())} × ${p.slatW}" · ${p.lSpecies}</div>
       <div class="product-card-prices">
         <div class="product-price-item highlight"><span class="ppi-label">Per Sq Ft</span><span class="ppi-val">${fmt(c.sellPerSqft)}</span></div>
+      </div>
+      <div class="product-qty-row">
+        <label class="field-label" style="margin:0;white-space:nowrap">Qty (sq ft)</label>
+        <input type="number" min="0" step="0.5" value="${qty||''}" placeholder="0"
+          oninput="updateProductQty(${JSON.stringify(p.name)},parseFloat(this.value)||0)">
+        ${lineTotal}
       </div>
     </div>`;
   };
@@ -1659,6 +2206,13 @@ function renderProductsTab(){
     if(lumber.length) html += `<div class="product-section-label" style="margin-top:${panels.length?'28px':'0'}">Lumber Products</div><div class="product-grid">${lumber.map(renderLumberCard).join('')}</div>`;
   }
   cont.innerHTML = html;
+}
+
+function updateProductQty(name, qty){
+  if(!qty || qty <= 0) delete productCart[name];
+  else productCart[name] = qty;
+  renderResults();
+  markDirty();
 }
 
 function renderVeneerThickTabs(){
@@ -1989,6 +2543,8 @@ async function fetchCloudPricing(){
   Object.keys(pricing).forEach(k => delete pricing[k]);
   Object.assign(pricing, imported);
   if(!pricing.productCategories) pricing.productCategories = [];
+  if(!pricing.laminationFaces)   pricing.laminationFaces = {};
+  if(!pricing.laminationCores)   pricing.laminationCores = {};
   if(!pricing.veneerCores) pricing.veneerCores = deepCopy(DEFAULT_PRICING.veneerCores);
   ensureAllCoreKeys();
   migrateThicknessKeys();
@@ -2246,8 +2802,10 @@ function showToast(msg){
   Object.keys(dp.services).forEach(k => {
     if(pricing.services[k] == null) pricing.services[k] = dp.services[k];
   });
-  if(!pricing.standardProducts) pricing.standardProducts = [];
-  if(!pricing.productCategories) pricing.productCategories = [];
+  if(!pricing.standardProducts)   pricing.standardProducts = [];
+  if(!pricing.productCategories)  pricing.productCategories = [];
+  if(!pricing.laminationFaces)    pricing.laminationFaces = {};
+  if(!pricing.laminationCores)    pricing.laminationCores = {};
   if(!pricing.veneerCores) pricing.veneerCores = deepCopy(dp.veneerCores);
   // Add any built-in cores missing from saved data
   dp.veneerCores.forEach(dc => {
