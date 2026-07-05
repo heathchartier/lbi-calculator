@@ -323,7 +323,7 @@ function addVeneerConfig(){
     id, orientation:'Horizontal', species:'', core:'Fire Rated MDF', thickness:'3/4"',
     grade:'timber',
     panelW:0, panelL:0, slatW:0, slatL:0, slatsPerPanel:0,
-    bracketsPerPanel:0, ebSides:4, assembly:false, satinFinish:false, notes:'',
+    bracketsPerPanel:0, ebSides:4, assembly:false, satinFinish:false, wasteOn:true, notes:'',
     calcMode:'sqft', manualQty:0, sqft:0, customPricePerPanel:0,
   };
   veneerConfigs.push(cfg);
@@ -371,7 +371,7 @@ function renderVeneerConfigs(){
           <div>
             <label class="field-label">Finish</label>
             <select id="v-satin-${cfg.id}" onchange="vUpdate(${cfg.id})">
-              <option value="standard" ${!cfg.satinFinish?'selected':''}>Standard</option>
+              <option value="standard" ${!cfg.satinFinish?'selected':''}>Unfinished</option>
               <option value="satin"    ${cfg.satinFinish?'selected':''}>Satin</option>
             </select>
           </div>
@@ -458,7 +458,9 @@ function renderVeneerConfigs(){
             <select id="v-ebsides-${cfg.id}" onchange="vUpdate(${cfg.id})">
               <option value="4" ${cfg.ebSides===4?'selected':''}>4 sides</option>
               <option value="3" ${cfg.ebSides===3?'selected':''}>3 sides</option>
-              <option value="2" ${cfg.ebSides===2?'selected':''}>Long sides only</option>
+              <option value="2" ${cfg.ebSides===2?'selected':''}>2 long sides</option>
+              <option value="1" ${cfg.ebSides===1?'selected':''}>1 long side</option>
+              <option value="0" ${cfg.ebSides===0?'selected':''}>No edge banding</option>
             </select>
           </div>
         </div>
@@ -467,6 +469,10 @@ function renderVeneerConfigs(){
           <div class="toggle-row">
             <label class="toggle"><input type="checkbox" id="v-assembly-${cfg.id}" ${cfg.assembly?'checked':''} onchange="vUpdate(${cfg.id})"><span class="toggle-slider"></span></label>
             <span class="toggle-label">Assembly included</span>
+          </div>
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="v-waste-${cfg.id}" ${cfg.wasteOn!==false?'checked':''} onchange="vUpdate(${cfg.id})"><span class="toggle-slider"></span></label>
+            <span class="toggle-label">+10% waste</span>
           </div>
         </div>
         <div id="v-preview-${cfg.id}" class="calc-preview" style="margin-top:16px"></div>
@@ -489,9 +495,11 @@ function vUpdate(id){
   cfg.slatL          = parseFloat(document.getElementById('v-slatL-'+id)?.value) || cfg.slatL;
   cfg.slatsPerPanel  = parseInt(document.getElementById('v-slats-'+id)?.value) || cfg.slatsPerPanel;
   cfg.bracketsPerPanel = parseInt(document.getElementById('v-brackets-'+id)?.value) || 0;
-  cfg.ebSides        = parseInt(document.getElementById('v-ebsides-'+id)?.value) || 4;
+  const ebSidesEl = document.getElementById('v-ebsides-'+id);
+  cfg.ebSides        = ebSidesEl ? parseInt(ebSidesEl.value) : cfg.ebSides;
   cfg.assembly       = document.getElementById('v-assembly-'+id)?.checked ?? true;
   cfg.satinFinish    = document.getElementById('v-satin-'+id)?.value === 'satin';
+  cfg.wasteOn        = document.getElementById('v-waste-'+id)?.checked ?? true;
   const prevMode     = cfg.calcMode;
   cfg.calcMode       = document.getElementById('v-mode-'+id)?.value || cfg.calcMode;
   cfg.sqft               = parseFloat(document.getElementById('v-sqft-'+id)?.value) || 0;
@@ -591,9 +599,11 @@ function calcVeneerPreview(cfg){
   const grade = cfg.orientation === 'Vertical' ? 'AA' : 'A3';
   const opt = chooseVeneerSheet(cfg.slatW, cfg.slatL, 0, 0);
   const { size, slatsPerSheet } = opt;
-  const sheetsNeeded = Math.ceil(totalSlats / slatsPerSheet);
-  const ebLong  = (cfg.slatL / 12) * totalSlats * 2;
-  const ebShort = (cfg.slatW / 12) * totalSlats * (cfg.ebSides >= 3 ? (cfg.ebSides === 4 ? 2 : 1) : 0);
+  const wasteMult   = cfg.wasteOn !== false ? 1.10 : 1.0;
+  const sheetsNeeded = Math.ceil(totalSlats / slatsPerSheet * wasteMult);
+  const longSides = cfg.ebSides >= 2 ? 2 : cfg.ebSides;
+  const ebLong  = (cfg.slatL / 12) * totalSlats * longSides;
+  const ebShort = (cfg.slatW / 12) * totalSlats * (cfg.ebSides === 4 ? 2 : cfg.ebSides === 3 ? 1 : 0);
   const ebFt    = ebLong + ebShort;
   const ebRolls = Math.ceil(ebFt * EB_WASTE_FACTOR / EB_ROLL_FEET);
 
@@ -602,7 +612,7 @@ function calcVeneerPreview(cfg){
     <div class="calc-preview-item"><div class="calc-preview-label">Panels Needed</div><div class="calc-preview-val">${fmtN(panelQty)}</div></div>
     <div class="calc-preview-item"><div class="calc-preview-label">Total Slats</div><div class="calc-preview-val">${fmtN(totalSlats)}</div></div>
     <div class="calc-preview-item"><div class="calc-preview-label">Slats / Sheet</div><div class="calc-preview-val">${fmtN(slatsPerSheet)}</div></div>
-    <div class="calc-preview-item"><div class="calc-preview-label">Sheets Needed</div><div class="calc-preview-val">${fmtN(sheetsNeeded)} <span style="font-size:11px;color:var(--mid)">(${grade} ${size})</span></div></div>
+    <div class="calc-preview-item"><div class="calc-preview-label">Sheets Needed${wasteMult>1?' (+10%)':''}</div><div class="calc-preview-val">${fmtN(sheetsNeeded)} <span style="font-size:11px;color:var(--mid)">(${grade} ${size})</span></div></div>
     <div class="calc-preview-item"><div class="calc-preview-label">EB Footage</div><div class="calc-preview-val">${fmtN(ebFt,0)} ft</div></div>
     <div class="calc-preview-item"><div class="calc-preview-label">EB Rolls</div><div class="calc-preview-val">${fmtN(ebRolls)}</div></div>
     <div class="calc-preview-item"><div class="calc-preview-label">Brackets</div><div class="calc-preview-val">${fmtN(panelQty * cfg.bracketsPerPanel)}</div></div>
@@ -627,13 +637,15 @@ function calcVeneerCost(cfg, cutCostOverride){
   const p10 = sData[`${sup}_${grade}_4x10_${coreK}_${thickK}${finishSuffix}`] || 0;
   const opt = chooseVeneerSheet(cfg.slatW, cfg.slatL, p8, p10);
   const { size: sheetSize, slatsPerSheet, sheetPrice } = opt;
-  const sheetsNeeded = Math.ceil(totalSlats / slatsPerSheet);
+  const wasteMult   = cfg.wasteOn !== false ? 1.10 : 1.0;
+  const sheetsNeeded = Math.ceil(totalSlats / slatsPerSheet * wasteMult);
   const sheetCost  = cfg.species === 'Custom' && cfg.customPricePerPanel
     ? panelQty * cfg.customPricePerPanel
     : sheetsNeeded * sheetPrice;
 
-  const ebLong  = (cfg.slatL/12) * totalSlats * 2;
-  const ebShort = (cfg.slatW/12) * totalSlats * (cfg.ebSides>=4?2:cfg.ebSides===3?1:0);
+  const longSides = cfg.ebSides >= 2 ? 2 : cfg.ebSides;
+  const ebLong  = (cfg.slatL/12) * totalSlats * longSides;
+  const ebShort = (cfg.slatW/12) * totalSlats * (cfg.ebSides===4?2:cfg.ebSides===3?1:0);
   const ebFt    = ebLong + ebShort;
   const ebRolls     = Math.ceil(ebFt * EB_WASTE_FACTOR / EB_ROLL_FEET);
   const isCustom    = cfg.species === 'Custom';
@@ -682,7 +694,7 @@ function addLumberConfig(){
     slatsPerPanel:0, panelW:0, panelL:0, bracketsPerPanel:0,
     sanding:false, cutToLength:false, assembly:false, orientation:'Horizontal', notes:'',
     calcMode:'sqft', manualQty:0, sqft:0, customPricePerBF:0,
-    roughThick:getSuggestedRoughThick(0.75), safetyBuffer:false,
+    roughThick:getSuggestedRoughThick(0.75), safetyBuffer:true,
   };
   lumberConfigs.push(cfg);
   renderLumberConfigs();
@@ -852,8 +864,8 @@ function renderLumberConfigs(){
             <span class="toggle-label">Cut to length</span>
           </div>
           <div class="toggle-row">
-            <label class="toggle"><input type="checkbox" id="l-safety-${cfg.id}" ${cfg.safetyBuffer?'checked':''} onchange="lUpdate(${cfg.id})"><span class="toggle-slider"></span></label>
-            <span class="toggle-label">+10% safety buffer</span>
+            <label class="toggle"><input type="checkbox" id="l-safety-${cfg.id}" ${cfg.safetyBuffer!==false?'checked':''} onchange="lUpdate(${cfg.id})"><span class="toggle-slider"></span></label>
+            <span class="toggle-label">+10% waste</span>
           </div>
         </div>
         <div id="l-preview-${cfg.id}" class="calc-preview" style="margin-top:16px"></div>
@@ -1081,7 +1093,7 @@ function calcLumberPreview(cfg){
     ${m.widthWaste !== null ? `<div class="calc-preview-item"><div class="calc-preview-label">Width Waste Factor</div><div class="calc-preview-val">${m.widthWaste}"</div></div>` : ''}
     ${m.boardsNeeded ? `<div class="calc-preview-item"><div class="calc-preview-label">Boards to Buy</div><div class="calc-preview-val">${m.boardsNeeded} × 2×6 (${m.pcsPerBoard} pcs ea)</div></div>` : ''}
     ${m.boardsNeeded ? `<div class="calc-preview-item"><div class="calc-preview-label">BF / Board</div><div class="calc-preview-val">${fmtN(m.bfPerBoard,0)} BF</div></div>` : `<div class="calc-preview-item"><div class="calc-preview-label">BF / Slat</div><div class="calc-preview-val">${fmtN(m.bfPerSlat,3)} BF</div></div>`}
-    <div class="calc-preview-item"><div class="calc-preview-label">Raw BF to Order${m.safetyBuffer?' (+10%)':''}</div><div class="calc-preview-val" style="color:var(--teal);font-weight:700;font-size:16px">${fmtN(m.rawBFTotal,0)} BF</div></div>
+    <div class="calc-preview-item"><div class="calc-preview-label">Raw BF to Order${m.safetyBuffer?' (+10% waste)':''}</div><div class="calc-preview-val" style="color:var(--teal);font-weight:700;font-size:16px">${fmtN(m.rawBFTotal,0)} BF</div></div>
     <div class="calc-preview-item"><div class="calc-preview-label">Brackets</div><div class="calc-preview-val">${fmtN(panelQty * cfg.bracketsPerPanel)}</div></div>
   `;
 }
