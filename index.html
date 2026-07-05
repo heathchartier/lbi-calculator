@@ -442,18 +442,6 @@ select option{background:#1e2226}
     <div id="lockErr"></div>
     <button class="btn-primary" onclick="unlock()">Unlock</button>
   </div>
-  <div style="margin-top:12px">
-    <button onclick="toggleCloudConnect()" style="background:none;border:none;color:var(--mid);font-size:12px;cursor:pointer;text-decoration:underline;padding:0" id="cloudConnectToggle">
-      Connect to Cloud Sync
-    </button>
-    <div id="cloudConnectPanel" style="display:none;margin-top:10px;background:var(--surf);border:1px solid var(--bdr2);border-radius:var(--r);padding:14px;max-width:320px">
-      <div style="font-size:12px;color:var(--mid);margin-bottom:8px">Paste your GitHub sync token to enable job saving across all devices.</div>
-      <input type="password" id="cloudTokenInput" placeholder="github_pat_…" autocomplete="off"
-        style="width:100%;background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;font-size:13px;box-sizing:border-box">
-      <button onclick="saveCloudToken()" class="btn-primary" style="width:100%;margin-top:8px">Save Token</button>
-      <div id="cloudTokenStatus" style="font-size:12px;text-align:center;margin-top:6px;min-height:16px"></div>
-    </div>
-  </div>
   <div style="font-size:12px;color:var(--dim);margin-top:12px">Powered by <a href="https://cutlistiq.pro" target="_blank" style="color:var(--teal);text-decoration:none">CutListIQ</a></div>
 </div>
 
@@ -660,15 +648,25 @@ select option{background:#1e2226}
     <!-- Cloud Sync -->
     <div class="modal-section">
       <h3 style="display:flex;align-items:center;gap:10px">Cloud Sync <span id="cloud-sync-badge" style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px;background:var(--surf3);color:var(--mid)">Not configured</span></h3>
-      <p style="font-size:12px;color:var(--mid);margin-bottom:4px">When configured, saving here auto-pushes pricing to the cloud so LBI's phones get it the next time they open the app — no manual steps for them.</p>
+      <p style="font-size:12px;color:var(--mid);margin-bottom:4px">Worker URL + Key distribute automatically to all devices on next load. GitHub Token stays on this device only (used to push pricing).</p>
       <p id="cloud-sync-time" style="font-size:12px;color:var(--teal);margin-bottom:12px"></p>
-      <div style="max-width:420px">
-        <label class="field-label">GitHub Token</label>
-        <input type="text" id="admin-gh-token" placeholder="Paste token here to update" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
-          style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%;font-family:var(--font-mono);font-size:12px">
-        <p style="font-size:11px;color:var(--mid);margin-top:6px">
-          One-time setup: <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" style="color:var(--teal)">github.com → Settings → Fine-grained token</a> → select repo <strong>heathchartier/lbi-calculator</strong> → Contents: Read &amp; write → paste above &amp; Save.
-        </p>
+      <div style="max-width:420px;display:grid;gap:10px">
+        <div>
+          <label class="field-label">Cloudflare Worker URL</label>
+          <input type="text" id="admin-worker-url" placeholder="https://lbi-jobs.your-name.workers.dev" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
+            style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%;font-family:var(--font-mono);font-size:12px">
+        </div>
+        <div>
+          <label class="field-label">Worker Key (shared password)</label>
+          <input type="text" id="admin-worker-key" placeholder="Paste key here to update" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
+            style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%;font-family:var(--font-mono);font-size:12px">
+        </div>
+        <div>
+          <label class="field-label">GitHub Token (this device only)</label>
+          <input type="text" id="admin-gh-token" placeholder="Paste token here to update" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
+            style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%;font-family:var(--font-mono);font-size:12px">
+          <p style="font-size:11px;color:var(--mid);margin-top:4px">Required on this device to push pricing updates to the cloud.</p>
+        </div>
       </div>
     </div>
 

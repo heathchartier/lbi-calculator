@@ -1386,7 +1386,7 @@ function saveJob(){
   localStorage.setItem('lbiq_jobs', JSON.stringify(jobs));
   isDirty = false;
   updateJobEditStatus();
-  if(localStorage.getItem('lbiq_gh_token')){
+  if(localStorage.getItem('lbiq_worker_key')){
     showToast(isNew ? 'Saving job to cloud…' : 'Updating job on cloud…');
     pushJobsToCloud(jobs).then(r => showToast(r.ok
       ? (isNew ? '✓ Job saved — visible on all devices' : '✓ Job updated — visible on all devices')
@@ -1434,7 +1434,7 @@ async function openSavedJobs(){
   const cloudJobs = await fetchJobsFromCloud();
   if(cloudJobs) localStorage.setItem('lbiq_jobs', JSON.stringify(cloudJobs));
   const jobs = JSON.parse(localStorage.getItem('lbiq_jobs') || '[]');
-  const canDelete = !!localStorage.getItem('lbiq_gh_token');
+  const canDelete = !!localStorage.getItem('lbiq_worker_key');
   if(!jobs.length){
     list.innerHTML = '<p style="color:var(--mid);font-size:14px">No saved jobs yet.</p>';
   } else {
@@ -1460,9 +1460,9 @@ function toggleCloudConnect(){
   const isOpen = panel.style.display !== 'none';
   panel.style.display = isOpen ? 'none' : 'block';
   if(!isOpen){
-    const hasToken = !!localStorage.getItem('lbiq_gh_token');
+    const hasKey = !!localStorage.getItem('lbiq_worker_key');
     const status = document.getElementById('cloudTokenStatus');
-    if(status) status.textContent = hasToken ? '✓ Already connected' : '';
+    if(status) status.textContent = hasKey ? '✓ Already connected' : '';
     if(status) status.style.color = 'var(--teal)';
   }
 }
@@ -1470,8 +1470,8 @@ function toggleCloudConnect(){
 function saveCloudToken(){
   const val = document.getElementById('cloudTokenInput')?.value?.trim();
   const status = document.getElementById('cloudTokenStatus');
-  if(!val){ if(status){ status.textContent = 'Please paste a token first'; status.style.color='var(--red)'; } return; }
-  localStorage.setItem('lbiq_gh_token', val);
+  if(!val){ if(status){ status.textContent = 'Please paste a key first'; status.style.color='var(--red)'; } return; }
+  localStorage.setItem('lbiq_worker_key', val);
   document.getElementById('cloudTokenInput').value = '';
   if(status){ status.textContent = '✓ Connected! You can now save and sync jobs.'; status.style.color='var(--teal)'; }
   setTimeout(() => {
@@ -1494,7 +1494,7 @@ function deleteJob(id){
   let jobs = JSON.parse(localStorage.getItem('lbiq_jobs') || '[]');
   jobs = jobs.filter(j => j.id !== id);
   localStorage.setItem('lbiq_jobs', JSON.stringify(jobs));
-  if(localStorage.getItem('lbiq_gh_token')){
+  if(localStorage.getItem('lbiq_worker_key')){
     pushJobsToCloud(jobs).then(r => { if(!r.ok) showToast('⚠ Deleted locally. Cloud sync failed: '+r.msg); });
   }
   openSavedJobs();
@@ -1537,7 +1537,7 @@ function newJob(){
 // --- ADMIN MODAL -------------------------------------------------------
 function renderAdminModal(){
   // Cloud sync badge + last sync time
-  const hasToken = !!localStorage.getItem('lbiq_gh_token');
+  const hasToken = !!localStorage.getItem('lbiq_gh_token') && !!localStorage.getItem('lbiq_worker_key');
   const badge = document.getElementById('cloud-sync-badge');
   if(badge){
     badge.textContent = hasToken ? 'Configured' : 'Not configured';
@@ -1700,11 +1700,17 @@ function saveAdmin(){
     if(el) pricing.services[k] = parseFloat(el.value) || 0;
   });
 
-  // Token: new entry overrides stored one; always bundle into pricing so all devices receive it
+  // GitHub PAT stays local — only used for pricing.json push from admin
   const ghTokenInput = document.getElementById('admin-gh-token')?.value?.trim();
   if(ghTokenInput) localStorage.setItem('lbiq_gh_token', ghTokenInput);
-  const activeToken = localStorage.getItem('lbiq_gh_token');
-  if(activeToken) pricing.ghToken = activeToken;
+
+  // Worker URL + key go into pricing.json so all devices receive them automatically
+  const workerUrlInput = document.getElementById('admin-worker-url')?.value?.trim();
+  const workerKeyInput = document.getElementById('admin-worker-key')?.value?.trim();
+  if(workerUrlInput){ localStorage.setItem('lbiq_worker_url', workerUrlInput); pricing.workerUrl = workerUrlInput; }
+  if(workerKeyInput){ localStorage.setItem('lbiq_worker_key', workerKeyInput); pricing.workerKey = workerKeyInput; }
+  if(!pricing.workerUrl){ const wu = localStorage.getItem('lbiq_worker_url'); if(wu) pricing.workerUrl = wu; }
+  if(!pricing.workerKey){ const wk = localStorage.getItem('lbiq_worker_key'); if(wk) pricing.workerKey = wk; }
 
   localStorage.setItem('lbiq_pricing', JSON.stringify(pricing));
   renderVeneerConfigs();
@@ -1723,31 +1729,17 @@ function saveAdmin(){
 
 // --- CLOUD JOB SYNC ---------------------------------------------------
 async function pushJobsToCloud(jobs){
-  const token = localStorage.getItem('lbiq_gh_token');
-  if(!token) return { ok:false, msg:'No token' };
-  const url = 'https://api.github.com/repos/heathchartier/lbi-calculator/contents/jobs.json';
-  const headers = {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json',
-    'Accept': 'application/vnd.github.v3+json',
-  };
-  const content = btoa(unescape(encodeURIComponent(JSON.stringify(jobs, null, 2))));
-  async function tryPush(retries){
-    let sha;
-    const getResp = await fetch(url, { headers });
-    if(getResp.ok) sha = (await getResp.json()).sha;
-    else if(getResp.status === 401) return { ok:false, msg:'Token invalid or expired' };
-    else if(getResp.status !== 404) return { ok:false, msg:'Could not reach GitHub ('+getResp.status+')' };
-    const body = { message:'Update jobs', content };
-    if(sha) body.sha = sha;
-    const putResp = await fetch(url, { method:'PUT', headers, body:JSON.stringify(body) });
-    if(putResp.ok) return { ok:true };
-    if(putResp.status === 409 && retries > 0) return tryPush(retries - 1);
-    if(putResp.status === 401) return { ok:false, msg:'Token invalid or expired' };
-    return { ok:false, msg:'Push failed ('+putResp.status+')' };
-  }
-  try { return await tryPush(1); }
-  catch(e){ return { ok:false, msg:e.message }; }
+  const workerUrl = localStorage.getItem('lbiq_worker_url');
+  const workerKey = localStorage.getItem('lbiq_worker_key');
+  if(!workerUrl || !workerKey) return { ok:false, msg:'Cloud sync not configured' };
+  try {
+    const resp = await fetch(workerUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Worker-Key': workerKey },
+      body: JSON.stringify(jobs),
+    });
+    return await resp.json();
+  } catch(e){ return { ok:false, msg:e.message }; }
 }
 
 async function fetchJobsFromCloud(){
@@ -2588,6 +2580,9 @@ async function fetchCloudPricing(){
   if(!imported.veneerSpecies || !imported.services) return;
   localStorage.setItem('lbiq_last_sync', Date.now());
   localStorage.setItem('lbiq_pricing', JSON.stringify(imported));
+  // Auto-distribute worker credentials to this device
+  if(imported.workerUrl) localStorage.setItem('lbiq_worker_url', imported.workerUrl);
+  if(imported.workerKey) localStorage.setItem('lbiq_worker_key', imported.workerKey);
   Object.keys(pricing).forEach(k => delete pricing[k]);
   Object.assign(pricing, imported);
   if(!pricing.productCategories) pricing.productCategories = [];
