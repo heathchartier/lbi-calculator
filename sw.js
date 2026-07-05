@@ -1,4 +1,4 @@
-const CACHE = 'lbiiq-v11';
+const CACHE = 'lbiiq-v12';
 const STATIC = [
   '/lbi-calculator/icon-192.png',
   '/lbi-calculator/icon-512.png',
@@ -24,6 +24,8 @@ self.addEventListener('activate', e => {
 // Cache-first only for static assets (icons, manifest) that never change.
 self.addEventListener('fetch', e => {
   const url = e.request.url;
+  // Don't intercept cross-origin requests (e.g. Cloudflare Worker calls)
+  if (!url.startsWith(self.location.origin)) return;
   const isStatic = STATIC.some(a => url.includes(a.replace('/lbi-calculator','')));
 
   if(isStatic){
