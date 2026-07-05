@@ -7132,5 +7132,7 @@
   ],
   "lbiPassword": "lbi2026",
   "laminationFaces": {},
-  "laminationCores": {}
+  "laminationCores": {},
+  "workerUrl": "https://lbi-jobs.heathchartier.workers.dev/",
+  "workerKey": "!!Miles-1227!!"
 }
