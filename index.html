@@ -497,9 +497,10 @@ select option{background:#1e2226}
           <input type="text" id="jobNotes" placeholder="Optional notes for this quote" oninput="markDirty()">
         </div>
       </div>
-      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap" class="print-hide">
-        <button class="btn-secondary" onclick="saveJob()">💾 Save Job</button>
+      <div style="margin-top:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap" class="print-hide">
+        <button id="saveJobBtn" class="btn-secondary" onclick="saveJob()">💾 Save Job</button>
         <button class="btn-secondary" onclick="newJob()">＋ New Job</button>
+        <span id="jobEditStatus"></span>
       </div>
     </div>
 
@@ -833,7 +834,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260705c"></script>
+<script src="app.js?v=20260705d"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });

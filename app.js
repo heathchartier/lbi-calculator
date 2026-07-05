@@ -184,6 +184,7 @@ let lumberCounter = 0;
 let laminationCounter = 0;
 let isDirty = false;
 let productCart = {};
+let currentJobId = null;
 let productCounter = 0;
 let categoryCounter = 0;
 let _dragProdId = null;
@@ -1360,7 +1361,7 @@ function toggleCollapse(id){
 // --- JOB SAVE / LOAD -------------------------------------------------
 function buildJobObject(){
   return {
-    id: Date.now(),
+    id: currentJobId || Date.now(),
     name:     document.getElementById('jobName')?.value || 'Untitled',
     customer: document.getElementById('jobCustomer')?.value || '',
     po:       document.getElementById('jobPO')?.value || '',
@@ -1375,18 +1376,23 @@ function buildJobObject(){
 }
 
 function saveJob(){
-  const job  = buildJobObject();
-  const jobs = JSON.parse(localStorage.getItem('lbiq_jobs') || '[]');
-  const idx  = jobs.findIndex(j => j.id === job.id || (j.name===job.name && j.customer===job.customer && j.date===job.date));
+  const isNew = !currentJobId;
+  const job   = buildJobObject();
+  if(isNew) currentJobId = job.id;
+  const jobs  = JSON.parse(localStorage.getItem('lbiq_jobs') || '[]');
+  const idx   = jobs.findIndex(j => j.id === job.id);
   if(idx >= 0) jobs[idx] = {...jobs[idx], ...job};
   else jobs.unshift(job);
   localStorage.setItem('lbiq_jobs', JSON.stringify(jobs));
   isDirty = false;
+  updateJobEditStatus();
   if(localStorage.getItem('lbiq_gh_token')){
-    showToast('Saving job to cloud…');
-    pushJobsToCloud(jobs).then(r => showToast(r.ok ? '✓ Job saved — visible on all devices' : '⚠ Saved locally. Cloud sync failed: '+r.msg));
+    showToast(isNew ? 'Saving job to cloud…' : 'Updating job on cloud…');
+    pushJobsToCloud(jobs).then(r => showToast(r.ok
+      ? (isNew ? '✓ Job saved — visible on all devices' : '✓ Job updated — visible on all devices')
+      : '⚠ Saved locally. Cloud sync failed: '+r.msg));
   } else {
-    showToast('Job saved locally');
+    showToast(isNew ? 'Job saved' : 'Job updated');
   }
 }
 
@@ -1409,11 +1415,13 @@ function loadJob(job){
   laminationCounter = laminationConfigs.reduce((m,c) => Math.max(m,c.id), 0);
   Object.keys(productCart).forEach(k => delete productCart[k]);
   Object.assign(productCart, job.productCart || {});
+  currentJobId = job.id;
   renderVeneerConfigs();
   renderLumberConfigs();
   renderLaminationConfigs();
   recalcAll();
   renderProductsTab();
+  updateJobEditStatus();
   closeSavedJobs();
   isDirty = false;
 }
@@ -1445,6 +1453,17 @@ async function openSavedJobs(){
 }
 
 function closeSavedJobs(){ document.getElementById('savedModal').classList.add('hidden'); }
+
+function updateJobEditStatus(){
+  const btn    = document.getElementById('saveJobBtn');
+  const status = document.getElementById('jobEditStatus');
+  if(btn)    btn.textContent = currentJobId ? '💾 Update Job' : '💾 Save Job';
+  if(status){
+    status.textContent = currentJobId ? '✎ Editing saved job' : '';
+    status.style.color = 'var(--teal)';
+    status.style.fontSize = '12px';
+  }
+}
 
 function deleteJob(id){
   let jobs = JSON.parse(localStorage.getItem('lbiq_jobs') || '[]');
@@ -1482,9 +1501,11 @@ function newJob(){
   document.getElementById('jobNotes').value    = '';
   veneerConfigs = []; lumberConfigs = []; laminationConfigs = [];
   veneerCounter = 0; lumberCounter = 0; laminationCounter = 0;
+  currentJobId = null;
   Object.keys(productCart).forEach(k => delete productCart[k]);
   renderVeneerConfigs(); renderLumberConfigs(); renderLaminationConfigs();
   addVeneerConfig();
+  updateJobEditStatus();
   recalcAll(); isDirty = false;
 }
 
