@@ -7089,7 +7089,8 @@
     "cutThreshold": 3000,
     "cutPerLF": 0.21,
     "cutFlatVeneer": 100,
-    "cutVeneerThreshold": 20
+    "cutVeneerThreshold": 20,
+    "glueLine": 0
   },
   "markup": {
     "panels": 15,
@@ -7129,5 +7130,7 @@
       "label": "Black MDF"
     }
   ],
-  "lbiPassword": "lbi2026"
+  "lbiPassword": "lbi2026",
+  "laminationFaces": {},
+  "laminationCores": {}
 }
