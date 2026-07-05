@@ -1429,12 +1429,12 @@ function loadJob(job){
 async function openSavedJobs(){
   document.getElementById('savedModal').classList.remove('hidden');
   const list = document.getElementById('savedJobsList');
-  if(localStorage.getItem('lbiq_gh_token')){
-    list.innerHTML = '<p style="color:var(--mid);font-size:14px">Loading from cloud…</p>';
-    const cloudJobs = await fetchJobsFromCloud();
-    if(cloudJobs) localStorage.setItem('lbiq_jobs', JSON.stringify(cloudJobs));
-  }
+  list.innerHTML = '<p style="color:var(--mid);font-size:14px">Loading…</p>';
+  // Always fetch from GitHub — reading jobs.json is public, no token required
+  const cloudJobs = await fetchJobsFromCloud();
+  if(cloudJobs) localStorage.setItem('lbiq_jobs', JSON.stringify(cloudJobs));
   const jobs = JSON.parse(localStorage.getItem('lbiq_jobs') || '[]');
+  const canDelete = !!localStorage.getItem('lbiq_gh_token');
   if(!jobs.length){
     list.innerHTML = '<p style="color:var(--mid);font-size:14px">No saved jobs yet.</p>';
   } else {
@@ -1446,7 +1446,7 @@ async function openSavedJobs(){
         </div>
         <button class="btn-secondary" onclick="loadJob(${JSON.stringify(j).replace(/"/g,'&quot;')})">Load</button>
         <button class="btn-ghost" onclick="copyJobCode(${JSON.stringify(j).replace(/"/g,'&quot;')})">Share</button>
-        <button class="btn-danger" onclick="deleteJob(${j.id})">✕</button>
+        ${canDelete ? `<button class="btn-danger" onclick="deleteJob(${j.id})">✕</button>` : ''}
       </div>
     `).join('');
   }
@@ -1675,9 +1675,13 @@ function saveAdmin(){
     if(el) pricing.services[k] = parseFloat(el.value) || 0;
   });
 
-  // Save GitHub token if a new one was entered
+  // Save GitHub token if a new one was entered, and include it in cloud pricing
+  // so all devices receive it automatically on next pricing fetch
   const ghTokenInput = document.getElementById('admin-gh-token')?.value?.trim();
-  if(ghTokenInput) localStorage.setItem('lbiq_gh_token', ghTokenInput);
+  if(ghTokenInput){
+    localStorage.setItem('lbiq_gh_token', ghTokenInput);
+    pricing.ghToken = ghTokenInput;
+  }
 
   localStorage.setItem('lbiq_pricing', JSON.stringify(pricing));
   renderVeneerConfigs();
@@ -2563,6 +2567,10 @@ async function fetchCloudPricing(){
   localStorage.setItem('lbiq_pricing', JSON.stringify(imported));
   Object.keys(pricing).forEach(k => delete pricing[k]);
   Object.assign(pricing, imported);
+  // Auto-distribute token so all devices get write access without manual entry
+  if(imported.ghToken && !localStorage.getItem('lbiq_gh_token')){
+    localStorage.setItem('lbiq_gh_token', imported.ghToken);
+  }
   if(!pricing.productCategories) pricing.productCategories = [];
   if(!pricing.laminationFaces)   pricing.laminationFaces = {};
   if(!pricing.laminationCores)   pricing.laminationCores = {};
