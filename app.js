@@ -1490,12 +1490,14 @@ function updateJobEditStatus(){
   }
 }
 
-function deleteJob(id){
+async function deleteJob(id){
   let jobs = JSON.parse(localStorage.getItem('lbiq_jobs') || '[]');
   jobs = jobs.filter(j => j.id !== id);
   localStorage.setItem('lbiq_jobs', JSON.stringify(jobs));
   if(localStorage.getItem('lbiq_worker_key')){
-    pushJobsToCloud(jobs).then(r => { if(!r.ok) showToast('⚠ Deleted locally. Cloud sync failed: '+r.msg); });
+    showToast('Deleting…');
+    const r = await pushJobsToCloud(jobs);
+    if(!r.ok) showToast('⚠ Deleted locally. Cloud sync failed: '+r.msg);
   }
   openSavedJobs();
 }
