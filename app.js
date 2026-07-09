@@ -1245,14 +1245,8 @@ function renderResults(){
   (pricing.standardProducts || []).forEach(p => {
     const qty = productCart[p.name];
     if(!qty) return;
-    let lineVal = 0;
-    if(p.type === 'panel'){
-      const c = calcPanelProduct(p);
-      if(c) lineVal = qty * c.sellPerSheet;
-    } else {
-      const c = calcLumberProduct(p);
-      if(c) lineVal = qty * c.sellPerSqft;
-    }
+    const sell = (p.cost||0) * (1 + (p.markup||0)/100);
+    const lineVal = qty * sell;
     if(lineVal > 0){ stockLines.push({ label:`${p.name} × ${fmtN(qty,2)}`, val:lineVal }); stockTotal += lineVal; }
   });
 
@@ -2203,46 +2197,26 @@ function renderProductsTab(){
     cont.innerHTML = searchBar + '<div style="text-align:center;padding:48px 0;color:var(--mid);font-size:15px">No standard products have been added yet.</div>';
     return;
   }
-  const renderPanelCard = p => {
-    const c = calcPanelProduct(p);
-    if(!c) return '';
+  const renderCard = p => {
+    const sell = (p.cost||0) * (1 + (p.markup||0)/100);
+    if(!sell && !p.cost) return '';
+    const unit = p.unit || 'each';
+    const unitLabel = { each:'Each', sheet:'Sheet', sqft:'Sq Ft', lf:'Lin Ft', bf:'Board Ft' }[unit] || unit;
     const qty = productCart[p.name] || 0;
-    const lineTotal = qty > 0 ? `<span class="product-line-total">${fmt(qty * c.sellPerSheet)}</span>` : '';
+    const lineTotal = qty > 0 ? `<span class="product-line-total">${fmt(qty * sell)}</span>` : '';
     return `<div class="product-card">
       <div class="product-card-name">${p.name}</div>
-      <div class="product-card-sub">${p.sheetGrade === 'A3' ? 'Horizontal' : 'Vertical'} · ${p.sheetSize} · ${p.grade === 'talbert' ? 'Premium' : 'Standard'}</div>
       <div class="product-card-prices">
-        <div class="product-price-item"><span class="ppi-label">Per Sheet</span><span class="ppi-val">${fmt(c.sellPerSheet)}</span></div>
-        <div class="product-price-item highlight"><span class="ppi-label">Per Sq Ft</span><span class="ppi-val">${fmt(c.sellPerSqft)}</span></div>
+        <div class="product-price-item highlight"><span class="ppi-label">Per ${unitLabel}</span><span class="ppi-val">${fmt(sell)}</span></div>
       </div>
       <div class="product-qty-row">
-        <label class="field-label" style="margin:0;white-space:nowrap">Qty (sheets)</label>
+        <label class="field-label" style="margin:0;white-space:nowrap">Qty</label>
         <input type="number" min="0" step="1" value="${qty||''}" placeholder="0"
-          oninput="updateProductQty(${JSON.stringify(p.name)},parseInt(this.value)||0)">
-        ${lineTotal}
-      </div>
-    </div>`;
-  };
-  const renderLumberCard = p => {
-    const c = calcLumberProduct(p);
-    if(!c) return '';
-    const qty = productCart[p.name] || 0;
-    const lineTotal = qty > 0 ? `<span class="product-line-total">${fmt(qty * c.sellPerSqft)}</span>` : '';
-    return `<div class="product-card">
-      <div class="product-card-name">${p.name}</div>
-      <div class="product-card-sub">${fractionLabel(p.thickness.toString())} × ${p.slatW}" · ${p.lSpecies}</div>
-      <div class="product-card-prices">
-        <div class="product-price-item highlight"><span class="ppi-label">Per Sq Ft</span><span class="ppi-val">${fmt(c.sellPerSqft)}</span></div>
-      </div>
-      <div class="product-qty-row">
-        <label class="field-label" style="margin:0;white-space:nowrap">Qty (sq ft)</label>
-        <input type="number" min="0" step="0.5" value="${qty||''}" placeholder="0"
           oninput="updateProductQty(${JSON.stringify(p.name)},parseFloat(this.value)||0)">
         ${lineTotal}
       </div>
     </div>`;
   };
-  const renderCard = p => p.type === 'panel' ? renderPanelCard(p) : renderLumberCard(p);
   let html = '';
   if(cats.length){
     cats.forEach(cat => {
@@ -2407,8 +2381,9 @@ function renderAdminProducts(){
     return;
   }
   const renderRow = p => {
-    const c = p.type==='panel' ? calcPanelProduct(p) : calcLumberProduct(p);
-    const price = c ? (p.type==='panel' ? `${fmt(c.sellPerSheet)}/sheet · ${fmt(c.sellPerSqft)}/sqft` : `${fmt(c.sellPerSqft)}/sqft`) : '—';
+    const sell = (p.cost||0) * (1 + (p.markup||0)/100);
+    const unit = { each:'ea', sheet:'sheet', sqft:'sqft', lf:'lf', bf:'bf' }[p.unit||'each'] || p.unit;
+    const price = p.cost ? `Cost: ${fmt(p.cost)} → Sell: ${fmt(sell)}/${unit}` : '— no cost set';
     return `<div class="prod-drag-row" draggable="true"
       ondragstart="prodDragStart(event,${p.id})"
       ondragover="prodDragOver(event)"
@@ -2533,30 +2508,9 @@ function showProductForm(type, p){
   document.getElementById('apf-category').value = p ? (p.category||0) : 0;
   document.getElementById('apf-form-title').textContent = (p ? 'Edit' : 'New') + (type==='panel' ? ' Panel' : ' Lumber') + ' Product';
 
-  const inp = (id, val='') => `style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%"`;
-  const sel = (id, opts, cur) => `<select id="${id}" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">${opts.map(([v,l])=>`<option value="${v}"${cur===v?' selected':''}>${l}</option>`).join('')}</select>`;
-
-  const tf = document.getElementById('apf-type-fields');
-  if(type === 'panel'){
-    const species = Object.keys(pricing.veneerSpecies||{}).sort(naturalSort).map(s=>[s,s]);
-    const cores = (pricing.veneerCores||[]).map(c=>[c.label, c.label]);
-    tf.innerHTML = `
-      <div><label class="field-label">Species</label>${sel('apf-species', [['','Select…'],...species], p?.species||'')}</div>
-      <div><label class="field-label">Grade</label>${sel('apf-grade',[['timber','Standard'],['talbert','Premium']], p?.grade||'timber')}</div>
-      <div><label class="field-label">Orientation</label>${sel('apf-sheetgrade',[['A3','Horizontal'],['AA','Vertical']], p?.sheetGrade||'A3')}</div>
-      <div><label class="field-label">Sheet Size</label>${sel('apf-sheetsize',[['4x8','4×8'],['4x10','4×10']], p?.sheetSize||'4x8')}</div>
-      <div><label class="field-label">Core</label>${sel('apf-core', [['','Select…'],...cores], p?.core||'')}</div>
-    `;
-  } else {
-    const lSpecies = Object.keys(pricing.lumberSpecies||{}).sort(naturalSort).map(s=>[s,s]);
-    const thicks = THICK_OPTIONS.map(t=>[t.label, t.label]);
-    tf.innerHTML = `
-      <div><label class="field-label">Species</label>${sel('apf-lspecies',[['','Select…'],...lSpecies], p?.lSpecies||'')}</div>
-      <div><label class="field-label">Thickness</label>${sel('apf-thickness', thicks, p?.thickness ? (THICK_OPTIONS.find(t=>parseFloat(t.key)/100===p.thickness||t.key===String(p.thickness))?.label||thicks[2][0]) : '3/4"')}</div>
-      <div><label class="field-label">Width (in)</label><input type="number" id="apf-slatw" value="${p?.slatW||''}" step="0.25" min="0" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%"></div>
-      <div><label class="field-label">Length (in)</label><input type="number" id="apf-slatl" value="${p?.slatL||''}" step="1" min="0" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%"></div>
-    `;
-  }
+  document.getElementById('apf-cost').value = p ? (p.cost||0) : 0;
+  document.getElementById('apf-unit').value = p ? (p.unit||'each') : 'each';
+  document.getElementById('apf-form-title').textContent = (p ? 'Edit' : 'New') + ' Product';
 }
 
 function addStandardProduct(type){ showProductForm(type, null); }
@@ -2571,24 +2525,11 @@ function saveProductForm(){
   const existingId = parseInt(document.getElementById('apf-id').value)||0;
   const name = document.getElementById('apf-name').value.trim();
   if(!name){ showToast('Enter a product name'); return; }
-  const markup = parseFloat(document.getElementById('apf-markup').value)||0;
+  const cost     = parseFloat(document.getElementById('apf-cost').value)||0;
+  const markup   = parseFloat(document.getElementById('apf-markup').value)||0;
+  const unit     = document.getElementById('apf-unit').value || 'each';
   const category = parseInt(document.getElementById('apf-category').value)||0;
-  const product = { id: existingId||++productCounter, type, name, markup, category };
-  if(type === 'panel'){
-    product.species    = document.getElementById('apf-species')?.value || '';
-    product.grade      = document.getElementById('apf-grade')?.value || 'timber';
-    product.sheetGrade = document.getElementById('apf-sheetgrade')?.value || 'A3';
-    product.sheetSize  = document.getElementById('apf-sheetsize')?.value || '4x8';
-    product.core       = document.getElementById('apf-core')?.value || '';
-    if(!product.species || !product.core){ showToast('Select a species and core'); return; }
-  } else {
-    product.lSpecies  = document.getElementById('apf-lspecies')?.value || '';
-    const thickLabel  = document.getElementById('apf-thickness')?.value || '3/4"';
-    product.thickness = parseFloat(thickLabel) || 0.75;
-    product.slatW     = parseFloat(document.getElementById('apf-slatw')?.value) || 0;
-    product.slatL     = parseFloat(document.getElementById('apf-slatl')?.value) || 0;
-    if(!product.lSpecies || !product.slatW || !product.slatL){ showToast('Select species and enter width/length'); return; }
-  }
+  const product  = { id: existingId||++productCounter, type, name, cost, markup, unit, category };
   if(!pricing.standardProducts) pricing.standardProducts=[];
   const idx = pricing.standardProducts.findIndex(p => p.id===existingId);
   if(idx>=0) pricing.standardProducts[idx]=product;

@@ -791,18 +791,31 @@ select option{background:#1e2226}
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px">
           <div>
             <label class="field-label">Product Name</label>
-            <input type="text" id="apf-name" placeholder="e.g. Walnut Panel 4x8" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+            <input type="text" id="apf-name" placeholder="e.g. Walnut 4x8 Panel" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+          </div>
+          <div>
+            <label class="field-label">Cost ($)</label>
+            <input type="number" id="apf-cost" value="0" step="0.01" min="0" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
           </div>
           <div>
             <label class="field-label">Markup %</label>
             <input type="number" id="apf-markup" value="0" step="1" min="0" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
           </div>
           <div>
+            <label class="field-label">Unit</label>
+            <select id="apf-unit" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+              <option value="each">Each</option>
+              <option value="sheet">Sheet</option>
+              <option value="sqft">Sq Ft</option>
+              <option value="lf">Lin Ft</option>
+              <option value="bf">Board Ft</option>
+            </select>
+          </div>
+          <div>
             <label class="field-label">Category</label>
             <select id="apf-category" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%"></select>
           </div>
         </div>
-        <div id="apf-type-fields" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:10px"></div>
         <div style="display:flex;gap:8px;margin-top:14px">
           <button class="btn-primary" onclick="saveProductForm()" style="width:auto;padding:8px 22px;font-size:15px">Save</button>
           <button class="btn-ghost" onclick="document.getElementById('admin-product-form').style.display='none'">Cancel</button>
@@ -839,7 +852,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260708b"></script>
+<script src="app.js?v=20260708c"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });
