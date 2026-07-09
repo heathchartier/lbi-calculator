@@ -7102,8 +7102,48 @@
     "cutService": 15,
     "brackets": 15
   },
-  "standardProducts": [],
-  "productCategories": [],
+  "standardProducts": [
+    {
+      "id": 1,
+      "type": "panel",
+      "name": "Arpa Tuet",
+      "markup": 18,
+      "category": 3
+    },
+    {
+      "id": 2,
+      "type": "panel",
+      "name": "Arpa Laminate",
+      "markup": 18,
+      "category": 3
+    }
+  ],
+  "productCategories": [
+    {
+      "id": 1,
+      "name": "MDF"
+    },
+    {
+      "id": 2,
+      "name": "Particle Board"
+    },
+    {
+      "id": 3,
+      "name": "Laminate"
+    },
+    {
+      "id": 4,
+      "name": "Master Oak"
+    },
+    {
+      "id": 5,
+      "name": "Edge Banding"
+    },
+    {
+      "id": 6,
+      "name": "Services"
+    }
+  ],
   "veneerCores": [
     {
       "key": "frmdf",
