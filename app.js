@@ -185,6 +185,7 @@ let laminationCounter = 0;
 let isDirty = false;
 let productCart = {};
 let currentJobId = null;
+let productSearch = '';
 let productCounter = 0;
 let categoryCounter = 0;
 let _dragProdId = null;
@@ -194,6 +195,9 @@ let _adminVeneerFinish = 'standard';
 let _adminVeneerThick  = '075';
 
 function deepCopy(o){ return JSON.parse(JSON.stringify(o)); }
+function naturalSort(a, b){ return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }); }
+function sortedCats(cats){ return [...cats].sort((a,b) => naturalSort(a.name, b.name)); }
+function sortedProds(prods){ return [...prods].sort((a,b) => naturalSort(a.name, b.name)); }
 
 // --- AUTH -------------------------------------------------------------
 const SESSION_DURATION_MS = 8 * 60 * 60 * 1000; // 8 hours
@@ -2053,8 +2057,10 @@ function calcLaminationPreview(cfg){
 function renderLaminationAdmin(){
   const el = document.getElementById('laminationAdminSection');
   if(!el) return;
-  const faces = pricing.laminationFaces || {};
-  const cores = pricing.laminationCores || {};
+  const facesRaw = pricing.laminationFaces || {};
+  const coresRaw = pricing.laminationCores || {};
+  const faces = Object.fromEntries(Object.keys(facesRaw).sort(naturalSort).map(k => [k, facesRaw[k]]));
+  const cores = Object.fromEntries(Object.keys(coresRaw).sort(naturalSort).map(k => [k, coresRaw[k]]));
 
   el.innerHTML = `
     <div style="grid-column:1/-1;margin-top:12px;padding-bottom:6px;border-bottom:1px solid var(--bdr2)">
@@ -2184,10 +2190,17 @@ function calcLumberProduct(p){
 function renderProductsTab(){
   const cont = document.getElementById('tab-products');
   if(!cont) return;
-  const products = pricing.standardProducts || [];
-  const cats = pricing.productCategories || [];
-  if(!products.length){
-    cont.innerHTML = '<div style="text-align:center;padding:48px 0;color:var(--mid);font-size:15px">No standard products have been added yet.</div>';
+  const allProducts = pricing.standardProducts || [];
+  const cats = sortedCats(pricing.productCategories || []);
+  const q = productSearch.toLowerCase().trim();
+  const products = q ? allProducts.filter(p => p.name.toLowerCase().includes(q)) : allProducts;
+  const searchBar = `<div style="margin-bottom:16px">
+    <input type="text" placeholder="🔍 Search products…" value="${productSearch.replace(/"/g,'&quot;')}"
+      oninput="productSearch=this.value;renderProductsTab()"
+      style="width:100%;background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:9px 12px;font-size:14px;box-sizing:border-box">
+  </div>`;
+  if(!allProducts.length){
+    cont.innerHTML = searchBar + '<div style="text-align:center;padding:48px 0;color:var(--mid);font-size:15px">No standard products have been added yet.</div>';
     return;
   }
   const renderPanelCard = p => {
@@ -2233,21 +2246,22 @@ function renderProductsTab(){
   let html = '';
   if(cats.length){
     cats.forEach(cat => {
-      const catProds = products.filter(p => p.category === cat.id);
+      const catProds = sortedProds(products.filter(p => p.category === cat.id));
       if(!catProds.length) return;
       html += `<div class="product-section-label" style="margin-top:${html?'28px':'0'}">${cat.name}</div><div class="product-grid">${catProds.map(renderCard).join('')}</div>`;
     });
-    const uncat = products.filter(p => !p.category || !cats.find(c => c.id === p.category));
+    const uncat = sortedProds(products.filter(p => !p.category || !cats.find(c => c.id === p.category)));
     if(uncat.length){
       html += `<div class="product-section-label" style="margin-top:${html?'28px':'0'}">Other</div><div class="product-grid">${uncat.map(renderCard).join('')}</div>`;
     }
   } else {
-    const panels = products.filter(p => p.type === 'panel');
-    const lumber = products.filter(p => p.type === 'lumber');
+    const panels = sortedProds(products.filter(p => p.type === 'panel'));
+    const lumber = sortedProds(products.filter(p => p.type === 'lumber'));
     if(panels.length) html += `<div class="product-section-label">Panel Products</div><div class="product-grid">${panels.map(renderPanelCard).join('')}</div>`;
     if(lumber.length) html += `<div class="product-section-label" style="margin-top:${panels.length?'28px':'0'}">Lumber Products</div><div class="product-grid">${lumber.map(renderLumberCard).join('')}</div>`;
   }
-  cont.innerHTML = html;
+  if(!html) html = '<div style="text-align:center;padding:48px 0;color:var(--mid);font-size:15px">No products match your search.</div>';
+  cont.innerHTML = searchBar + html;
 }
 
 function updateProductQty(name, qty){
@@ -2410,14 +2424,15 @@ function renderAdminProducts(){
       <button class="btn-danger" style="padding:5px 10px;font-size:12px;flex-shrink:0" onclick="removeStandardProduct(${p.id})">✕</button>
     </div>`;
   };
+  const sortedCatList = sortedCats(cats);
   let html = '';
-  cats.forEach(cat => {
-    const catProds = products.filter(p => p.category === cat.id);
+  sortedCatList.forEach(cat => {
+    const catProds = sortedProds(products.filter(p => p.category === cat.id));
     if(!catProds.length) return;
     html += `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--teal);padding:10px 0 2px">${cat.name}</div>`;
     catProds.forEach(p => { html += renderRow(p); });
   });
-  const uncat = products.filter(p => !p.category || !cats.find(c => c.id === p.category));
+  const uncat = sortedProds(products.filter(p => !p.category || !cats.find(c => c.id === p.category)));
   if(uncat.length){
     if(cats.length) html += `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mid);padding:10px 0 2px">Uncategorized</div>`;
     uncat.forEach(p => { html += renderRow(p); });
@@ -2428,14 +2443,8 @@ function renderAdminProducts(){
 function renderCategoryManager(){
   const cont = document.getElementById('admin-category-manager');
   if(!cont) return;
-  const cats = pricing.productCategories || [];
-  let html = cats.map(c => `<div class="prod-drag-row" draggable="true"
-    ondragstart="catDragStart(event,${c.id})"
-    ondragover="catDragOver(event)"
-    ondrop="catDrop(event,${c.id})"
-    ondragleave="this.classList.remove('drag-over')"
-    style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bdr)">
-    <span class="drag-handle">⠿</span>
+  const cats = sortedCats(pricing.productCategories || []);
+  let html = cats.map(c => `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bdr)">
     <span style="flex:1;font-size:13px;font-weight:600">${c.name}</span>
     <button class="btn-danger" style="padding:3px 8px;font-size:12px" onclick="removeCategory(${c.id})">✕</button>
   </div>`).join('');
