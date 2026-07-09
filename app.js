@@ -2532,6 +2532,31 @@ function showProductForm(type, p){
   document.getElementById('apf-markup').value = p ? (p.markup||0) : 0;
   document.getElementById('apf-category').value = p ? (p.category||0) : 0;
   document.getElementById('apf-form-title').textContent = (p ? 'Edit' : 'New') + (type==='panel' ? ' Panel' : ' Lumber') + ' Product';
+
+  const inp = (id, val='') => `style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%"`;
+  const sel = (id, opts, cur) => `<select id="${id}" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">${opts.map(([v,l])=>`<option value="${v}"${cur===v?' selected':''}>${l}</option>`).join('')}</select>`;
+
+  const tf = document.getElementById('apf-type-fields');
+  if(type === 'panel'){
+    const species = Object.keys(pricing.veneerSpecies||{}).sort(naturalSort).map(s=>[s,s]);
+    const cores = (pricing.veneerCores||[]).map(c=>[c.label, c.label]);
+    tf.innerHTML = `
+      <div><label class="field-label">Species</label>${sel('apf-species', [['','Select…'],...species], p?.species||'')}</div>
+      <div><label class="field-label">Grade</label>${sel('apf-grade',[['timber','Standard'],['talbert','Premium']], p?.grade||'timber')}</div>
+      <div><label class="field-label">Orientation</label>${sel('apf-sheetgrade',[['A3','Horizontal'],['AA','Vertical']], p?.sheetGrade||'A3')}</div>
+      <div><label class="field-label">Sheet Size</label>${sel('apf-sheetsize',[['4x8','4×8'],['4x10','4×10']], p?.sheetSize||'4x8')}</div>
+      <div><label class="field-label">Core</label>${sel('apf-core', [['','Select…'],...cores], p?.core||'')}</div>
+    `;
+  } else {
+    const lSpecies = Object.keys(pricing.lumberSpecies||{}).sort(naturalSort).map(s=>[s,s]);
+    const thicks = THICK_OPTIONS.map(t=>[t.label, t.label]);
+    tf.innerHTML = `
+      <div><label class="field-label">Species</label>${sel('apf-lspecies',[['','Select…'],...lSpecies], p?.lSpecies||'')}</div>
+      <div><label class="field-label">Thickness</label>${sel('apf-thickness', thicks, p?.thickness ? (THICK_OPTIONS.find(t=>parseFloat(t.key)/100===p.thickness||t.key===String(p.thickness))?.label||thicks[2][0]) : '3/4"')}</div>
+      <div><label class="field-label">Width (in)</label><input type="number" id="apf-slatw" value="${p?.slatW||''}" step="0.25" min="0" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%"></div>
+      <div><label class="field-label">Length (in)</label><input type="number" id="apf-slatl" value="${p?.slatL||''}" step="1" min="0" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%"></div>
+    `;
+  }
 }
 
 function addStandardProduct(type){ showProductForm(type, null); }
@@ -2549,6 +2574,21 @@ function saveProductForm(){
   const markup = parseFloat(document.getElementById('apf-markup').value)||0;
   const category = parseInt(document.getElementById('apf-category').value)||0;
   const product = { id: existingId||++productCounter, type, name, markup, category };
+  if(type === 'panel'){
+    product.species    = document.getElementById('apf-species')?.value || '';
+    product.grade      = document.getElementById('apf-grade')?.value || 'timber';
+    product.sheetGrade = document.getElementById('apf-sheetgrade')?.value || 'A3';
+    product.sheetSize  = document.getElementById('apf-sheetsize')?.value || '4x8';
+    product.core       = document.getElementById('apf-core')?.value || '';
+    if(!product.species || !product.core){ showToast('Select a species and core'); return; }
+  } else {
+    product.lSpecies  = document.getElementById('apf-lspecies')?.value || '';
+    const thickLabel  = document.getElementById('apf-thickness')?.value || '3/4"';
+    product.thickness = parseFloat(thickLabel) || 0.75;
+    product.slatW     = parseFloat(document.getElementById('apf-slatw')?.value) || 0;
+    product.slatL     = parseFloat(document.getElementById('apf-slatl')?.value) || 0;
+    if(!product.lSpecies || !product.slatW || !product.slatL){ showToast('Select species and enter width/length'); return; }
+  }
   if(!pricing.standardProducts) pricing.standardProducts=[];
   const idx = pricing.standardProducts.findIndex(p => p.id===existingId);
   if(idx>=0) pricing.standardProducts[idx]=product;
