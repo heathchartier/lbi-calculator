@@ -2199,15 +2199,13 @@ function renderProductsTab(){
   }
   const renderCard = p => {
     const sell = (p.cost||0) * (1 + (p.markup||0)/100);
-    if(!sell && !p.cost) return '';
-    const unit = p.unit || 'each';
-    const unitLabel = { each:'Each', sheet:'Sheet', sqft:'Sq Ft', lf:'Lin Ft', bf:'Board Ft' }[unit] || unit;
+    if(!sell) return '';
     const qty = productCart[p.name] || 0;
     const lineTotal = qty > 0 ? `<span class="product-line-total">${fmt(qty * sell)}</span>` : '';
     return `<div class="product-card">
       <div class="product-card-name">${p.name}</div>
       <div class="product-card-prices">
-        <div class="product-price-item highlight"><span class="ppi-label">Per ${unitLabel}</span><span class="ppi-val">${fmt(sell)}</span></div>
+        <div class="product-price-item highlight"><span class="ppi-label">Price</span><span class="ppi-val">${fmt(sell)}</span></div>
       </div>
       <div class="product-qty-row">
         <label class="field-label" style="margin:0;white-space:nowrap">Qty</label>
@@ -2382,8 +2380,7 @@ function renderAdminProducts(){
   }
   const renderRow = p => {
     const sell = (p.cost||0) * (1 + (p.markup||0)/100);
-    const unit = { each:'ea', sheet:'sheet', sqft:'sqft', lf:'lf', bf:'bf' }[p.unit||'each'] || p.unit;
-    const price = p.cost ? `Cost: ${fmt(p.cost)} → Sell: ${fmt(sell)}/${unit}` : '— no cost set';
+    const price = p.cost ? `Cost: ${fmt(p.cost)} → Sell: ${fmt(sell)}` : '— no cost set';
     return `<div class="prod-drag-row" draggable="true"
       ondragstart="prodDragStart(event,${p.id})"
       ondragover="prodDragOver(event)"
@@ -2509,7 +2506,6 @@ function showProductForm(type, p){
   document.getElementById('apf-form-title').textContent = (p ? 'Edit' : 'New') + (type==='panel' ? ' Panel' : ' Lumber') + ' Product';
 
   document.getElementById('apf-cost').value = p ? (p.cost||0) : 0;
-  document.getElementById('apf-unit').value = p ? (p.unit||'each') : 'each';
   document.getElementById('apf-form-title').textContent = (p ? 'Edit' : 'New') + ' Product';
 }
 
@@ -2527,9 +2523,8 @@ function saveProductForm(){
   if(!name){ showToast('Enter a product name'); return; }
   const cost     = parseFloat(document.getElementById('apf-cost').value)||0;
   const markup   = parseFloat(document.getElementById('apf-markup').value)||0;
-  const unit     = document.getElementById('apf-unit').value || 'each';
   const category = parseInt(document.getElementById('apf-category').value)||0;
-  const product  = { id: existingId||++productCounter, type, name, cost, markup, unit, category };
+  const product  = { id: existingId||++productCounter, type, name, cost, markup, category };
   if(!pricing.standardProducts) pricing.standardProducts=[];
   const idx = pricing.standardProducts.findIndex(p => p.id===existingId);
   if(idx>=0) pricing.standardProducts[idx]=product;

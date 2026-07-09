@@ -802,16 +802,6 @@ select option{background:#1e2226}
             <input type="number" id="apf-markup" value="0" step="1" min="0" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
           </div>
           <div>
-            <label class="field-label">Unit</label>
-            <select id="apf-unit" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
-              <option value="each">Each</option>
-              <option value="sheet">Sheet</option>
-              <option value="sqft">Sq Ft</option>
-              <option value="lf">Lin Ft</option>
-              <option value="bf">Board Ft</option>
-            </select>
-          </div>
-          <div>
             <label class="field-label">Category</label>
             <select id="apf-category" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%"></select>
           </div>
@@ -852,7 +842,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260708c"></script>
+<script src="app.js?v=20260708d"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });
