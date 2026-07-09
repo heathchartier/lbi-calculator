@@ -303,6 +303,7 @@ function switchTab(name, btn){
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   btn.classList.add('active');
+  if(name === 'calculators') populateSlatSpecies();
 }
 
 // --- HELPERS ----------------------------------------------------------
@@ -2724,6 +2725,136 @@ function calcCountFromSqft(){
 }
 
 function calcPC(){ calcPCfromCount(); }
+
+// --- SLAT CALCULATOR --------------------------------------------------
+function populateSlatSpecies(){
+  const sel = document.getElementById('sc-species');
+  if(!sel) return;
+  const species = visibleLumberSpecies();
+  sel.innerHTML = species.map(s=>`<option value="${s}">${s}</option>`).join('');
+}
+
+function calcSlat(){
+  const mode      = document.getElementById('sc-mode')?.value || 'sqft';
+  const qty       = parseFloat(document.getElementById('sc-qty')?.value) || 0;
+  const thickRaw  = document.getElementById('sc-thick')?.value || '';
+  const thick     = parseFraction(thickRaw) || 0;
+  const slatW     = parseFloat(document.getElementById('sc-slatW')?.value) || 0;
+  const slatL     = parseFloat(document.getElementById('sc-slatL')?.value) || 0;
+  const slatsPerPanel = parseInt(document.getElementById('sc-slatsPerPanel')?.value) || 0;
+  const panelW    = parseFloat(document.getElementById('sc-panelW')?.value) || 0;
+  const panelL    = parseFloat(document.getElementById('sc-panelL')?.value) || 0;
+  const waste     = document.getElementById('sc-waste')?.checked ? 1.10 : 1.0;
+  const species   = document.getElementById('sc-species')?.value || '';
+  const res       = document.getElementById('sc-result');
+
+  // Update label
+  const labelEl = document.getElementById('sc-qty-label');
+  if(labelEl) labelEl.textContent = mode==='sqft' ? 'Ceiling Sq Ft' : mode==='slats' ? 'Total Slats' : 'Number of Panels';
+
+  if(!slatW || !slatL || !thick){ res.innerHTML = '<span style="color:var(--mid)">Enter thickness, width, and length to see results.</span>'; return; }
+
+  // Resolve total slats
+  let totalSlats = 0;
+  if(mode === 'slats'){
+    totalSlats = qty;
+  } else if(mode === 'panels'){
+    if(!slatsPerPanel){ res.innerHTML = '<span style="color:var(--mid)">Enter slats per panel.</span>'; return; }
+    totalSlats = qty * slatsPerPanel;
+  } else {
+    // sqft mode
+    if(!panelW || !panelL){ res.innerHTML = '<span style="color:var(--mid)">Enter panel width and length for sq ft mode.</span>'; return; }
+    if(!slatsPerPanel){ res.innerHTML = '<span style="color:var(--mid)">Enter slats per panel.</span>'; return; }
+    const panelSqft = (panelW * panelL) / 144;
+    const panels = panelSqft > 0 ? Math.ceil(qty / panelSqft) : 0;
+    totalSlats = panels * slatsPerPanel;
+  }
+
+  if(!totalSlats){ res.innerHTML = '<span style="color:var(--mid)">Enter a quantity to see results.</span>'; return; }
+
+  const totalWithWaste = Math.ceil(totalSlats * waste);
+  const bfPerSlat = (thick * slatW * slatL) / 144;
+  const totalBF = totalWithWaste * bfPerSlat;
+
+  // Stock length
+  const millStockIn = getMillStockLength(slatL);
+  const stockFt = millStockIn / 12;
+  const pcsPerLength = slatL >= 72 ? 1 : Math.max(1, Math.floor((millStockIn - END_TRIM) / slatL));
+  const stockPieces = Math.ceil(totalWithWaste / pcsPerLength);
+
+  // Pricing if available
+  const sData = pricing.lumberSpecies?.[species];
+  let priceRow = '';
+  if(sData?.price){
+    const cfg = { species, thickness: thick, slatW, slatL, safetyBuffer: false };
+    const m = millLumberCalc(cfg, 1);
+    const finSqft = (slatW * slatL) / 144;
+    const rawBFperSqft = finSqft > 0 ? m.bfPerSlat / finSqft : 0;
+    const costPerSqft = rawBFperSqft * sData.price;
+    const totalFinSqft = (slatW * slatL / 144) * totalWithWaste;
+    const totalCost = totalFinSqft * costPerSqft;
+    priceRow = `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--bdr)">
+      <span style="color:var(--mid)">Material cost (${species}):</span>
+      <strong style="color:var(--teal);margin-left:6px">${fmt(totalCost)}</strong>
+      <span style="color:var(--dim);margin-left:6px;font-size:12px">(${fmt(costPerSqft)}/sqft raw cost)</span>
+    </div>`;
+  }
+
+  res.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:${priceRow?'0':'0'}">
+      <div><div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Total Slats</div><div style="font-size:22px;font-weight:700;color:var(--ink)">${fmtN(totalWithWaste)}</div>${waste>1?`<div style="font-size:11px;color:var(--dim)">(${fmtN(totalSlats)} + 10% waste)</div>`:''}</div>
+      <div><div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Board Feet</div><div style="font-size:22px;font-weight:700;color:var(--ink)">${fmtN(totalBF,1)}</div></div>
+      <div><div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Stock Pieces</div><div style="font-size:22px;font-weight:700;color:var(--ink)">${fmtN(stockPieces)}</div><div style="font-size:11px;color:var(--dim)">${stockFt}' lengths · ${pcsPerLength} slat${pcsPerLength!==1?'s':''}/pc</div></div>
+      <div><div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">BF / Slat</div><div style="font-size:22px;font-weight:700;color:var(--ink)">${fmtN(bfPerSlat,3)}</div></div>
+    </div>
+    ${priceRow}
+  `;
+}
+
+// --- BRACKET CALCULATOR -----------------------------------------------
+function calcBracket(){
+  const bW      = parseFloat(document.getElementById('bc-w')?.value) || 0;
+  const bL      = parseFloat(document.getElementById('bc-l')?.value) || 0;
+  const panels  = parseFloat(document.getElementById('bc-panels')?.value) || 0;
+  const perPanel= parseFloat(document.getElementById('bc-perPanel')?.value) || 0;
+  const res     = document.getElementById('bc-result');
+
+  if(!bW || !bL){ res.innerHTML = '<span style="color:var(--mid)">Enter bracket width and length to see results.</span>'; return; }
+  if(!panels || !perPanel){ res.innerHTML = '<span style="color:var(--mid)">Enter panel count and brackets per panel.</span>'; return; }
+
+  // Usable sheet after 1/4" squaring each edge
+  const sheetW = 48 - 0.5;  // 47.5"
+  const sheetL = 96 - 0.5;  // 95.5"
+
+  // Layout A: width across sheet width, length down sheet length
+  const layoutA_cols = Math.floor(sheetW / bW);
+  const layoutA_rows = Math.floor(sheetL / bL);
+  const layoutA = layoutA_cols * layoutA_rows;
+
+  // Layout B: rotated — length across sheet width, width down sheet length
+  const layoutB_cols = Math.floor(sheetW / bL);
+  const layoutB_rows = Math.floor(sheetL / bW);
+  const layoutB = layoutB_cols * layoutB_rows;
+
+  const bestLayout = layoutA >= layoutB ? 'A' : 'B';
+  const bracketsPerSheet = Math.max(layoutA, layoutB);
+  const bestCols = bestLayout === 'A' ? layoutA_cols : layoutB_cols;
+  const bestRows = bestLayout === 'A' ? layoutA_rows : layoutB_rows;
+
+  const totalBrackets = panels * perPanel;
+  const sheetsNeeded = bracketsPerSheet > 0 ? Math.ceil(totalBrackets / bracketsPerSheet) : 0;
+
+  res.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px">
+      <div><div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Total Brackets</div><div style="font-size:22px;font-weight:700;color:var(--ink)">${fmtN(totalBrackets)}</div><div style="font-size:11px;color:var(--dim)">${fmtN(panels)} panels × ${fmtN(perPanel)}/panel</div></div>
+      <div><div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Brackets / Sheet</div><div style="font-size:22px;font-weight:700;color:var(--ink)">${fmtN(bracketsPerSheet)}</div><div style="font-size:11px;color:var(--dim)">${bestCols} cols × ${bestRows} rows${bestLayout==='B'?' (rotated)':''}</div></div>
+      <div><div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Sheets Needed</div><div style="font-size:22px;font-weight:700;color:var(--teal)">${fmtN(sheetsNeeded)}</div><div style="font-size:11px;color:var(--dim)">3/4" × 48" × 96" Baltic Birch</div></div>
+    </div>
+    <div style="margin-top:10px;font-size:12px;color:var(--dim)">
+      Layout A (${bW}" × ${bL}"): ${layoutA} per sheet &nbsp;|&nbsp; Layout B rotated (${bL}" × ${bW}"): ${layoutB} per sheet — using best fit
+    </div>
+  `;
+}
 
 // --- TOAST ------------------------------------------------------------
 function showToast(msg){

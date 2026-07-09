@@ -622,6 +622,88 @@ select option{background:#1e2226}
           </div>
         </div>
 
+        <!-- Slat Calculator -->
+        <div class="calc-card" style="grid-column:1/-1">
+          <div class="calc-title">Slat Calculator</div>
+          <div class="calc-subtitle">Material estimate for slat ceiling jobs — mirrors the Lumber tab without brackets</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:12px">
+            <div>
+              <label class="field-label">Species</label>
+              <select id="sc-species" oninput="calcSlat()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%"></select>
+            </div>
+            <div>
+              <label class="field-label">Calculate By</label>
+              <select id="sc-mode" onchange="calcSlat()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+                <option value="sqft">By Sq Ft</option>
+                <option value="slats">By Slat Count</option>
+                <option value="panels">By Panel Count</option>
+              </select>
+            </div>
+            <div id="sc-qty-wrap">
+              <label class="field-label" id="sc-qty-label">Ceiling Sq Ft</label>
+              <input type="number" id="sc-qty" placeholder="0" min="0" step="1" oninput="calcSlat()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+            </div>
+            <div>
+              <label class="field-label">Thickness</label>
+              <input type="text" id="sc-thick" placeholder="e.g. 3/4 or .75" autocorrect="off" autocapitalize="none" oninput="calcSlat()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+            </div>
+            <div>
+              <label class="field-label">Slat Width (in)</label>
+              <input type="number" id="sc-slatW" placeholder="e.g. 3.25" step="0.0625" min="0" oninput="calcSlat()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+            </div>
+            <div>
+              <label class="field-label">Slat Length (in)</label>
+              <input type="number" id="sc-slatL" placeholder="e.g. 96" step="0.25" min="0" oninput="calcSlat()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+            </div>
+            <div>
+              <label class="field-label">Slats / Panel</label>
+              <input type="number" id="sc-slatsPerPanel" placeholder="e.g. 4" step="1" min="1" oninput="calcSlat()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+            </div>
+            <div>
+              <label class="field-label">Panel Width (in)</label>
+              <input type="number" id="sc-panelW" placeholder="e.g. 12" step="0.25" min="0" oninput="calcSlat()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+            </div>
+            <div>
+              <label class="field-label">Panel Length (in)</label>
+              <input type="number" id="sc-panelL" placeholder="e.g. 96" step="0.25" min="0" oninput="calcSlat()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+            </div>
+            <div style="display:flex;align-items:flex-end;padding-bottom:2px">
+              <label class="toggle" style="margin-right:8px"><input type="checkbox" id="sc-waste" checked onchange="calcSlat()"><span class="toggle-slider"></span></label>
+              <span style="font-size:13px;color:var(--ink)">+10% waste</span>
+            </div>
+          </div>
+          <div id="sc-result" style="margin-top:16px;background:var(--surf2);border-radius:var(--r);padding:14px;font-size:14px;color:var(--mid);min-height:48px">
+            Fill in the fields above to see results.
+          </div>
+        </div>
+
+        <!-- Bracket Calculator -->
+        <div class="calc-card" style="grid-column:1/-1">
+          <div class="calc-title">Bracket Calculator</div>
+          <div class="calc-subtitle">How many 3/4" × 48" × 96" Baltic Birch sheets to cut your brackets (1/4" squaring per edge)</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:12px">
+            <div>
+              <label class="field-label">Bracket Width (in)</label>
+              <input type="number" id="bc-w" placeholder="e.g. 1.5" step="0.0625" min="0" oninput="calcBracket()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+            </div>
+            <div>
+              <label class="field-label">Bracket Length (in)</label>
+              <input type="number" id="bc-l" placeholder="e.g. 3" step="0.0625" min="0" oninput="calcBracket()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+            </div>
+            <div>
+              <label class="field-label">Ceiling Panels</label>
+              <input type="number" id="bc-panels" placeholder="e.g. 20" step="1" min="0" oninput="calcBracket()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+            </div>
+            <div>
+              <label class="field-label">Brackets / Panel</label>
+              <input type="number" id="bc-perPanel" placeholder="e.g. 8" step="1" min="0" oninput="calcBracket()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+            </div>
+          </div>
+          <div id="bc-result" style="margin-top:16px;background:var(--surf2);border-radius:var(--r);padding:14px;font-size:14px;color:var(--mid);min-height:48px">
+            Fill in bracket size and panel count to see results.
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -842,7 +924,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260708d"></script>
+<script src="app.js?v=20260709a"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });
