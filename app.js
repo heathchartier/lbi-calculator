@@ -2786,41 +2786,65 @@ function calcSlat(){
   }
   if(!totalSlats){ res.innerHTML = '<span style="color:var(--mid)">Enter a quantity to see results.</span>'; return; }
 
-  // Mill calculation — mirrors lumber tab (no species so no VG 2×6 path)
+  // Mill calculation — mirrors lumber tab
   const stockIn      = getMillStockLength(slatL, '');
   const stockFt      = stockIn / 12;
   const piecesPerLen = slatL >= 72 ? 1 : Math.max(1, Math.floor((stockIn - END_TRIM) / slatL));
-  const stockInfo    = getStockInfo(thick);
-  const roughT       = stockInfo ? stockInfo.stock : getSuggestedRoughThick(thick);
-  const widthWaste   = getWidthWasteFactor(slatW);
-  const stockLabel   = stockInfo?.label || `${roughT}" rough`;
   const safetyMult   = addWaste ? 1.10 : 1.0;
+  const lengthNote   = piecesPerLen > 1 ? ` · ${piecesPerLen} slats/board` : '';
+  const isVG         = document.getElementById('sc-vg')?.checked;
 
-  let pcsWide, boardsNeeded, bfPerSlat, rawBFTotal, isResaw = false;
+  let pcsWide, boardsNeeded, bfPerSlat, bfPerBoard, rawBFTotal;
+  let roughLabel, widthWasteLabel, warningHTML = '';
 
-  if(stockInfo?.resaw){
-    isResaw = true;
-    const pcsFromThick = Math.floor((roughT + RESAW_KERF) / (thick + RESAW_KERF));
-    pcsWide       = Math.max(1, pcsFromThick);
-    boardsNeeded  = Math.ceil(totalSlats * safetyMult / (pcsWide * piecesPerLen));
-    bfPerSlat     = roughT * (slatW + widthWaste) * stockIn / (144 * pcsWide * piecesPerLen);
-    rawBFTotal    = Math.ceil(bfPerSlat * totalSlats * safetyMult);
+  if(isVG){
+    // V.G. Fir / Hemlock: milled from 2×6 rough stock
+    pcsWide      = getVGPcsPerBoard(thick, slatW);
+    const pcsPerBoard = pcsWide * piecesPerLen;
+    boardsNeeded = Math.ceil(totalSlats / pcsPerBoard);
+    bfPerBoard   = (2 * 6 * stockIn) / 144;
+    bfPerSlat    = bfPerBoard / pcsPerBoard;
+    rawBFTotal   = Math.ceil(boardsNeeded * bfPerBoard * safetyMult);
+    roughLabel   = `2×6 rough · ${pcsWide} pcs/board`;
+    widthWasteLabel = '— (2×6 board)';
+    if(thick > 0.6875){
+      const altPcs = getVGPcsPerBoard(0.6875, slatW);
+      warningHTML = `<div style="grid-column:1/-1;background:#3a1a00;border:1px solid var(--gold);border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--gold);line-height:1.5">
+        ⚠ At this thickness you get <strong>${pcsWide} pcs</strong> per 2×6 board.
+        Consider <strong>11/16" (${altPcs} pcs/board)</strong> for better yield.
+      </div>`;
+    }
   } else {
-    pcsWide      = null;
-    boardsNeeded = Math.ceil(totalSlats * safetyMult / piecesPerLen);
-    bfPerSlat    = roughT * (slatW + widthWaste) * stockIn / (144 * piecesPerLen);
-    rawBFTotal   = Math.ceil(bfPerSlat * totalSlats * safetyMult);
-  }
+    // Standard path: lookup rough stock, apply widthWaste
+    const stockInfo = getStockInfo(thick);
+    const roughT    = stockInfo ? stockInfo.stock : getSuggestedRoughThick(thick);
+    const widthWaste = getWidthWasteFactor(slatW);
+    const stockLabel = stockInfo?.label || `${roughT}" rough`;
+    const isResaw    = !!(stockInfo?.resaw);
 
-  const roughLabel = stockLabel + (isResaw && pcsWide ? ` · ${pcsWide} pcs/board` : '');
-  const lengthNote = piecesPerLen > 1 ? ` · ${piecesPerLen} slats/board` : '';
+    if(isResaw){
+      const pcsFromThick = Math.floor((roughT + RESAW_KERF) / (thick + RESAW_KERF));
+      pcsWide       = Math.max(1, pcsFromThick);
+      boardsNeeded  = Math.ceil(totalSlats / (pcsWide * piecesPerLen));
+      bfPerSlat     = roughT * (slatW + widthWaste) * stockIn / (144 * pcsWide * piecesPerLen);
+      rawBFTotal    = Math.ceil(bfPerSlat * totalSlats * safetyMult);
+      roughLabel    = `${stockLabel} · ${pcsWide} pcs/board`;
+    } else {
+      pcsWide      = null;
+      boardsNeeded = Math.ceil(totalSlats / piecesPerLen);
+      bfPerSlat    = roughT * (slatW + widthWaste) * stockIn / (144 * piecesPerLen);
+      rawBFTotal   = Math.ceil(bfPerSlat * totalSlats * safetyMult);
+      roughLabel   = stockLabel;
+    }
+    widthWasteLabel = `${widthWaste}"`;
+  }
 
   res.innerHTML = `
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px">
+      ${warningHTML}
       <div>
         <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Total Slats</div>
-        <div style="font-size:22px;font-weight:700;color:var(--ink)">${fmtN(Math.ceil(totalSlats * safetyMult))}</div>
-        ${addWaste ? `<div style="font-size:11px;color:var(--dim)">(${fmtN(totalSlats)} + 10% waste)</div>` : ''}
+        <div style="font-size:22px;font-weight:700;color:var(--ink)">${fmtN(totalSlats)}</div>
       </div>
       <div>
         <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Stock Length</div>
@@ -2834,11 +2858,11 @@ function calcSlat(){
       <div>
         <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Boards to Buy</div>
         <div style="font-size:22px;font-weight:700;color:var(--ink)">${fmtN(boardsNeeded)}</div>
-        ${isResaw ? `<div style="font-size:11px;color:var(--dim)">${pcsWide} slat${pcsWide!==1?'s':''}/board (resaw)</div>` : ''}
+        ${isVG ? `<div style="font-size:11px;color:var(--dim)">2×6 boards</div>` : pcsWide ? `<div style="font-size:11px;color:var(--dim)">${pcsWide} slat${pcsWide!==1?'s':''}/board (resaw)</div>` : ''}
       </div>
       <div>
         <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Width Waste</div>
-        <div style="font-size:22px;font-weight:700;color:var(--ink)">${widthWaste}"</div>
+        <div style="font-size:22px;font-weight:700;color:var(--ink)">${widthWasteLabel}</div>
       </div>
       <div>
         <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">BF / Slat</div>
