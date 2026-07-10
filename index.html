@@ -137,7 +137,7 @@ select{cursor:pointer;appearance:none;
 select option{background:#1e2226}
 
 /* ─── TABS ──────────────────────────────────────────────────────── */
-.tab-bar{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--bdr);padding-bottom:0;overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;scrollbar-width:none;-ms-overflow-style:none}
+.tab-bar{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--bdr);padding-bottom:0;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;-ms-overflow-style:none}
 .tab-bar::-webkit-scrollbar{display:none}
 .tab-btn{
   font-family:var(--font-head);font-size:15px;font-weight:700;letter-spacing:.3px;
@@ -923,7 +923,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260709d"></script>
+<script src="app.js?v=20260710a"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });

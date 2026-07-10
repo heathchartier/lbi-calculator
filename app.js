@@ -13,7 +13,17 @@ const RESAW_KERF = 0.0625;   // thin-kerf blade for resaw/rip operations on 2x6
 const TWO_X_SIX_T = 1.5;    // 2x6 actual thickness (inches)
 const TWO_X_SIX_W = 6.0;    // 2x6 nominal width (inches, rough/green)
 const END_TRIM = 4.0;
-const STOCK_LENGTHS = [96, 120, 144, 168, 192];
+const STOCK_LENGTHS      = [96, 120, 144, 168, 192]; // all lengths (long-stock species)
+const STOCK_LENGTHS_STD  = [96, 120, 144];            // max 12' — most species
+// Species that come in longer stock (can use 14' or 16' for estimating)
+const LONG_STOCK_SPECIES = new Set([
+  'Stain Grade Poplar',
+  'V.G. Hemlock', 'Therm VG Hemlock',
+  'V.G. Fir',
+  'Therm Poplar',
+  'Therm Pine',
+  'Grey Accoya',
+]);
 const SHEET_WIDTHS  = { '4x8': 49, '4x10': 49 };
 const SHEET_LENGTHS = { '4x8': 97, '4x10': 121 };
 const EB_ROLL_FEET   = 500;
@@ -719,9 +729,10 @@ function removeLumberConfig(id){
   recalcAll();
 }
 
-function getBestStock(slatL){
+function getBestStock(slatL, species){
+  const lengths = LONG_STOCK_SPECIES.has(species) ? STOCK_LENGTHS : STOCK_LENGTHS_STD;
   let best = null, bestPieces = 0;
-  for(const stockIn of STOCK_LENGTHS){
+  for(const stockIn of lengths){
     const usable = stockIn - END_TRIM;
     const pieces = Math.floor(usable / slatL);
     if(pieces > bestPieces){ bestPieces=pieces; best=stockIn; }
@@ -730,17 +741,19 @@ function getBestStock(slatL){
   return { stockIn: best||96, piecesPerBoard: Math.max(1,bestPieces) };
 }
 
-// Stock length for a given slat length (Heath's mill rules)
-// 72"+ → use next standard length above slat; <72" → pack multiples (getBestStock)
-function getMillStockLength(slatL){
+// Stock length for a given slat length.
+// Most species: max 12' stock. Long-stock species can use 14'/16'.
+function getMillStockLength(slatL, species){
+  const isLong = LONG_STOCK_SPECIES.has(species);
   if(slatL >= 72){
-    if(slatL <= 95)  return 96;   // 8'
-    if(slatL <= 119) return 120;  // 10'
-    if(slatL <= 143) return 144;  // 12'
-    if(slatL <= 167) return 168;  // 14'
-    return 192;                   // 16'
+    if(slatL <= 95)  return 96;
+    if(slatL <= 119) return 120;
+    if(slatL <= 143) return 144;
+    if(!isLong)      return 144;  // cap at 12' for standard species
+    if(slatL <= 167) return 168;
+    return 192;
   }
-  return getBestStock(slatL).stockIn; // <72": maximize pieces per board
+  return getBestStock(slatL, species).stockIn;
 }
 
 // VG Fir/Hemlock: pieces per 2×6 board — width rips × thickness slabs
@@ -775,7 +788,7 @@ function renderLumberConfigs(){
     if(!cfg.species && species.length > 0) cfg.species = species[0];
     const sData    = pricing.lumberSpecies[cfg.species] || {};
     const isResaw  = sData.resaw || false;
-    const millStockIn = getMillStockLength(cfg.slatL);
+    const millStockIn = getMillStockLength(cfg.slatL, cfg.species);
     const stockFt     = millStockIn / 12;
     const pcsPerLen   = cfg.slatL >= 72 ? 1 : Math.max(1, Math.floor((millStockIn - END_TRIM) / cfg.slatL));
     const showQty  = cfg.calcMode !== 'sqft';
@@ -925,7 +938,7 @@ function lUpdate(id){
   const stockTag = document.getElementById('l-stock-'+id);
   if(stockTag){
     if(cfg.slatL > 0){
-      const millStockIn   = getMillStockLength(cfg.slatL);
+      const millStockIn   = getMillStockLength(cfg.slatL, cfg.species);
       const millPcsPerLen = cfg.slatL >= 72 ? 1 : Math.max(1, Math.floor((millStockIn - END_TRIM) / cfg.slatL));
       stockTag.textContent = `📏 ${millStockIn/12}' stock · ${millPcsPerLen} pc/length`;
       stockTag.style.display = '';
@@ -975,7 +988,7 @@ function millLumberCalc(cfg, totalSlats){
   const defectPct = pricing.services.lumberDefectPct || 0;
 
   // --- Stock length ---
-  const stockIn = getMillStockLength(cfg.slatL);
+  const stockIn = getMillStockLength(cfg.slatL, cfg.species);
   const stockFt = stockIn / 12;
 
   // --- Pieces per board in the LENGTH direction (for <72" slats only) ---
@@ -2765,7 +2778,7 @@ function calcSlat(){
   const bfPerSlat = (thick * slatW * slatL) / 144;
   const totalBF = totalWithWaste * bfPerSlat;
 
-  const millStockIn = getMillStockLength(slatL);
+  const millStockIn = getMillStockLength(slatL, '');
   const stockFt = millStockIn / 12;
   const pcsPerLength = slatL >= 72 ? 1 : Math.max(1, Math.floor((millStockIn - END_TRIM) / slatL));
   const stockPieces = Math.ceil(totalWithWaste / pcsPerLength);
