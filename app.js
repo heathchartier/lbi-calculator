@@ -1035,9 +1035,24 @@ function millLumberCalc(cfg, totalSlats){
 
     if(stockInfo?.resaw){
       // Resaw: multiple finished slats from one board's thickness
+      // Use finished width directly — widthWaste table was built for milled planks, not ripped slats
       const pcsFromThick = Math.floor((roughT + RESAW_KERF) / (cfg.thickness + RESAW_KERF));
       pcsWide  = Math.max(1, pcsFromThick);
-      bfPerSlat = roughT * (cfg.slatW + widthWaste) * stockIn / (144 * pcsWide * piecesPerLen);
+      const boardsNeeded = Math.ceil(totalSlats / (pcsWide * piecesPerLen));
+      bfPerSlat = roughT * cfg.slatW * stockIn / (144 * pcsWide * piecesPerLen);
+      const rawBFExact = bfPerSlat * totalSlats;
+      const safetyMult = cfg.safetyBuffer ? 1.10 : 1;
+      const rawBFTotal = Math.ceil(rawBFExact * safetyMult);
+      return {
+        isVGResaw, vgWarning,
+        stockIn, stockFt, piecesPerLen,
+        roughT, widthWaste: null, pcsWide,
+        boardsNeeded, pcsPerBoard: pcsWide * piecesPerLen,
+        bfPerSlat, rawBFTotal, defectPct,
+        safetyBuffer: cfg.safetyBuffer,
+        stockLabel: stockInfo?.label || null,
+        isThickResaw: true,
+      };
     } else {
       pcsWide    = null;
       bfPerSlat = roughT * (cfg.slatW + widthWaste) * stockIn / (144 * piecesPerLen);
@@ -1053,7 +1068,7 @@ function millLumberCalc(cfg, totalSlats){
       bfPerSlat, rawBFTotal, defectPct,
       safetyBuffer: cfg.safetyBuffer,
       stockLabel: stockInfo?.label || null,
-      isThickResaw: !!(stockInfo?.resaw),
+      isThickResaw: false,
     };
   }
 
@@ -1116,8 +1131,8 @@ function calcLumberPreview(cfg){
     ${m.piecesPerLen > 1 ? `<div class="calc-preview-item"><div class="calc-preview-label">Pcs / Board (length)</div><div class="calc-preview-val">${m.piecesPerLen}</div></div>` : ''}
     <div class="calc-preview-item"><div class="calc-preview-label">Rough Stock</div><div class="calc-preview-val">${roughLabel}</div></div>
     ${m.widthWaste !== null ? `<div class="calc-preview-item"><div class="calc-preview-label">Width Waste Factor</div><div class="calc-preview-val">${m.widthWaste}"</div></div>` : ''}
-    ${m.boardsNeeded ? `<div class="calc-preview-item"><div class="calc-preview-label">Boards to Buy</div><div class="calc-preview-val">${m.boardsNeeded} × 2×6 (${m.pcsPerBoard} pcs ea)</div></div>` : ''}
-    ${m.boardsNeeded ? `<div class="calc-preview-item"><div class="calc-preview-label">BF / Board</div><div class="calc-preview-val">${fmtN(m.bfPerBoard,0)} BF</div></div>` : `<div class="calc-preview-item"><div class="calc-preview-label">BF / Slat</div><div class="calc-preview-val">${fmtN(m.bfPerSlat,3)} BF</div></div>`}
+    ${m.boardsNeeded ? `<div class="calc-preview-item"><div class="calc-preview-label">Boards to Buy</div><div class="calc-preview-val">${m.boardsNeeded}${m.isVGResaw ? ' × 2×6' : ''} (${m.pcsPerBoard} slat${m.pcsPerBoard!==1?'s':''}/board)</div></div>` : ''}
+    ${m.boardsNeeded && m.bfPerBoard ? `<div class="calc-preview-item"><div class="calc-preview-label">BF / Board</div><div class="calc-preview-val">${fmtN(m.bfPerBoard,0)} BF</div></div>` : `<div class="calc-preview-item"><div class="calc-preview-label">BF / Slat</div><div class="calc-preview-val">${fmtN(m.bfPerSlat,3)} BF</div></div>`}
     <div class="calc-preview-item"><div class="calc-preview-label">Raw BF to Order${m.safetyBuffer?' (+10% waste)':''}</div><div class="calc-preview-val" style="color:var(--teal);font-weight:700;font-size:16px">${fmtN(m.rawBFTotal,0)} BF</div></div>
     <div class="calc-preview-item"><div class="calc-preview-label">Brackets</div><div class="calc-preview-val">${fmtN(panelQty * cfg.bracketsPerPanel)}</div></div>
   `;
