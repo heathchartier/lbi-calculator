@@ -746,12 +746,12 @@ function getBestStock(slatL, species){
 function getMillStockLength(slatL, species){
   const isLong = LONG_STOCK_SPECIES.has(species);
   if(slatL >= 72){
-    if(slatL <= 95)  return 96;
-    if(slatL <= 119) return 120;
-    if(slatL <= 143) return 144;
+    if(slatL <= 96)  return 96;   // 8'
+    if(slatL <= 120) return 120;  // 10'
+    if(slatL <= 144) return 144;  // 12'
     if(!isLong)      return 144;  // cap at 12' for standard species
-    if(slatL <= 167) return 168;
-    return 192;
+    if(slatL <= 168) return 168;  // 14'
+    return 192;                   // 16'
   }
   return getBestStock(slatL, species).stockIn;
 }
@@ -1035,18 +1035,17 @@ function millLumberCalc(cfg, totalSlats){
 
     if(stockInfo?.resaw){
       // Resaw: multiple finished slats from one board's thickness
-      // Use finished width directly — widthWaste table was built for milled planks, not ripped slats
       const pcsFromThick = Math.floor((roughT + RESAW_KERF) / (cfg.thickness + RESAW_KERF));
       pcsWide  = Math.max(1, pcsFromThick);
       const boardsNeeded = Math.ceil(totalSlats / (pcsWide * piecesPerLen));
-      bfPerSlat = roughT * cfg.slatW * stockIn / (144 * pcsWide * piecesPerLen);
+      bfPerSlat = roughT * (cfg.slatW + widthWaste) * stockIn / (144 * pcsWide * piecesPerLen);
       const rawBFExact = bfPerSlat * totalSlats;
       const safetyMult = cfg.safetyBuffer ? 1.10 : 1;
       const rawBFTotal = Math.ceil(rawBFExact * safetyMult);
       return {
         isVGResaw, vgWarning,
         stockIn, stockFt, piecesPerLen,
-        roughT, widthWaste: null, pcsWide,
+        roughT, widthWaste, pcsWide,
         boardsNeeded, pcsPerBoard: pcsWide * piecesPerLen,
         bfPerSlat, rawBFTotal, defectPct,
         safetyBuffer: cfg.safetyBuffer,
