@@ -2792,11 +2792,13 @@ function calcBracket(){
 
   // Usable sheet after 1/4" squaring each edge
   // Fixed layout: width runs across the 47.5" (4') dimension, length runs down the 95.5" (8') dimension
+  // Panel saw blade = 3/16" (0.1875") kerf between each piece
   const sheetW = 47.5;
   const sheetL = 95.5;
+  const BLADE  = 0.1875;
 
-  const cols = Math.floor(sheetW / bW);
-  const rows = Math.floor(sheetL / bL);
+  const cols = Math.floor((sheetW + BLADE) / (bW + BLADE));
+  const rows = Math.floor((sheetL + BLADE) / (bL + BLADE));
   const bracketsPerSheet = cols * rows;
 
   if(!panels || !perPanel){
