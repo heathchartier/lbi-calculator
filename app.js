@@ -2755,23 +2755,23 @@ function calcPC(){ calcPCfromCount(); }
 
 // --- SLAT CALCULATOR --------------------------------------------------
 function calcSlat(){
-  const mode      = document.getElementById('sc-mode')?.value || 'sqft';
-  const qty       = parseFloat(document.getElementById('sc-qty')?.value) || 0;
-  const thickRaw  = document.getElementById('sc-thick')?.value || '';
-  const thick     = parseFraction(thickRaw) || 0;
-  const slatW     = parseFloat(document.getElementById('sc-slatW')?.value) || 0;
-  const slatL     = parseFloat(document.getElementById('sc-slatL')?.value) || 0;
+  const mode          = document.getElementById('sc-mode')?.value || 'sqft';
+  const qty           = parseFloat(document.getElementById('sc-qty')?.value) || 0;
+  const thick         = parseFraction(document.getElementById('sc-thick')?.value || '') || 0;
+  const slatW         = parseFloat(document.getElementById('sc-slatW')?.value) || 0;
+  const slatL         = parseFloat(document.getElementById('sc-slatL')?.value) || 0;
   const slatsPerPanel = parseInt(document.getElementById('sc-slatsPerPanel')?.value) || 0;
-  const panelW    = parseFloat(document.getElementById('sc-panelW')?.value) || 0;
-  const panelL    = parseFloat(document.getElementById('sc-panelL')?.value) || 0;
-  const waste     = document.getElementById('sc-waste')?.checked ? 1.10 : 1.0;
-  const res       = document.getElementById('sc-result');
+  const panelW        = parseFloat(document.getElementById('sc-panelW')?.value) || 0;
+  const panelL        = parseFloat(document.getElementById('sc-panelL')?.value) || 0;
+  const addWaste      = document.getElementById('sc-waste')?.checked;
+  const res           = document.getElementById('sc-result');
 
   const labelEl = document.getElementById('sc-qty-label');
   if(labelEl) labelEl.textContent = mode==='sqft' ? 'Ceiling Sq Ft' : mode==='slats' ? 'Total Slats' : 'Number of Panels';
 
   if(!slatW || !slatL || !thick){ res.innerHTML = '<span style="color:var(--mid)">Enter thickness, width, and length to see results.</span>'; return; }
 
+  // Resolve total slats
   let totalSlats = 0;
   if(mode === 'slats'){
     totalSlats = qty;
@@ -2782,27 +2782,72 @@ function calcSlat(){
     if(!panelW || !panelL){ res.innerHTML = '<span style="color:var(--mid)">Enter panel width and length for sq ft mode.</span>'; return; }
     if(!slatsPerPanel){ res.innerHTML = '<span style="color:var(--mid)">Enter slats per panel.</span>'; return; }
     const panelSqft = (panelW * panelL) / 144;
-    const panels = panelSqft > 0 ? Math.ceil(qty / panelSqft) : 0;
-    totalSlats = panels * slatsPerPanel;
+    totalSlats = panelSqft > 0 ? Math.ceil(qty / panelSqft) * slatsPerPanel : 0;
   }
-
   if(!totalSlats){ res.innerHTML = '<span style="color:var(--mid)">Enter a quantity to see results.</span>'; return; }
 
-  const totalWithWaste = Math.ceil(totalSlats * waste);
-  const bfPerSlat = (thick * slatW * slatL) / 144;
-  const totalBF = totalWithWaste * bfPerSlat;
+  // Mill calculation — mirrors lumber tab (no species so no VG 2×6 path)
+  const stockIn      = getMillStockLength(slatL, '');
+  const stockFt      = stockIn / 12;
+  const piecesPerLen = slatL >= 72 ? 1 : Math.max(1, Math.floor((stockIn - END_TRIM) / slatL));
+  const stockInfo    = getStockInfo(thick);
+  const roughT       = stockInfo ? stockInfo.stock : getSuggestedRoughThick(thick);
+  const widthWaste   = getWidthWasteFactor(slatW);
+  const stockLabel   = stockInfo?.label || `${roughT}" rough`;
+  const safetyMult   = addWaste ? 1.10 : 1.0;
 
-  const millStockIn = getMillStockLength(slatL, '');
-  const stockFt = millStockIn / 12;
-  const pcsPerLength = slatL >= 72 ? 1 : Math.max(1, Math.floor((millStockIn - END_TRIM) / slatL));
-  const stockPieces = Math.ceil(totalWithWaste / pcsPerLength);
+  let pcsWide, boardsNeeded, bfPerSlat, rawBFTotal, isResaw = false;
+
+  if(stockInfo?.resaw){
+    isResaw = true;
+    const pcsFromThick = Math.floor((roughT + RESAW_KERF) / (thick + RESAW_KERF));
+    pcsWide       = Math.max(1, pcsFromThick);
+    boardsNeeded  = Math.ceil(totalSlats * safetyMult / (pcsWide * piecesPerLen));
+    bfPerSlat     = roughT * (slatW + widthWaste) * stockIn / (144 * pcsWide * piecesPerLen);
+    rawBFTotal    = Math.ceil(bfPerSlat * totalSlats * safetyMult);
+  } else {
+    pcsWide      = null;
+    boardsNeeded = Math.ceil(totalSlats * safetyMult / piecesPerLen);
+    bfPerSlat    = roughT * (slatW + widthWaste) * stockIn / (144 * piecesPerLen);
+    rawBFTotal   = Math.ceil(bfPerSlat * totalSlats * safetyMult);
+  }
+
+  const roughLabel = stockLabel + (isResaw && pcsWide ? ` · ${pcsWide} pcs/board` : '');
+  const lengthNote = piecesPerLen > 1 ? ` · ${piecesPerLen} slats/board` : '';
 
   res.innerHTML = `
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px">
-      <div><div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Total Slats</div><div style="font-size:22px;font-weight:700;color:var(--ink)">${fmtN(totalWithWaste)}</div>${waste>1?`<div style="font-size:11px;color:var(--dim)">(${fmtN(totalSlats)} + 10% waste)</div>`:''}</div>
-      <div><div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Board Feet</div><div style="font-size:22px;font-weight:700;color:var(--ink)">${fmtN(totalBF,1)}</div></div>
-      <div><div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Stock Pieces</div><div style="font-size:22px;font-weight:700;color:var(--ink)">${fmtN(stockPieces)}</div><div style="font-size:11px;color:var(--dim)">${stockFt}' lengths · ${pcsPerLength} slat${pcsPerLength!==1?'s':''}/pc</div></div>
-      <div><div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">BF / Slat</div><div style="font-size:22px;font-weight:700;color:var(--ink)">${fmtN(bfPerSlat,3)}</div></div>
+      <div>
+        <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Total Slats</div>
+        <div style="font-size:22px;font-weight:700;color:var(--ink)">${fmtN(Math.ceil(totalSlats * safetyMult))}</div>
+        ${addWaste ? `<div style="font-size:11px;color:var(--dim)">(${fmtN(totalSlats)} + 10% waste)</div>` : ''}
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Stock Length</div>
+        <div style="font-size:22px;font-weight:700;color:var(--ink)">${stockFt}'</div>
+        <div style="font-size:11px;color:var(--dim)">${stockIn}"${lengthNote}</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Rough Stock</div>
+        <div style="font-size:15px;font-weight:700;color:var(--ink);line-height:1.3">${roughLabel}</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Boards to Buy</div>
+        <div style="font-size:22px;font-weight:700;color:var(--ink)">${fmtN(boardsNeeded)}</div>
+        ${isResaw ? `<div style="font-size:11px;color:var(--dim)">${pcsWide} slat${pcsWide!==1?'s':''}/board (resaw)</div>` : ''}
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Width Waste</div>
+        <div style="font-size:22px;font-weight:700;color:var(--ink)">${widthWaste}"</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">BF / Slat</div>
+        <div style="font-size:22px;font-weight:700;color:var(--ink)">${fmtN(bfPerSlat,3)}</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Raw BF to Order${addWaste?' (+10%)':''}</div>
+        <div style="font-size:22px;font-weight:700;color:var(--teal)">${fmtN(rawBFTotal,0)} BF</div>
+      </div>
     </div>
   `;
 }
