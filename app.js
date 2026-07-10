@@ -746,11 +746,11 @@ function getBestStock(slatL, species){
 function getMillStockLength(slatL, species){
   const isLong = LONG_STOCK_SPECIES.has(species);
   if(slatL >= 72){
-    if(slatL <= 96)  return 96;   // 8'
-    if(slatL <= 120) return 120;  // 10'
-    if(slatL <= 144) return 144;  // 12'
+    if(slatL <= 95)  return 96;   // 8'
+    if(slatL <= 119) return 120;  // 10'
+    if(slatL <= 143) return 144;  // 12'
     if(!isLong)      return 144;  // cap at 12' for standard species
-    if(slatL <= 168) return 168;  // 14'
+    if(slatL <= 167) return 168;  // 14'
     return 192;                   // 16'
   }
   return getBestStock(slatL, species).stockIn;
