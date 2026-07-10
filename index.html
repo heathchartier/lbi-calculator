@@ -137,7 +137,8 @@ select{cursor:pointer;appearance:none;
 select option{background:#1e2226}
 
 /* ─── TABS ──────────────────────────────────────────────────────── */
-.tab-bar{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--bdr);padding-bottom:0;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;-ms-overflow-style:none;position:sticky;top:56px;z-index:199;background:var(--bg);padding-top:8px;margin-top:-8px}
+.tab-bar-wrap{position:sticky;top:56px;z-index:199;background:var(--bg);padding-top:8px;margin-top:-8px}
+.tab-bar{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--bdr);padding-bottom:0;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;-ms-overflow-style:none}
 .tab-bar::-webkit-scrollbar{display:none}
 .tab-btn{
   font-family:var(--font-head);font-size:15px;font-weight:700;letter-spacing:.3px;
@@ -509,12 +510,14 @@ select option{background:#1e2226}
     </div>
 
     <!-- Tabs -->
-    <div class="tab-bar print-hide">
-      <button class="tab-btn active" onclick="switchTab('veneer',this)">Veneer Panels</button>
-      <button class="tab-btn" onclick="switchTab('lumber',this)">Solid Lumber</button>
-      <button class="tab-btn" onclick="switchTab('products',this)">Stock Items</button>
-      <button class="tab-btn" onclick="switchTab('lam',this)">Lamination</button>
-      <button class="tab-btn" onclick="switchTab('calcs',this)">Calculators</button>
+    <div class="tab-bar-wrap print-hide">
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('veneer',this)">Veneer Panels</button>
+        <button class="tab-btn" onclick="switchTab('lumber',this)">Solid Lumber</button>
+        <button class="tab-btn" onclick="switchTab('products',this)">Stock Items</button>
+        <button class="tab-btn" onclick="switchTab('lam',this)">Lamination</button>
+        <button class="tab-btn" onclick="switchTab('calcs',this)">Calculators</button>
+      </div>
     </div>
 
     <!-- Veneer Tab -->
@@ -927,7 +930,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260710g"></script>
+<script src="app.js?v=20260710h"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });
