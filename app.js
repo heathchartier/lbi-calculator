@@ -236,6 +236,7 @@ function activateApp(isAdmin){
   document.getElementById('jobDate').value = new Date().toISOString().split('T')[0];
   addVeneerConfig();
   addLumberConfig();
+  addLaminationConfig();
   recalcAll();
   renderProductsTab();
   renderLaminationConfigs();
@@ -2236,6 +2237,7 @@ function addLaminationFace(){
   if(!name){ showToast('Enter a face name'); return; }
   if(!pricing.laminationFaces) pricing.laminationFaces = {};
   if(pricing.laminationFaces[name]){ showToast('Face already exists'); return; }
+  collectAdminForm();
   pricing.laminationFaces[name] = { pricePerSheet:0, ebRoll:0 };
   input.value = '';
   renderLaminationAdmin();
@@ -2253,6 +2255,7 @@ function addLaminationCore(){
   if(!name){ showToast('Enter a core name'); return; }
   if(!pricing.laminationCores) pricing.laminationCores = {};
   if(pricing.laminationCores[name]){ showToast('Core already exists'); return; }
+  collectAdminForm();
   pricing.laminationCores[name] = { pricePerSheet:0 };
   input.value = '';
   renderLaminationAdmin();
