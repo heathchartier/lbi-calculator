@@ -1209,8 +1209,11 @@ function calcJobServices(){
     : 0;
 
   // Series change: one charge per additional unique (thickness × width) mill setup
+  // Only count configs with actual quantities and valid numeric dimensions
   const setupKeys = new Set(
-    lumberConfigs.map(c => `${c.thickness.toFixed(4)}_${c.slatW.toFixed(4)}`)
+    lumberConfigs
+      .filter(c => resolveLumberQty(c) && +c.thickness > 0 && +c.slatW > 0)
+      .map(c => `${(+c.thickness).toFixed(4)}_${(+c.slatW).toFixed(4)}`)
   );
   const seriesChangeCost = Math.max(0, setupKeys.size - 1) * svc.seriesChange;
 
