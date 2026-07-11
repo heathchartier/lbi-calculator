@@ -1855,6 +1855,7 @@ function addLaminationConfig(){
   laminationConfigs.push({
     id:       laminationCounter,
     face:     last?.face    || faceKeys[0] || '',
+    back:     last?.back    || faceKeys[0] || '',
     core:     last?.core    || coreKeys[0] || '',
     ebSides:  last?.ebSides ?? 4,
     calcMode: last?.calcMode || 'sqft',
@@ -1909,6 +1910,14 @@ function renderLaminationConfigs(){
             <select id="l2-face-${cfg.id}" onchange="lamUpdate(${cfg.id})">
               ${faceKeys.length
                 ? ['Customer Supplied',...faceKeys].map(f=>`<option value="${f}" ${cfg.face===f?'selected':''}>${f}</option>`).join('')
+                : '<option value="Customer Supplied">Customer Supplied (no faces priced — see admin)</option>'}
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Laminated Back</label>
+            <select id="l2-back-${cfg.id}" onchange="lamUpdate(${cfg.id})">
+              ${faceKeys.length
+                ? ['Customer Supplied',...faceKeys].map(f=>`<option value="${f}" ${(cfg.back||cfg.face)===f?'selected':''}>${f}</option>`).join('')
                 : '<option value="Customer Supplied">Customer Supplied (no faces priced — see admin)</option>'}
             </select>
           </div>
@@ -1996,6 +2005,7 @@ function lamUpdate(id){
   const cfg = laminationConfigs.find(c => c.id === id);
   if(!cfg) return;
   cfg.face    = document.getElementById('l2-face-'+id)?.value || cfg.face;
+  cfg.back    = document.getElementById('l2-back-'+id)?.value || cfg.back;
   cfg.core    = document.getElementById('l2-core-'+id)?.value || cfg.core;
   cfg.panelW  = parseFloat(document.getElementById('l2-panelW-'+id)?.value) || 0;
   cfg.panelL  = parseFloat(document.getElementById('l2-panelL-'+id)?.value) || 0;
@@ -2045,7 +2055,9 @@ function calcLaminationCost(cfg){
   const { panelQty, totalSlats, effectiveSqft } = qty;
 
   const isCustomer = cfg.face === 'Customer Supplied';
+  const isBackCustomer = (cfg.back || cfg.face) === 'Customer Supplied';
   const faceData   = isCustomer ? null : (pricing.laminationFaces||{})[cfg.face];
+  const backData   = isBackCustomer ? null : (pricing.laminationFaces||{})[cfg.back || cfg.face];
   const coreData   = (pricing.laminationCores||{})[cfg.core];
   const wasteMult  = cfg.wasteOn !== false ? 1.10 : 1.0;
 
@@ -2054,6 +2066,12 @@ function calcLaminationCost(cfg){
   const faceOpt = chooseVeneerSheet(cfg.slatW, cfg.slatL, facePPS, facePPS);
   const faceSheets = isCustomer ? 0 : Math.ceil(totalSlats / faceOpt.slatsPerSheet * wasteMult);
   const faceMat  = isCustomer ? 0 : faceSheets * facePPS;
+
+  // Back sheets
+  const backPPS = isBackCustomer ? 0 : (backData?.pricePerSheet || 0);
+  const backOpt = chooseVeneerSheet(cfg.slatW, cfg.slatL, backPPS, backPPS);
+  const backSheets = isBackCustomer ? 0 : Math.ceil(totalSlats / backOpt.slatsPerSheet * wasteMult);
+  const backMat  = isBackCustomer ? 0 : backSheets * backPPS;
 
   // Core sheets
   const corePPS = coreData?.pricePerSheet || 0;
@@ -2084,6 +2102,7 @@ function calcLaminationCost(cfg){
 
   // Apply markup
   const faceMatLine = isCustomer ? 0 : withMarkup(faceMat,      'panels');
+  const backMatLine = isBackCustomer ? 0 : withMarkup(backMat,  'panels');
   const coreMatLine = withMarkup(coreMat,       'panels');
   const glueLineAmt = withMarkup(glueCost,      'cutService');
   const ebMatLine   = withMarkup(ebMaterialCost,'edgeBand');
@@ -2093,8 +2112,10 @@ function calcLaminationCost(cfg){
   const bktLine     = withMarkup(bracketCost,   'brackets');
 
   const lines = {};
-  if(!isCustomer && faceMat > 0) lines[`Face Sheets (${fmtN(faceSheets)} × ${cfg.face})`] = faceMatLine;
-  if(isCustomer)                 lines['Face Material (Customer Supplied)'] = 0;
+  if(!isCustomer && faceMat > 0)       lines[`Face Sheets (${fmtN(faceSheets)} × ${cfg.face})`] = faceMatLine;
+  if(isCustomer)                       lines['Face Material (Customer Supplied)'] = 0;
+  if(!isBackCustomer && backMat > 0)   lines[`Back Sheets (${fmtN(backSheets)} × ${cfg.back || cfg.face})`] = backMatLine;
+  if(isBackCustomer)                   lines['Back Material (Customer Supplied)'] = 0;
   if(coreMat > 0)  lines[`Core Sheets (${fmtN(coreSheets)} × ${cfg.core})`]  = coreMatLine;
   if(glueCost > 0) lines['Glue Line']      = glueLineAmt;
   if(cfg.ebSides > 0){
@@ -2107,9 +2128,9 @@ function calcLaminationCost(cfg){
 
   const subtotal = Object.values(lines).reduce((s,v)=>s+v, 0);
   return {
-    face:cfg.face, core:cfg.core,
+    face:cfg.face, back:cfg.back||cfg.face, core:cfg.core,
     effectiveSqft, panelQty, totalSlats,
-    faceSheets, coreSheets, ebFt, ebRolls, bracketCount,
+    faceSheets, backSheets, coreSheets, ebFt, ebRolls, bracketCount,
     lines, subtotal,
     sqftCost: effectiveSqft > 0 && subtotal > 0 ? subtotal/effectiveSqft : null,
   };
