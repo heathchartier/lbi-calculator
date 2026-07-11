@@ -177,6 +177,9 @@ const DEFAULT_PRICING = {
   productCategories: [],
   laminationFaces: {},
   laminationCores: {},
+  renameMap: {
+    veneerSpecies: {}, lumberSpecies: {}, laminationFaces: {}, laminationCores: {},
+  },
   veneerCores: [
     { key:'frmdf', label:'Fire Rated MDF' },
     { key:'mdf',   label:'Regular MDF' },
@@ -1464,6 +1467,11 @@ function saveJob(){
   }
 }
 
+function applyRenameMap(configs, field, mapSection){
+  const map = (pricing.renameMap || {})[mapSection] || {};
+  configs.forEach(c => { if(c[field] && map[c[field]]) c[field] = map[c[field]]; });
+}
+
 function loadJob(job){
   document.getElementById('jobName').value     = job.name     || '';
   document.getElementById('jobCustomer').value = job.customer || '';
@@ -1478,6 +1486,10 @@ function loadJob(job){
   veneerConfigs     = job.veneerConfigs  || [];
   lumberConfigs     = job.lumberConfigs  || [];
   laminationConfigs = job.laminationConfigs || [];
+  applyRenameMap(veneerConfigs,     'species', 'veneerSpecies');
+  applyRenameMap(lumberConfigs,     'species', 'lumberSpecies');
+  applyRenameMap(laminationConfigs, 'face',    'laminationFaces');
+  applyRenameMap(laminationConfigs, 'core',    'laminationCores');
   veneerCounter     = veneerConfigs.reduce((m,c) => Math.max(m,c.id), 0);
   lumberCounter     = lumberConfigs.reduce((m,c) => Math.max(m,c.id), 0);
   laminationCounter = laminationConfigs.reduce((m,c) => Math.max(m,c.id), 0);
@@ -2476,6 +2488,7 @@ function renameItem(el){
   const type    = el.dataset.type;
   if(!newName || newName === oldName) return;
   collectAdminForm();
+  const mapKey = {veneer:'veneerSpecies',lumber:'lumberSpecies',lamface:'laminationFaces',lamcore:'laminationCores'}[type];
   if(type === 'veneer' && pricing.veneerSpecies[oldName]){
     pricing.veneerSpecies[newName] = pricing.veneerSpecies[oldName];
     delete pricing.veneerSpecies[oldName];
@@ -2495,6 +2508,12 @@ function renameItem(el){
   } else {
     return;
   }
+  // Record rename so saved jobs using the old name auto-update on load
+  if(!pricing.renameMap) pricing.renameMap = {veneerSpecies:{},lumberSpecies:{},laminationFaces:{},laminationCores:{}};
+  const map = pricing.renameMap[mapKey] || (pricing.renameMap[mapKey] = {});
+  // If something previously renamed TO oldName, chain it forward
+  Object.keys(map).forEach(k => { if(map[k] === oldName) map[k] = newName; });
+  map[oldName] = newName;
   renderAdminModal();
   recalcAll();
   markDirty();
