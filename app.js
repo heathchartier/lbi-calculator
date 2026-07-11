@@ -1656,7 +1656,7 @@ function renderAdminModal(){
 
   // Lumber pricing
   const lb = document.getElementById('lumberPricingBody');
-  lb.innerHTML = Object.entries(pricing.lumberSpecies).map(([name,p]) => `
+  lb.innerHTML = Object.entries(pricing.lumberSpecies).sort(([a],[b]) => naturalSort(a,b)).map(([name,p]) => `
     <tr>
       <td style="font-weight:600;white-space:nowrap">${name}</td>
       <td><input type="number" class="admin-price-input" value="${p.price||0}" step="0.01"
@@ -1714,20 +1714,16 @@ function renderAdminModal(){
   renderLaminationAdmin();
 }
 
-function saveAdmin(){
-  // Passwords
-  const adminPw = document.getElementById('admin-admin-password')?.value?.trim();
-  if(adminPw) localStorage.setItem('lbiq_admin_password', adminPw);
-  const lbiPw = document.getElementById('admin-lbi-password')?.value?.trim();
-  if(lbiPw){ localStorage.setItem('lbiq_lbi_password', lbiPw); pricing.lbiPassword = lbiPw; }
-
+// Reads all currently-visible admin form inputs into pricing.
+// Call this before any re-render of the admin modal to preserve unsaved edits.
+function collectAdminForm(){
   // Markup
   ['panels','edgeBand','lumber','milling','assembly','ebService','cutService','brackets'].forEach(k => {
     const el = document.getElementById('mkp-'+k);
     if(el) pricing.markup[k] = parseFloat(el.value) || 0;
   });
 
-  // Veneer species
+  // Veneer species (also auto-written by vPriceInput, but collect here for safety)
   document.querySelectorAll('#veneerPricingBody input[data-species]').forEach(el => {
     const s = el.dataset.species, k = el.dataset.key;
     if(!pricing.veneerSpecies[s]) pricing.veneerSpecies[s] = {};
@@ -1736,16 +1732,10 @@ function saveAdmin(){
 
   // Lumber
   document.querySelectorAll('#lumberPricingBody input[data-species]').forEach(el => {
-    const s = el.dataset.species, k = el.dataset.key, table = el.dataset.table;
-    if(table === 'lumber'){
-      if(!pricing.lumberSpecies[s]) pricing.lumberSpecies[s] = {};
-      if(k === 'resaw') pricing.lumberSpecies[s].resaw = el.checked;
-      else pricing.lumberSpecies[s][k] = parseFloat(el.value) || 0;
-    }
-  });
-  document.querySelectorAll('#lumberPricingBody input[type=checkbox][data-key=resaw]').forEach(el => {
-    const s = el.dataset.species;
-    if(pricing.lumberSpecies[s]) pricing.lumberSpecies[s].resaw = el.checked;
+    const s = el.dataset.species, k = el.dataset.key;
+    if(!pricing.lumberSpecies[s]) pricing.lumberSpecies[s] = {};
+    if(k === 'resaw') pricing.lumberSpecies[s].resaw = el.checked;
+    else pricing.lumberSpecies[s][k] = parseFloat(el.value) || 0;
   });
 
   // Lamination faces
@@ -1775,6 +1765,16 @@ function saveAdmin(){
     const el = document.getElementById('svc-'+k);
     if(el) pricing.services[k] = parseFloat(el.value) || 0;
   });
+}
+
+function saveAdmin(){
+  // Passwords
+  const adminPw = document.getElementById('admin-admin-password')?.value?.trim();
+  if(adminPw) localStorage.setItem('lbiq_admin_password', adminPw);
+  const lbiPw = document.getElementById('admin-lbi-password')?.value?.trim();
+  if(lbiPw){ localStorage.setItem('lbiq_lbi_password', lbiPw); pricing.lbiPassword = lbiPw; }
+
+  collectAdminForm();
 
   // GitHub PAT stays local — only used for pricing.json push from admin
   const ghTokenInput = document.getElementById('admin-gh-token')?.value?.trim();
@@ -2412,7 +2412,7 @@ function renderVeneerPricingTable(){
   const c  = _adminVeneerCore;
   const t  = _adminVeneerThick;
   const fs = _adminVeneerFinish === 'satin' ? '_satin' : '';
-  vb.innerHTML = Object.entries(pricing.veneerSpecies).filter(([name]) => name !== 'Custom').map(([name, p]) => {
+  vb.innerHTML = Object.entries(pricing.veneerSpecies).filter(([name]) => name !== 'Custom').sort(([a],[b]) => naturalSort(a,b)).map(([name, p]) => {
     const inp = (key) => `<input type="number" class="admin-price-input" value="${p[key]||0}" step="1" data-species="${name}" data-key="${key}" oninput="vPriceInput(this)">`;
     const row = (sup, label, color) => `
       <tr>
@@ -2432,6 +2432,7 @@ function renderEBPricingSection(){
   if(!eb) return;
   eb.innerHTML = Object.entries(pricing.veneerSpecies)
     .filter(([name]) => name !== 'Custom')
+    .sort(([a],[b]) => naturalSort(a,b))
     .map(([name, p]) => {
       const inp = (key) => `<input type="number" class="admin-price-input" value="${p[key]||0}" step="1" data-species="${name}" data-key="${key}" oninput="vPriceInput(this)">`;
       return `<tr>
@@ -2633,6 +2634,7 @@ function addCustomSpecies(type){
   const name = prompt('Enter new species name:');
   if(!name || !name.trim()) return;
   const n = name.trim();
+  collectAdminForm(); // preserve any prices typed but not yet saved
   if(type === 'veneer'){
     if(!pricing.veneerSpecies[n]){ pricing.veneerSpecies[n] = blankVeneerSpecies(); ensureAllCoreKeys(); }
   } else {
