@@ -7175,20 +7175,80 @@
   ],
   "lbiPassword": "lbi2026",
   "laminationFaces": {
-    "Formica 909 black or 949 white (58 finish) vertical": {
+    "Formica 909 or 949 post (58 finish)": {
       "pricePerSheet": 0,
       "ebRoll": 0
     },
-    "Formica 909 black or 949 white (58 finish) post": {
+    "Formica 909 or 949 vertical (58 finish)": {
       "pricePerSheet": 0,
       "ebRoll": 0
     },
-    "Formica (00, 43, 58 finish)": {
+    "Formica (00, 43, 58 finish) post": {
+      "pricePerSheet": 0,
+      "ebRoll": 0
+    },
+    "Formica (00, 43, 58 finish) vertical": {
+      "pricePerSheet": 0,
+      "ebRoll": 0
+    },
+    "Formica (26, 34, 42, 46 finish) post": {
+      "pricePerSheet": 0,
+      "ebRoll": 0
+    },
+    "Formica (26, 34, 42, 46 finish) vertical": {
+      "pricePerSheet": 0,
+      "ebRoll": 0
+    },
+    "Formica (BH, RD, ML finish) post": {
+      "pricePerSheet": 0,
+      "ebRoll": 0
+    },
+    "Formica (BH, RD, ML finish) vertical": {
+      "pricePerSheet": 0,
+      "ebRoll": 0
+    },
+    "Formica (90, MC, SP finish) vertical": {
+      "pricePerSheet": 0,
+      "ebRoll": 0
+    },
+    "Formica (90, MC, SP finish) post": {
+      "pricePerSheet": 0,
+      "ebRoll": 0
+    },
+    "Formica (NG, PG, PX, WR finish) post": {
+      "pricePerSheet": 0,
+      "ebRoll": 0
+    },
+    "Formica (NG, PG, PX, WR finish) vertical": {
+      "pricePerSheet": 0,
+      "ebRoll": 0
+    },
+    "Formical ColorCore (58, 90 finish)": {
+      "pricePerSheet": 0,
+      "ebRoll": 0
+    },
+    "Formica phenolic backer post": {
+      "pricePerSheet": 0,
+      "ebRoll": 0
+    },
+    "Formica phenolic backer vertical": {
       "pricePerSheet": 0,
       "ebRoll": 0
     }
   },
   "laminationCores": {},
   "workerUrl": "https://lbi-jobs.heathchartier.workers.dev",
-  "workerKey": "!!Miles-1227!!"
+  "workerKey": "!!Miles-1227!!",
+  "renameMap": {
+    "veneerSpecies": {},
+    "lumberSpecies": {},
+    "laminationFaces": {
+      "Formica 909 black or 949 white (58 finish) post": "Formica 909 or 949 post (58 finish)",
+      "Formica 909 black or 949 white (58 finish) vertical": "Formica 909 or 949 vertical (58 finish)",
+      "Formica (00, 43, 58 finish)": "Formica (00, 43, 58 finish) post",
+      "Formica (90, MC, SP Finish) vertical": "Formica (90, MC, SP finish) vertical",
+      "Formica (90, MC, SP Finish) post": "Formica (90, MC, SP finish) post"
+    },
+    "laminationCores": {}
+  }
 }
