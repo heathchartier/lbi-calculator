@@ -7174,7 +7174,20 @@
     }
   ],
   "lbiPassword": "lbi2026",
-  "laminationFaces": {},
+  "laminationFaces": {
+    "Formica 909 black or 949 white (58 finish) vertical": {
+      "pricePerSheet": 0,
+      "ebRoll": 0
+    },
+    "Formica 909 black or 949 white (58 finish) post": {
+      "pricePerSheet": 0,
+      "ebRoll": 0
+    },
+    "Formica (00, 43, 58 finish)": {
+      "pricePerSheet": 0,
+      "ebRoll": 0
+    }
+  },
   "laminationCores": {},
   "workerUrl": "https://lbi-jobs.heathchartier.workers.dev",
   "workerKey": "!!Miles-1227!!"
