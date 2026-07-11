@@ -1193,15 +1193,11 @@ function calcJobServices(){
     ? (totalLF <= svc.millingThreshold ? svc.millingFlat : totalLF * svc.millingPerLF)
     : 0;
 
-  // Series change: pairwise — +$115 per thickness diff, +$115 per width diff
-  let seriesChangeCost = 0;
-  for(let i = 0; i < lumberConfigs.length; i++){
-    for(let j = i+1; j < lumberConfigs.length; j++){
-      const a = lumberConfigs[i], b = lumberConfigs[j];
-      if(Math.abs(a.thickness - b.thickness) > 0.001) seriesChangeCost += svc.seriesChange;
-      if(Math.abs(a.slatW    - b.slatW)    > 0.001) seriesChangeCost += svc.seriesChange;
-    }
-  }
+  // Series change: one charge per additional unique (thickness × width) mill setup
+  const setupKeys = new Set(
+    lumberConfigs.map(c => `${c.thickness.toFixed(4)}_${c.slatW.toFixed(4)}`)
+  );
+  const seriesChangeCost = Math.max(0, setupKeys.size - 1) * svc.seriesChange;
 
   const millingTotal = millingBase + seriesChangeCost;
 
