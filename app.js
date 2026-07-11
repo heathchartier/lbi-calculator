@@ -343,7 +343,7 @@ function addVeneerConfig(){
   const id = ++veneerCounter;
   const cfg = {
     id, orientation:'Horizontal', species:'', core:'Fire Rated MDF', thickness:'3/4"',
-    grade:'timber',
+    grade:'talbert',
     panelW:0, panelL:0, slatW:0, slatL:0, slatsPerPanel:0,
     bracketsPerPanel:0, ebSides:4, assembly:false, satinFinish:false, wasteOn:true, notes:'',
     calcMode:'sqft', manualQty:0, sqft:0, customPricePerPanel:0,
