@@ -7090,7 +7090,10 @@
     "cutPerLF": 0.21,
     "cutFlatVeneer": 100,
     "cutVeneerThreshold": 20,
-    "glueLine": 0.55
+    "glueLine": 0.55,
+    "resawFlat": 745,
+    "resawThreshold": 3000,
+    "resawPerLF": 24
   },
   "markup": {
     "panels": 15,
