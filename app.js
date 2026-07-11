@@ -2245,6 +2245,7 @@ function addLaminationFace(){
 
 function removeLaminationFace(name){
   if(!pricing.laminationFaces) return;
+  collectAdminForm();
   delete pricing.laminationFaces[name];
   renderLaminationAdmin();
 }
@@ -2263,6 +2264,7 @@ function addLaminationCore(){
 
 function removeLaminationCore(name){
   if(!pricing.laminationCores) return;
+  collectAdminForm();
   delete pricing.laminationCores[name];
   renderLaminationAdmin();
 }
