@@ -211,24 +211,17 @@ function sortedCats(cats){ return [...cats].sort((a,b) => naturalSort(a.name, b.
 function sortedProds(prods){ return [...prods].sort((a,b) => naturalSort(a.name, b.name)); }
 
 // --- AUTH -------------------------------------------------------------
-const SESSION_DURATION_MS = 8 * 60 * 60 * 1000; // 8 hours
-
 function saveSession(role){
-  localStorage.setItem('lbiq_session_role',   role);
-  localStorage.setItem('lbiq_session_expiry', Date.now() + SESSION_DURATION_MS);
+  localStorage.setItem('lbiq_session_role', role);
 }
 
 function clearSession(){
   localStorage.removeItem('lbiq_session_role');
-  localStorage.removeItem('lbiq_session_expiry');
+  localStorage.removeItem('lbiq_session_expiry'); // remove legacy expiry key if present
 }
 
 function getValidSession(){
-  const role   = localStorage.getItem('lbiq_session_role');
-  const expiry = parseInt(localStorage.getItem('lbiq_session_expiry') || '0');
-  if(role && Date.now() < expiry) return role;
-  clearSession();
-  return null;
+  return localStorage.getItem('lbiq_session_role') || null;
 }
 
 function activateApp(isAdmin){
@@ -341,17 +334,30 @@ function visibleLumberSpecies(){
 
 // --- VENEER CONFIG ----------------------------------------------------
 function addVeneerConfig(){
-  const id = ++veneerCounter;
+  const id   = ++veneerCounter;
+  const last = veneerConfigs[veneerConfigs.length - 1];
   const cfg = {
-    id, orientation:'Horizontal', species:'', core:'Fire Rated MDF', thickness:'3/4"',
-    grade:'talbert',
+    id,
+    orientation:  last?.orientation  || 'Horizontal',
+    species:      last?.species      || '',
+    core:         last?.core         || 'Fire Rated MDF',
+    thickness:    last?.thickness    || '3/4"',
+    grade:        last?.grade        || 'talbert',
+    satinFinish:  last?.satinFinish  || false,
     panelW:0, panelL:0, slatW:0, slatL:0, slatsPerPanel:0,
-    bracketsPerPanel:0, ebSides:4, assembly:false, satinFinish:false, wasteOn:true, notes:'',
+    bracketsPerPanel:0, ebSides:4, assembly:false, wasteOn:true, notes:'',
     calcMode:'sqft', manualQty:0, sqft:0, customPricePerPanel:0,
   };
   veneerConfigs.push(cfg);
   renderVeneerConfigs();
   recalcAll();
+}
+
+function resetVeneerConfigs(){
+  if(!confirm('Clear all veneer configurations and start fresh?')) return;
+  veneerConfigs = []; veneerCounter = 0;
+  addVeneerConfig();
+  recalcAll(); markDirty();
 }
 
 function removeVeneerConfig(id){
@@ -711,17 +717,32 @@ function calcVeneerCost(cfg, cutCostOverride){
 
 // --- LUMBER CONFIG ---------------------------------------------------
 function addLumberConfig(){
-  const id = ++lumberCounter;
+  const id   = ++lumberCounter;
+  const last = lumberConfigs[lumberConfigs.length - 1];
+  const thick = last?.thickness || 0.75;
   const cfg = {
-    id, species:'', thickness:0.75, slatW:0, slatL:0,
-    slatsPerPanel:0, panelW:0, panelL:0, bracketsPerPanel:0,
-    sanding:false, cutToLength:false, assembly:false, orientation:'Horizontal', notes:'',
-    calcMode:'sqft', manualQty:0, sqft:0, customPricePerBF:0,
-    roughThick:getSuggestedRoughThick(0.75), safetyBuffer:true,
+    id,
+    species:      last?.species      || '',
+    orientation:  last?.orientation  || 'Horizontal',
+    thickness:    thick,
+    sanding:      last?.sanding      || false,
+    cutToLength:  last?.cutToLength  || false,
+    calcMode:     last?.calcMode     || 'sqft',
+    safetyBuffer: last != null ? (last.safetyBuffer ?? true) : true,
+    slatW:0, slatL:0, slatsPerPanel:0, panelW:0, panelL:0, bracketsPerPanel:0,
+    assembly:false, notes:'', manualQty:0, sqft:0, customPricePerBF:0,
+    roughThick: getSuggestedRoughThick(thick),
   };
   lumberConfigs.push(cfg);
   renderLumberConfigs();
   recalcAll();
+}
+
+function resetLumberConfigs(){
+  if(!confirm('Clear all lumber configurations and start fresh?')) return;
+  lumberConfigs = []; lumberCounter = 0;
+  addLumberConfig();
+  recalcAll(); markDirty();
 }
 
 function removeLumberConfig(id){
@@ -1814,16 +1835,25 @@ function addLaminationConfig(){
   laminationCounter++;
   const faceKeys = Object.keys(pricing.laminationFaces || {});
   const coreKeys = Object.keys(pricing.laminationCores || {});
+  const last = laminationConfigs[laminationConfigs.length - 1];
   laminationConfigs.push({
-    id: laminationCounter,
-    face: faceKeys[0] || '',
-    core: coreKeys[0] || '',
+    id:       laminationCounter,
+    face:     last?.face    || faceKeys[0] || '',
+    core:     last?.core    || coreKeys[0] || '',
+    ebSides:  last?.ebSides ?? 4,
+    calcMode: last?.calcMode || 'sqft',
     panelW:0, panelL:0, slatW:0, slatL:0,
     slatsPerPanel:0, bracketsPerPanel:0,
-    ebSides:4, assembly:false, wasteOn:true,
-    calcMode:'sqft', manualQty:0, sqft:0,
+    assembly:false, wasteOn:true, manualQty:0, sqft:0,
   });
   renderLaminationConfigs();
+}
+
+function resetLaminationConfigs(){
+  if(!confirm('Clear all lamination configurations and start fresh?')) return;
+  laminationConfigs = []; laminationCounter = 0;
+  addLaminationConfig();
+  recalcAll(); markDirty();
 }
 
 function removeLaminationConfig(id){
