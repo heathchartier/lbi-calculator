@@ -165,6 +165,7 @@ const DEFAULT_PRICING = {
     cutFlatVeneer: 0, cutVeneerThreshold: 20,
     assembly: 1.50, bracketPrice: 2.50, glueLine: 0,
     millingFlat: 780, millingThreshold: 3000, millingPerLF: 0.21, seriesChange: 115,
+    resawFlat: 780, resawThreshold: 3000, resawPerLF: 0.21,
     sandingFlat: 240, sandingThreshold: 1700, sandingPerLF: 0.19,
     cutFlat: 500, cutThreshold: 3000, cutPerLF: 0.21,
   },
@@ -846,7 +847,7 @@ function renderLumberConfigs(){
           <div>
             <label class="field-label">Finished Thickness</label>
             <input type="text" id="l-thick-${cfg.id}" value="${cfg.thickness}" autocorrect="off" autocapitalize="none" placeholder="e.g. 3/4 or .75" oninput="lUpdate(${cfg.id})">
-            <span class="stock-tag" id="l-thick-tag-${cfg.id}" style="${getStockInfo(cfg.thickness)?'':'display:none'}">${getStockInfo(cfg.thickness)?.label||''}</span>
+            <span class="stock-tag" id="l-thick-tag-${cfg.id}" style="${isResaw||getStockInfo(cfg.thickness)?'':'display:none'}">${isResaw?'Milled from 2×6':(getStockInfo(cfg.thickness)?.label||'')}</span>
           </div>
           <div>
             <label class="field-label">Finished Width</label>
@@ -949,9 +950,15 @@ function lUpdate(id){
 
   const thickTag = document.getElementById('l-thick-tag-'+id);
   if(thickTag){
-    const si = getStockInfo(cfg.thickness);
-    thickTag.textContent = si ? si.label : '';
-    thickTag.style.display = si ? '' : 'none';
+    const sDataU = pricing.lumberSpecies[cfg.species] || {};
+    if(sDataU.resaw){
+      thickTag.textContent = 'Milled from 2×6';
+      thickTag.style.display = '';
+    } else {
+      const si = getStockInfo(cfg.thickness);
+      thickTag.textContent = si ? si.label : '';
+      thickTag.style.display = si ? '' : 'none';
+    }
   }
 
   if(prevMode !== cfg.calcMode) renderLumberConfigs();
@@ -1177,20 +1184,28 @@ function calcLumberCost(cfg){
 // Called once per renderResults — totals all lumber configs together
 function calcJobServices(){
   const svc = pricing.services;
-  let totalLF = 0, sandingLF = 0, cutLF = 0;
+  let totalLF = 0, standardLF = 0, resawLF = 0, sandingLF = 0, cutLF = 0;
 
   lumberConfigs.forEach(cfg => {
     const qty = resolveLumberQty(cfg);
     if(!qty) return;
     const lf = qty.totalSlats * cfg.slatL / 12;
-    totalLF  += lf;
-    if(cfg.sanding)      sandingLF += lf;
-    if(cfg.cutToLength)  cutLF     += lf;
+    totalLF += lf;
+    const sDataJ = pricing.lumberSpecies[cfg.species] || {};
+    const isResawCfg = sDataJ.resaw || !!(getStockInfo(cfg.thickness)?.resaw);
+    if(isResawCfg) resawLF += lf; else standardLF += lf;
+    if(cfg.sanding)     sandingLF += lf;
+    if(cfg.cutToLength) cutLF     += lf;
   });
 
-  // Milling: flat fee up to threshold, then $/LF
-  const millingBase = totalLF > 0
-    ? (totalLF <= svc.millingThreshold ? svc.millingFlat : totalLF * svc.millingPerLF)
+  // Standard milling: flat fee up to threshold, then $/LF
+  const millingBase = standardLF > 0
+    ? (standardLF <= svc.millingThreshold ? svc.millingFlat : standardLF * svc.millingPerLF)
+    : 0;
+
+  // Resaw milling: separate flat fee and $/LF
+  const resawMillingCost = resawLF > 0
+    ? (resawLF <= svc.resawThreshold ? svc.resawFlat : resawLF * svc.resawPerLF)
     : 0;
 
   // Series change: one charge per additional unique (thickness × width) mill setup
@@ -1199,9 +1214,9 @@ function calcJobServices(){
   );
   const seriesChangeCost = Math.max(0, setupKeys.size - 1) * svc.seriesChange;
 
-  const millingTotal = millingBase + seriesChangeCost;
+  const millingTotal = millingBase + resawMillingCost + seriesChangeCost;
 
-  // Sanding: flat fee up to threshold, then $/LF (total LF for sanded configs)
+  // Sanding: flat fee up to threshold, then $/LF
   const sandingCost = sandingLF <= 0 ? 0
     : (sandingLF <= svc.sandingThreshold ? svc.sandingFlat : sandingLF * svc.sandingPerLF);
 
@@ -1209,7 +1224,7 @@ function calcJobServices(){
   const cutCost = cutLF <= 0 ? 0
     : (cutLF <= svc.cutThreshold ? svc.cutFlat : cutLF * svc.cutPerLF);
 
-  return { totalLF, sandingLF, cutLF, millingBase, seriesChangeCost, millingTotal, sandingCost, cutCost };
+  return { totalLF, standardLF, resawLF, sandingLF, cutLF, millingBase, resawMillingCost, seriesChangeCost, millingTotal, sandingCost, cutCost };
 }
 
 // --- RECALC -----------------------------------------------------------
@@ -1282,14 +1297,15 @@ function renderResults(){
 
   // Mill services (all lumber configs combined)
   const hasLumber = allResults.some(r => 'isVGResaw' in r);
-  let millSvc = null, millingBaseMarked = 0, seriesChangeMarked = 0, sandingMarked = 0, cutMarked = 0, svcTotal = 0;
+  let millSvc = null, millingBaseMarked = 0, resawMillingMarked = 0, seriesChangeMarked = 0, sandingMarked = 0, cutMarked = 0, svcTotal = 0;
   if(hasLumber){
-    millSvc             = calcJobServices();
-    millingBaseMarked   = withMarkup(millSvc.millingBase,      'milling');
-    seriesChangeMarked  = withMarkup(millSvc.seriesChangeCost, 'milling');
-    sandingMarked       = withMarkup(millSvc.sandingCost,      'milling');
-    cutMarked           = withMarkup(millSvc.cutCost,          'milling');
-    svcTotal            = millingBaseMarked + seriesChangeMarked + sandingMarked + cutMarked;
+    millSvc              = calcJobServices();
+    millingBaseMarked    = withMarkup(millSvc.millingBase,       'milling');
+    resawMillingMarked   = withMarkup(millSvc.resawMillingCost,  'milling');
+    seriesChangeMarked   = withMarkup(millSvc.seriesChangeCost,  'milling');
+    sandingMarked        = withMarkup(millSvc.sandingCost,       'milling');
+    cutMarked            = withMarkup(millSvc.cutCost,           'milling');
+    svcTotal             = millingBaseMarked + resawMillingMarked + seriesChangeMarked + sandingMarked + cutMarked;
   }
 
   let html = '';
@@ -1322,10 +1338,16 @@ function renderResults(){
 
   // Combined mill services block
   if(hasLumber && millSvc){
-    const millingRate = millSvc.totalLF > pricing.services.millingThreshold ? 'at $/LF rate' : 'flat rate';
     html += `<div class="result-config">`;
     html += `<div class="result-config-title" style="color:var(--gold)">MILL SERVICES</div>`;
-    html += `<div class="result-row"><span class="result-label">Milling (${fmtN(millSvc.totalLF,0)} LF — ${millingRate})</span><span class="result-value">${fmt(millingBaseMarked)}</span></div>`;
+    if(millSvc.millingBase > 0){
+      const millingRate = millSvc.standardLF > pricing.services.millingThreshold ? 'at $/LF rate' : 'flat rate';
+      html += `<div class="result-row"><span class="result-label">Milling (${fmtN(millSvc.standardLF,0)} LF — ${millingRate})</span><span class="result-value">${fmt(millingBaseMarked)}</span></div>`;
+    }
+    if(millSvc.resawMillingCost > 0){
+      const resawRate = millSvc.resawLF > pricing.services.resawThreshold ? 'at $/LF rate' : 'flat rate';
+      html += `<div class="result-row"><span class="result-label">Resaw Milling (${fmtN(millSvc.resawLF,0)} LF — ${resawRate})</span><span class="result-value">${fmt(resawMillingMarked)}</span></div>`;
+    }
     if(millSvc.seriesChangeCost > 0){
       html += `<div class="result-row"><span class="result-label">Series Change</span><span class="result-value">${fmt(seriesChangeMarked)}</span></div>`;
     }
@@ -1627,11 +1649,16 @@ function renderAdminModal(){
   const svcField = (k, lbl, step='1') => `<div><label class="field-label">${lbl}</label>${svcInput(k, step)}</div>`;
 
   sg.innerHTML = `
-    ${svcHead('Milling', 'var(--teal)')}
+    ${svcHead('Standard Milling', 'var(--teal)')}
     ${svcField('millingFlat',      'Flat Fee (≤ threshold $)', '5')}
     ${svcField('millingThreshold', 'Threshold (LF)', '100')}
     ${svcField('millingPerLF',     'Over threshold ($/LF)', '0.01')}
     ${svcField('seriesChange',     'Series change charge ($)', '5')}
+
+    ${svcHead('Resaw Milling (VG / Resaw species)', 'var(--teal)')}
+    ${svcField('resawFlat',      'Flat Fee (≤ threshold $)', '5')}
+    ${svcField('resawThreshold', 'Threshold (LF)', '100')}
+    ${svcField('resawPerLF',     'Over threshold ($/LF)', '0.01')}
 
     ${svcHead('Sanding', 'var(--teal)')}
     ${svcField('sandingFlat',      'Flat Fee (≤ threshold $)', '5')}
@@ -1714,6 +1741,7 @@ function saveAdmin(){
   // Services
   const svcKeys = [
     'millingFlat','millingThreshold','millingPerLF','seriesChange',
+    'resawFlat','resawThreshold','resawPerLF',
     'sandingFlat','sandingThreshold','sandingPerLF',
     'cutFlat','cutThreshold','cutPerLF',
     'assembly','bracketPrice','ebServicePerFt','cutServicePerSqft','cutFlatVeneer','cutVeneerThreshold',
