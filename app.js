@@ -2198,14 +2198,15 @@ function renderLaminationAdmin(){
             </td>
             <td style="padding:4px 8px;text-align:center">
               <input type="number" class="admin-price-input" value="${d.pricePerSheet||0}" step="0.01"
-                data-lamface="${name}" data-key="pricePerSheet">
+                data-lamface="${name}" data-key="pricePerSheet" oninput="lamFacePriceInput(this)">
             </td>
             <td style="padding:4px 8px;text-align:center">
               <input type="number" class="admin-price-input" value="${d.ebRoll||0}" step="0.01"
-                data-lamface="${name}" data-key="ebRoll">
+                data-lamface="${name}" data-key="ebRoll" oninput="lamFacePriceInput(this)">
             </td>
             <td style="padding:4px 8px">
-              <button onclick="removeLaminationFace(${JSON.stringify(name)})" class="btn-danger" style="padding:2px 8px;font-size:12px">✕</button>
+              <button class="btn-danger" data-lamface="${name.replace(/"/g,'&quot;')}"
+                onclick="removeLaminationFace(this.dataset.lamface)" style="padding:2px 8px;font-size:12px">✕</button>
             </td>
           </tr>`).join('')}
         </tbody>
@@ -2235,10 +2236,11 @@ function renderLaminationAdmin(){
             </td>
             <td style="padding:4px 8px;text-align:center">
               <input type="number" class="admin-price-input" value="${d.pricePerSheet||0}" step="0.01"
-                data-lamcore="${name}" data-key="pricePerSheet">
+                data-lamcore="${name}" data-key="pricePerSheet" oninput="lamCorePriceInput(this)">
             </td>
             <td style="padding:4px 8px">
-              <button onclick="removeLaminationCore(${JSON.stringify(name)})" class="btn-danger" style="padding:2px 8px;font-size:12px">✕</button>
+              <button class="btn-danger" data-lamcore="${name.replace(/"/g,'&quot;')}"
+                onclick="removeLaminationCore(this.dataset.lamcore)" style="padding:2px 8px;font-size:12px">✕</button>
             </td>
           </tr>`).join('')}
         </tbody>
@@ -2506,6 +2508,16 @@ function vPriceInput(el){
   const s = el.dataset.species, k = el.dataset.key;
   if(!pricing.veneerSpecies[s]) pricing.veneerSpecies[s] = blankVeneerSpecies();
   pricing.veneerSpecies[s][k] = parseFloat(el.value) || 0;
+}
+function lamFacePriceInput(el){
+  const name = el.dataset.lamface, k = el.dataset.key;
+  if(!pricing.laminationFaces[name]) pricing.laminationFaces[name] = { pricePerSheet:0, ebRoll:0 };
+  pricing.laminationFaces[name][k] = parseFloat(el.value) || 0;
+}
+function lamCorePriceInput(el){
+  const name = el.dataset.lamcore, k = el.dataset.key;
+  if(!pricing.laminationCores[name]) pricing.laminationCores[name] = { pricePerSheet:0 };
+  pricing.laminationCores[name][k] = parseFloat(el.value) || 0;
 }
 
 function renameItem(el){
