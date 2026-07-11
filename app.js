@@ -1658,7 +1658,10 @@ function renderAdminModal(){
   const lb = document.getElementById('lumberPricingBody');
   lb.innerHTML = Object.entries(pricing.lumberSpecies).sort(([a],[b]) => naturalSort(a,b)).map(([name,p]) => `
     <tr>
-      <td style="font-weight:600;white-space:nowrap">${name}</td>
+      <td style="white-space:nowrap;min-width:110px">
+        <input type="text" class="admin-name-input" value="${name}"
+          data-oldname="${name}" data-type="lumber" onchange="renameItem(this)">
+      </td>
       <td><input type="number" class="admin-price-input" value="${p.price||0}" step="0.01"
           data-species="${name}" data-key="price" data-table="lumber"></td>
       <td style="text-align:center"><input type="checkbox" ${p.resaw?'checked':''}
@@ -2155,7 +2158,10 @@ function renderLaminationAdmin(){
         </tr></thead>
         <tbody id="lamFacesBody">
           ${Object.entries(faces).map(([name,d]) => `<tr>
-            <td style="padding:4px 8px;font-weight:600">${name}</td>
+            <td style="padding:4px 4px;min-width:110px">
+              <input type="text" class="admin-name-input" value="${name}"
+                data-oldname="${name}" data-type="lamface" onchange="renameItem(this)">
+            </td>
             <td style="padding:4px 8px;text-align:center">
               <input type="number" class="admin-price-input" value="${d.pricePerSheet||0}" step="0.01"
                 data-lamface="${name}" data-key="pricePerSheet">
@@ -2189,7 +2195,10 @@ function renderLaminationAdmin(){
         </tr></thead>
         <tbody id="lamCoresBody">
           ${Object.entries(cores).map(([name,d]) => `<tr>
-            <td style="padding:4px 8px;font-weight:600">${name}</td>
+            <td style="padding:4px 4px;min-width:110px">
+              <input type="text" class="admin-name-input" value="${name}"
+                data-oldname="${name}" data-type="lamcore" onchange="renameItem(this)">
+            </td>
             <td style="padding:4px 8px;text-align:center">
               <input type="number" class="admin-price-input" value="${d.pricePerSheet||0}" step="0.01"
                 data-lamcore="${name}" data-key="pricePerSheet">
@@ -2416,7 +2425,10 @@ function renderVeneerPricingTable(){
     const inp = (key) => `<input type="number" class="admin-price-input" value="${p[key]||0}" step="1" data-species="${name}" data-key="${key}" oninput="vPriceInput(this)">`;
     const row = (sup, label, color) => `
       <tr>
-        ${sup==='talbert' ? `<td rowspan="2" style="font-weight:600;white-space:nowrap;vertical-align:middle">${name}</td>` : ''}
+        ${sup==='talbert' ? `<td rowspan="2" style="vertical-align:middle;min-width:110px">
+          <input type="text" class="admin-name-input" value="${name}"
+            data-oldname="${name}" data-type="veneer" onchange="renameItem(this)">
+        </td>` : ''}
         <td style="font-size:11px;font-weight:700;letter-spacing:.5px;color:${color};white-space:nowrap">${label}</td>
         <td>${inp(`${sup}_A3_4x8_${c}_${t}${fs}`)}</td>
         <td>${inp(`${sup}_A3_4x10_${c}_${t}${fs}`)}</td>
@@ -2436,7 +2448,10 @@ function renderEBPricingSection(){
     .map(([name, p]) => {
       const inp = (key) => `<input type="number" class="admin-price-input" value="${p[key]||0}" step="1" data-species="${name}" data-key="${key}" oninput="vPriceInput(this)">`;
       return `<tr>
-        <td style="font-weight:600;white-space:nowrap;vertical-align:middle">${name}</td>
+        <td style="vertical-align:middle;min-width:110px">
+          <input type="text" class="admin-name-input" value="${name}"
+            data-oldname="${name}" data-type="veneer" onchange="renameItem(this)">
+        </td>
         <td>${inp('eb_roll')}</td>
         <td>${inp('eb_roll_satin')}</td>
       </tr>`;
@@ -2453,6 +2468,36 @@ function vPriceInput(el){
   const s = el.dataset.species, k = el.dataset.key;
   if(!pricing.veneerSpecies[s]) pricing.veneerSpecies[s] = blankVeneerSpecies();
   pricing.veneerSpecies[s][k] = parseFloat(el.value) || 0;
+}
+
+function renameItem(el){
+  const oldName = el.dataset.oldname;
+  const newName = el.value.trim();
+  const type    = el.dataset.type;
+  if(!newName || newName === oldName) return;
+  collectAdminForm();
+  if(type === 'veneer' && pricing.veneerSpecies[oldName]){
+    pricing.veneerSpecies[newName] = pricing.veneerSpecies[oldName];
+    delete pricing.veneerSpecies[oldName];
+    veneerConfigs.forEach(c => { if(c.species === oldName) c.species = newName; });
+  } else if(type === 'lumber' && pricing.lumberSpecies[oldName]){
+    pricing.lumberSpecies[newName] = pricing.lumberSpecies[oldName];
+    delete pricing.lumberSpecies[oldName];
+    lumberConfigs.forEach(c => { if(c.species === oldName) c.species = newName; });
+  } else if(type === 'lamface' && pricing.laminationFaces[oldName]){
+    pricing.laminationFaces[newName] = pricing.laminationFaces[oldName];
+    delete pricing.laminationFaces[oldName];
+    laminationConfigs.forEach(c => { if(c.face === oldName) c.face = newName; });
+  } else if(type === 'lamcore' && pricing.laminationCores[oldName]){
+    pricing.laminationCores[newName] = pricing.laminationCores[oldName];
+    delete pricing.laminationCores[oldName];
+    laminationConfigs.forEach(c => { if(c.core === oldName) c.core = newName; });
+  } else {
+    return;
+  }
+  renderAdminModal();
+  recalcAll();
+  markDirty();
 }
 
 function renderAdminProducts(){

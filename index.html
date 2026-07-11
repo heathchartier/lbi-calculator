@@ -384,6 +384,8 @@ select option{background:#1e2226}
 .tab-reset-bar{display:flex;justify-content:flex-end;margin-bottom:12px}
 .btn-reset{background:none;border:1px solid var(--bdr2);border-radius:var(--r);color:var(--mid);font-size:12px;font-weight:600;padding:5px 12px;cursor:pointer;display:flex;align-items:center;gap:5px;transition:color .15s,border-color .15s}
 .btn-reset:hover{color:var(--red);border-color:var(--red)}
+.admin-name-input{background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:3px 7px;font-size:13px;font-weight:600;width:100%;min-width:100px}
+.admin-name-input:focus{border-color:var(--teal);outline:none}
 
 /* ─── RESPONSIVE ─────────────────────────────────────────────────── */
 @media(max-width:640px){
@@ -953,7 +955,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260711c"></script>
+<script src="app.js?v=20260711d"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });
