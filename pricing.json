@@ -7109,7 +7109,8 @@
     {
       "id": 1,
       "type": "panel",
-      "name": "Arpa Tuet",
+      "name": "Arpa Tuet Laminate",
+      "cost": 0,
       "markup": 18,
       "category": 3
     },
@@ -7236,7 +7237,47 @@
       "ebRoll": 0
     }
   },
-  "laminationCores": {},
+  "laminationCores": {
+    "MR MDF": {
+      "pricePerSheet": 0
+    },
+    "MDF FR": {
+      "pricePerSheet": 0
+    },
+    "Particle Board FR": {
+      "pricePerSheet": 0
+    },
+    "MDF Light Weight": {
+      "pricePerSheet": 0
+    },
+    "MDF Regular": {
+      "pricePerSheet": 0
+    },
+    "Particle Board Regular": {
+      "pricePerSheet": 0
+    },
+    "Plywood Regular": {
+      "pricePerSheet": 0
+    },
+    "Plywood FR": {
+      "pricePerSheet": 0
+    },
+    "Baltic Birch": {
+      "pricePerSheet": 0
+    },
+    "Plywood Pro Core": {
+      "pricePerSheet": 0
+    },
+    "Black MDF Regular": {
+      "pricePerSheet": 0
+    },
+    "Black MDF FR": {
+      "pricePerSheet": 0
+    },
+    "Black MDF MR": {
+      "pricePerSheet": 0
+    }
+  },
   "workerUrl": "https://lbi-jobs.heathchartier.workers.dev",
   "workerKey": "!!Miles-1227!!",
   "renameMap": {
@@ -7249,6 +7290,12 @@
       "Formica (90, MC, SP Finish) vertical": "Formica (90, MC, SP finish) vertical",
       "Formica (90, MC, SP Finish) post": "Formica (90, MC, SP finish) post"
     },
-    "laminationCores": {}
+    "laminationCores": {
+      "FR MDF": "MDF FR",
+      "FR Particle Board": "Particle Board FR",
+      "Light Weight MDF": "MDF Light Weight",
+      "MDF": "MDF Regular",
+      "Particle Board": "Particle Board Regular"
+    }
   }
 }
