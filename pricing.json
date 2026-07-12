@@ -7176,60 +7176,60 @@
   "lbiPassword": "lbi2026",
   "laminationFaces": {
     "Formica 909 or 949 post (58 finish)": {
-      "pricePerSheet": 0,
-      "ebRoll": 0
+      "pricePerSheet": 49.92,
+      "ebRoll": 50
     },
     "Formica 909 or 949 vertical (58 finish)": {
-      "pricePerSheet": 0,
-      "ebRoll": 0
+      "pricePerSheet": 44.8,
+      "ebRoll": 50
     },
     "Formica (00, 43, 58 finish) post": {
-      "pricePerSheet": 0,
-      "ebRoll": 0
+      "pricePerSheet": 53.76,
+      "ebRoll": 80
     },
     "Formica (00, 43, 58 finish) vertical": {
-      "pricePerSheet": 0,
-      "ebRoll": 0
+      "pricePerSheet": 50.56,
+      "ebRoll": 80
     },
     "Formica (26, 34, 42, 46 finish) post": {
-      "pricePerSheet": 0,
-      "ebRoll": 0
+      "pricePerSheet": 64.64,
+      "ebRoll": 80
     },
     "Formica (26, 34, 42, 46 finish) vertical": {
-      "pricePerSheet": 0,
-      "ebRoll": 0
+      "pricePerSheet": 61.44,
+      "ebRoll": 80
     },
     "Formica (BH, RD, ML finish) post": {
-      "pricePerSheet": 0,
-      "ebRoll": 0
+      "pricePerSheet": 64.64,
+      "ebRoll": 80
     },
     "Formica (BH, RD, ML finish) vertical": {
-      "pricePerSheet": 0,
-      "ebRoll": 0
+      "pricePerSheet": 61.44,
+      "ebRoll": 80
     },
     "Formica (90, MC, SP finish) vertical": {
-      "pricePerSheet": 0,
-      "ebRoll": 0
+      "pricePerSheet": 53.76,
+      "ebRoll": 80
     },
     "Formica (90, MC, SP finish) post": {
-      "pricePerSheet": 0,
-      "ebRoll": 0
+      "pricePerSheet": 56.96,
+      "ebRoll": 80
     },
     "Formica (NG, PG, PX, WR finish) post": {
-      "pricePerSheet": 0,
-      "ebRoll": 0
+      "pricePerSheet": 64.64,
+      "ebRoll": 80
     },
     "Formica (NG, PG, PX, WR finish) vertical": {
-      "pricePerSheet": 0,
-      "ebRoll": 0
+      "pricePerSheet": 61.44,
+      "ebRoll": 80
     },
     "Formical ColorCore (58, 90 finish)": {
-      "pricePerSheet": 0,
+      "pricePerSheet": 158.4,
       "ebRoll": 0
     },
     "Formica phenolic backer post": {
       "pricePerSheet": 19.01,
-      "ebRoll": 0
+      "ebRoll": 80
     },
     "Formica phenolic backer vertical": {
       "pricePerSheet": 26.24,
