@@ -1665,9 +1665,9 @@ function renderAdminModal(){
   // Markup grid
   const mg = document.getElementById('markupGrid');
   const markupLabels = {
-    panels:'Panel Sheets', edgeBand:'Edge Band Material', lumber:'Lumber Material',
+    panels:'Panel & Lam Sheets (Veneer + Lam Face/Back/Core)', edgeBand:'Edge Band Material', lumber:'Lumber Material',
     milling:'Milling / Sanding', assembly:'Assembly', ebService:'EB Service',
-    cutService:'Cut Service', brackets:'Brackets',
+    cutService:'Cut Service (Veneer Cut + Lam Glue Line)', brackets:'Brackets',
   };
   mg.innerHTML = Object.entries(markupLabels).map(([k,lbl]) => `
     <div>
