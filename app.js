@@ -484,19 +484,19 @@ function renderVeneerConfigs(){
         <div class="config-grid">
           <div>
             <label class="field-label">Panel Width</label>
-            <input type="number" id="v-panelW-${cfg.id}" value="${cfg.panelW||''}" step="0.25" min="1" placeholder="e.g. 12" oninput="vUpdate(${cfg.id})">
+            <input type="text" inputmode="decimal" id="v-panelW-${cfg.id}" value="${cfg.panelW||''}" placeholder="e.g. 12" oninput="vUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Panel Length</label>
-            <input type="number" id="v-panelL-${cfg.id}" value="${cfg.panelL||''}" step="0.25" min="1" placeholder="e.g. 96" oninput="vUpdate(${cfg.id})">
+            <input type="text" inputmode="decimal" id="v-panelL-${cfg.id}" value="${cfg.panelL||''}" placeholder="e.g. 96" oninput="vUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Slat Width</label>
-            <input type="number" id="v-slatW-${cfg.id}" value="${cfg.slatW||''}" step="0.0625" min="0.5" placeholder="e.g. 3.25" oninput="vUpdate(${cfg.id})">
+            <input type="text" inputmode="decimal" id="v-slatW-${cfg.id}" value="${cfg.slatW||''}" placeholder="e.g. 3.25 or 3-1/4" oninput="vUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Slat Length</label>
-            <input type="number" id="v-slatL-${cfg.id}" value="${cfg.slatL||''}" step="0.25" min="1" placeholder="e.g. 96" oninput="vUpdate(${cfg.id})">
+            <input type="text" inputmode="decimal" id="v-slatL-${cfg.id}" value="${cfg.slatL||''}" placeholder="e.g. 96" oninput="vUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Slats / Panel</label>
@@ -542,10 +542,10 @@ function vUpdate(id){
   cfg.grade          = document.getElementById('v-grade-'+id)?.value || cfg.grade || 'talbert';
   cfg.core           = document.getElementById('v-core-'+id)?.value  || cfg.core;
   cfg.thickness      = document.getElementById('v-thick-'+id)?.value || cfg.thickness || '3/4"';
-  cfg.panelW         = parseFloat(document.getElementById('v-panelW-'+id)?.value) || cfg.panelW;
-  cfg.panelL         = parseFloat(document.getElementById('v-panelL-'+id)?.value) || cfg.panelL;
-  cfg.slatW          = parseFloat(document.getElementById('v-slatW-'+id)?.value) || cfg.slatW;
-  cfg.slatL          = parseFloat(document.getElementById('v-slatL-'+id)?.value) || cfg.slatL;
+  cfg.panelW         = parseFraction(document.getElementById('v-panelW-'+id)?.value) || cfg.panelW;
+  cfg.panelL         = parseFraction(document.getElementById('v-panelL-'+id)?.value) || cfg.panelL;
+  cfg.slatW          = parseFraction(document.getElementById('v-slatW-'+id)?.value) || cfg.slatW;
+  cfg.slatL          = parseFraction(document.getElementById('v-slatL-'+id)?.value) || cfg.slatL;
   cfg.slatsPerPanel  = parseInt(document.getElementById('v-slats-'+id)?.value) || cfg.slatsPerPanel;
   cfg.bracketsPerPanel = parseInt(document.getElementById('v-brackets-'+id)?.value) || 0;
   const ebSidesEl = document.getElementById('v-ebsides-'+id);
@@ -650,7 +650,14 @@ function calcVeneerPreview(cfg){
   const { panelQty, totalSlats } = qty;
 
   const grade = cfg.orientation === 'Vertical' ? 'AA' : 'A3';
-  const opt = chooseVeneerSheet(cfg.slatW, cfg.slatL, 0, 0);
+  const sup   = cfg.grade || 'talbert';
+  const coreK  = coreToKey(cfg.core || 'Fire Rated MDF');
+  const thickK = thickToKey(cfg.thickness || '3/4"');
+  const finSfx = cfg.satinFinish ? '_satin' : '';
+  const sData  = (pricing.veneerSpecies || {})[cfg.species] || {};
+  const p8  = sData[`${sup}_${grade}_4x8_${coreK}_${thickK}${finSfx}`]  || 0;
+  const p10 = sData[`${sup}_${grade}_4x10_${coreK}_${thickK}${finSfx}`] || 0;
+  const opt = chooseVeneerSheet(cfg.slatW, cfg.slatL, p8, p10);
   const { size, slatsPerSheet } = opt;
   const wasteMult   = cfg.wasteOn !== false ? 1.10 : 1.0;
   const sheetsNeeded = Math.ceil(totalSlats / slatsPerSheet * wasteMult);
@@ -896,11 +903,11 @@ function renderLumberConfigs(){
           </div>
           <div>
             <label class="field-label">Finished Width</label>
-            <input type="number" id="l-slatW-${cfg.id}" value="${cfg.slatW||''}" step="0.0625" min="0.5" placeholder="e.g. 3.25" oninput="lUpdate(${cfg.id})">
+            <input type="text" inputmode="decimal" id="l-slatW-${cfg.id}" value="${cfg.slatW||''}" placeholder="e.g. 3.25 or 3-1/4" oninput="lUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Finished Length</label>
-            <input type="number" id="l-slatL-${cfg.id}" value="${cfg.slatL||''}" step="0.25" min="1" placeholder="e.g. 96" oninput="lUpdate(${cfg.id})">
+            <input type="text" inputmode="decimal" id="l-slatL-${cfg.id}" value="${cfg.slatL||''}" placeholder="e.g. 96" oninput="lUpdate(${cfg.id})">
             ${cfg.slatL ? `<span class="stock-tag" id="l-stock-${cfg.id}">📏 ${stockFt}' stock · ${pcsPerLen} pc/length</span>` : `<span class="stock-tag" id="l-stock-${cfg.id}" style="display:none"></span>`}
           </div>
           <div>
@@ -909,11 +916,11 @@ function renderLumberConfigs(){
           </div>
           <div>
             <label class="field-label">Panel Width</label>
-            <input type="number" id="l-panelW-${cfg.id}" value="${cfg.panelW||''}" step="0.25" min="1" placeholder="e.g. 12" oninput="lUpdate(${cfg.id})">
+            <input type="text" inputmode="decimal" id="l-panelW-${cfg.id}" value="${cfg.panelW||''}" placeholder="e.g. 12" oninput="lUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Panel Length</label>
-            <input type="number" id="l-panelL-${cfg.id}" value="${cfg.panelL||''}" step="0.25" min="1" placeholder="e.g. 96" oninput="lUpdate(${cfg.id})">
+            <input type="text" inputmode="decimal" id="l-panelL-${cfg.id}" value="${cfg.panelL||''}" placeholder="e.g. 96" oninput="lUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Brackets / Panel</label>
@@ -958,11 +965,11 @@ function lUpdate(id){
   cfg.species      = document.getElementById('l-species-'+id)?.value || cfg.species;
   cfg.orientation  = document.getElementById('l-orient-'+id)?.value || cfg.orientation;
   cfg.thickness    = parseFraction(document.getElementById('l-thick-'+id)?.value) || cfg.thickness;
-  cfg.slatW        = parseFloat(document.getElementById('l-slatW-'+id)?.value) || cfg.slatW;
-  cfg.slatL        = parseFloat(document.getElementById('l-slatL-'+id)?.value) || cfg.slatL;
+  cfg.slatW        = parseFraction(document.getElementById('l-slatW-'+id)?.value) || cfg.slatW;
+  cfg.slatL        = parseFraction(document.getElementById('l-slatL-'+id)?.value) || cfg.slatL;
   cfg.slatsPerPanel = parseInt(document.getElementById('l-slats-'+id)?.value) || cfg.slatsPerPanel;
-  cfg.panelW       = parseFloat(document.getElementById('l-panelW-'+id)?.value) || cfg.panelW;
-  cfg.panelL       = parseFloat(document.getElementById('l-panelL-'+id)?.value) || cfg.panelL;
+  cfg.panelW       = parseFraction(document.getElementById('l-panelW-'+id)?.value) || cfg.panelW;
+  cfg.panelL       = parseFraction(document.getElementById('l-panelL-'+id)?.value) || cfg.panelL;
   cfg.bracketsPerPanel = parseInt(document.getElementById('l-brackets-'+id)?.value) || 0;
   cfg.assembly     = document.getElementById('l-assembly-'+id)?.checked ?? true;
   cfg.sanding      = document.getElementById('l-sanding-'+id)?.checked ?? false;
@@ -1977,19 +1984,19 @@ function renderLaminationConfigs(){
         <div class="config-grid">
           <div>
             <label class="field-label">Panel Width</label>
-            <input type="number" id="l2-panelW-${cfg.id}" value="${cfg.panelW||''}" step="0.25" min="1" placeholder="e.g. 12" oninput="lamUpdate(${cfg.id})">
+            <input type="text" inputmode="decimal" id="l2-panelW-${cfg.id}" value="${cfg.panelW||''}" placeholder="e.g. 12" oninput="lamUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Panel Length</label>
-            <input type="number" id="l2-panelL-${cfg.id}" value="${cfg.panelL||''}" step="0.25" min="1" placeholder="e.g. 96" oninput="lamUpdate(${cfg.id})">
+            <input type="text" inputmode="decimal" id="l2-panelL-${cfg.id}" value="${cfg.panelL||''}" placeholder="e.g. 96" oninput="lamUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Slat Width</label>
-            <input type="number" id="l2-slatW-${cfg.id}" value="${cfg.slatW||''}" step="0.0625" min="0.5" placeholder="e.g. 3.25" oninput="lamUpdate(${cfg.id})">
+            <input type="text" inputmode="decimal" id="l2-slatW-${cfg.id}" value="${cfg.slatW||''}" placeholder="e.g. 3.25 or 3-1/4" oninput="lamUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Slat Length</label>
-            <input type="number" id="l2-slatL-${cfg.id}" value="${cfg.slatL||''}" step="0.25" min="1" placeholder="e.g. 96" oninput="lamUpdate(${cfg.id})">
+            <input type="text" inputmode="decimal" id="l2-slatL-${cfg.id}" value="${cfg.slatL||''}" placeholder="e.g. 96" oninput="lamUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Slats / Panel</label>
@@ -2035,10 +2042,10 @@ function lamUpdate(id){
   cfg.back      = document.getElementById('l2-back-'+id)?.value  || cfg.back;
   cfg.core      = document.getElementById('l2-core-'+id)?.value  || cfg.core;
   cfg.thickness = parseFloat(document.getElementById('l2-thick-'+id)?.value) || cfg.thickness || 0.75;
-  cfg.panelW  = parseFloat(document.getElementById('l2-panelW-'+id)?.value) || 0;
-  cfg.panelL  = parseFloat(document.getElementById('l2-panelL-'+id)?.value) || 0;
-  cfg.slatW   = parseFloat(document.getElementById('l2-slatW-'+id)?.value) || 0;
-  cfg.slatL   = parseFloat(document.getElementById('l2-slatL-'+id)?.value) || 0;
+  cfg.panelW  = parseFraction(document.getElementById('l2-panelW-'+id)?.value) || 0;
+  cfg.panelL  = parseFraction(document.getElementById('l2-panelL-'+id)?.value) || 0;
+  cfg.slatW   = parseFraction(document.getElementById('l2-slatW-'+id)?.value) || 0;
+  cfg.slatL   = parseFraction(document.getElementById('l2-slatL-'+id)?.value) || 0;
   cfg.slatsPerPanel   = parseInt(document.getElementById('l2-slats-'+id)?.value) || 0;
   cfg.bracketsPerPanel= parseInt(document.getElementById('l2-brackets-'+id)?.value) || 0;
   cfg.ebSides  = parseInt(document.getElementById('l2-ebsides-'+id)?.value) || 0;
