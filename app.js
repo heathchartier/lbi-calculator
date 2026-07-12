@@ -28,6 +28,26 @@ const SHEET_WIDTHS  = { '4x8': 49, '4x10': 49 };
 const SHEET_LENGTHS = { '4x8': 97, '4x10': 121 };
 const EB_ROLL_FEET   = 500;
 const EB_WASTE_FACTOR = 1.1;
+// Lamination thickness definitions. user:false = admin-only (3/4 fallback)
+const LAM_THICK_KEYS = [
+  { k:'t0_5',    label:'1/2"',   val:0.5,    user:true  },
+  { k:'t0_625',  label:'5/8"',   val:0.625,  user:true  },
+  { k:'t0_6875', label:'11/16"', val:0.6875, user:false },
+  { k:'t0_75',   label:'3/4"',   val:0.75,   user:true  },
+  { k:'t1_0',    label:'1"',     val:1.0,    user:true  },
+];
+const LAM_SIZES = ['4x8','4x10'];
+function blankLamFace(){ const o={ebRoll:0}; LAM_THICK_KEYS.forEach(t=>LAM_SIZES.forEach(s=>{o[`${t.k}_${s}`]=0;})); return o; }
+function blankLamCore(){ const o={}; LAM_THICK_KEYS.forEach(t=>LAM_SIZES.forEach(s=>{o[`${t.k}_${s}`]=0;})); return o; }
+// For a chosen thickness value, get {price4x8, price4x10}. 3/4 tries 11/16 first.
+function getLamSheetPrices(item, thickVal){
+  const fallback = thickVal === 0.75 ? 't0_6875' : null;
+  const primary  = LAM_THICK_KEYS.find(t => t.val === thickVal)?.k || 't0_75';
+  const get = (tk, sz) => (item && item[`${tk}_${sz}`]) || 0;
+  const p4x8  = (fallback && get(fallback,'4x8'))  || get(primary,'4x8');
+  const p4x10 = (fallback && get(fallback,'4x10')) || get(primary,'4x10');
+  return { p4x8, p4x10 };
+}
 const SUPPLIER_LABELS = { talbert: 'Talbert (Premium)', timber: 'Timber (Standard)' };
 
 function getLBIPassword(){ return pricing?.lbiPassword || localStorage.getItem('lbiq_lbi_password') || 'lbi2024'; }
@@ -1853,12 +1873,13 @@ function addLaminationConfig(){
   const coreKeys = Object.keys(pricing.laminationCores || {});
   const last = laminationConfigs[laminationConfigs.length - 1];
   laminationConfigs.push({
-    id:       laminationCounter,
-    face:     last?.face    || faceKeys[0] || '',
-    back:     last?.back    || faceKeys[0] || '',
-    core:     last?.core    || coreKeys[0] || '',
-    ebSides:  last?.ebSides ?? 4,
-    calcMode: last?.calcMode || 'sqft',
+    id:        laminationCounter,
+    face:      last?.face      || faceKeys[0] || '',
+    back:      last?.back      || faceKeys[0] || '',
+    core:      last?.core      || coreKeys[0] || '',
+    thickness: last?.thickness || 0.75,
+    ebSides:   last?.ebSides   ?? 4,
+    calcMode:  last?.calcMode  || 'sqft',
     panelW:0, panelL:0, slatW:0, slatL:0,
     slatsPerPanel:0, bracketsPerPanel:0,
     assembly:false, wasteOn:true, manualQty:0, sqft:0,
@@ -1886,9 +1907,10 @@ function renderLaminationConfigs(){
   cont.innerHTML = '';
   const faces = pricing.laminationFaces || {};
   const cores = pricing.laminationCores || {};
-  // Only show items with a price set (same rule as veneer species / lumber)
-  const faceKeys = Object.keys(faces).filter(k => (faces[k].pricePerSheet || 0) > 0);
-  const coreKeys = Object.keys(cores).filter(k => (cores[k].pricePerSheet || 0) > 0);
+  // Only show items that have at least one thickness/size price set
+  const hasAnyLamPrice = (item) => LAM_THICK_KEYS.some(t => LAM_SIZES.some(s => (item[`${t.k}_${s}`]||0) > 0));
+  const faceKeys = Object.keys(faces).filter(k => hasAnyLamPrice(faces[k]));
+  const coreKeys = Object.keys(cores).filter(k => hasAnyLamPrice(cores[k]));
 
   laminationConfigs.forEach(cfg => {
     const modeLabels = {sqft:'By Sq Ft', slats:'By Slat Count', panels:'By Panel Count'};
@@ -1927,6 +1949,12 @@ function renderLaminationConfigs(){
               ${coreKeys.length
                 ? coreKeys.map(c=>`<option value="${c}" ${cfg.core===c?'selected':''}>${c}</option>`).join('')
                 : '<option value="">No cores priced — see admin</option>'}
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Core Thickness</label>
+            <select id="l2-thick-${cfg.id}" onchange="lamUpdate(${cfg.id})">
+              ${LAM_THICK_KEYS.filter(t=>t.user).map(t=>`<option value="${t.val}" ${(cfg.thickness||0.75)==t.val?'selected':''}>${t.label}</option>`).join('')}
             </select>
           </div>
           <div>
@@ -2004,9 +2032,10 @@ function renderLaminationConfigs(){
 function lamUpdate(id){
   const cfg = laminationConfigs.find(c => c.id === id);
   if(!cfg) return;
-  cfg.face    = document.getElementById('l2-face-'+id)?.value || cfg.face;
-  cfg.back    = document.getElementById('l2-back-'+id)?.value || cfg.back;
-  cfg.core    = document.getElementById('l2-core-'+id)?.value || cfg.core;
+  cfg.face      = document.getElementById('l2-face-'+id)?.value  || cfg.face;
+  cfg.back      = document.getElementById('l2-back-'+id)?.value  || cfg.back;
+  cfg.core      = document.getElementById('l2-core-'+id)?.value  || cfg.core;
+  cfg.thickness = parseFloat(document.getElementById('l2-thick-'+id)?.value) || cfg.thickness || 0.75;
   cfg.panelW  = parseFloat(document.getElementById('l2-panelW-'+id)?.value) || 0;
   cfg.panelL  = parseFloat(document.getElementById('l2-panelL-'+id)?.value) || 0;
   cfg.slatW   = parseFloat(document.getElementById('l2-slatW-'+id)?.value) || 0;
@@ -2061,23 +2090,25 @@ function calcLaminationCost(cfg){
   const coreData   = (pricing.laminationCores||{})[cfg.core];
   const wasteMult  = cfg.wasteOn !== false ? 1.10 : 1.0;
 
+  const thick = cfg.thickness || 0.75;
+
   // Face sheets
-  const facePPS = isCustomer ? 0 : (faceData?.pricePerSheet || 0);
-  const faceOpt = chooseVeneerSheet(cfg.slatW, cfg.slatL, facePPS, facePPS);
+  const { p4x8: faceP4x8, p4x10: faceP4x10 } = isCustomer ? {p4x8:0,p4x10:0} : getLamSheetPrices(faceData, thick);
+  const faceOpt    = chooseVeneerSheet(cfg.slatW, cfg.slatL, faceP4x8, faceP4x10);
   const faceSheets = isCustomer ? 0 : Math.ceil(totalSlats / faceOpt.slatsPerSheet * wasteMult);
-  const faceMat  = isCustomer ? 0 : faceSheets * facePPS;
+  const faceMat    = isCustomer ? 0 : faceSheets * faceOpt.sheetPrice;
 
   // Back sheets
-  const backPPS = isBackCustomer ? 0 : (backData?.pricePerSheet || 0);
-  const backOpt = chooseVeneerSheet(cfg.slatW, cfg.slatL, backPPS, backPPS);
+  const { p4x8: backP4x8, p4x10: backP4x10 } = isBackCustomer ? {p4x8:0,p4x10:0} : getLamSheetPrices(backData, thick);
+  const backOpt    = chooseVeneerSheet(cfg.slatW, cfg.slatL, backP4x8, backP4x10);
   const backSheets = isBackCustomer ? 0 : Math.ceil(totalSlats / backOpt.slatsPerSheet * wasteMult);
-  const backMat  = isBackCustomer ? 0 : backSheets * backPPS;
+  const backMat    = isBackCustomer ? 0 : backSheets * backOpt.sheetPrice;
 
   // Core sheets
-  const corePPS = coreData?.pricePerSheet || 0;
-  const coreOpt = chooseVeneerSheet(cfg.slatW, cfg.slatL, corePPS, corePPS);
+  const { p4x8: coreP4x8, p4x10: coreP4x10 } = getLamSheetPrices(coreData, thick);
+  const coreOpt    = chooseVeneerSheet(cfg.slatW, cfg.slatL, coreP4x8, coreP4x10);
   const coreSheets = Math.ceil(totalSlats / coreOpt.slatsPerSheet * wasteMult);
-  const coreMat  = coreSheets * corePPS;
+  const coreMat    = coreSheets * coreOpt.sheetPrice;
 
   // Glue line
   const glueCost = effectiveSqft * (pricing.services.glueLine || 0);
@@ -2112,11 +2143,11 @@ function calcLaminationCost(cfg){
   const bktLine     = withMarkup(bracketCost,   'brackets');
 
   const lines = {};
-  if(!isCustomer && faceMat > 0)       lines[`Face Sheets (${fmtN(faceSheets)} × ${cfg.face})`] = faceMatLine;
+  if(!isCustomer && faceMat > 0)       lines[`Face Sheets (${fmtN(faceSheets)} × ${cfg.face} ${faceOpt.size})`] = faceMatLine;
   if(isCustomer)                       lines['Face Material (Customer Supplied)'] = 0;
-  if(!isBackCustomer && backMat > 0)   lines[`Back Sheets (${fmtN(backSheets)} × ${cfg.back || cfg.face})`] = backMatLine;
+  if(!isBackCustomer && backMat > 0)   lines[`Back Sheets (${fmtN(backSheets)} × ${cfg.back || cfg.face} ${backOpt.size})`] = backMatLine;
   if(isBackCustomer)                   lines['Back Material (Customer Supplied)'] = 0;
-  if(coreMat > 0)  lines[`Core Sheets (${fmtN(coreSheets)} × ${cfg.core})`]  = coreMatLine;
+  if(coreMat > 0)  lines[`Core Sheets (${fmtN(coreSheets)} × ${cfg.core} ${coreOpt.size})`]  = coreMatLine;
   if(glueCost > 0) lines['Glue Line']      = glueLineAmt;
   if(cfg.ebSides > 0){
     if(ebMaterialCost > 0) lines[`Edge Band Material (${fmtN(ebRolls)} rolls)`] = ebMatLine;
@@ -2178,69 +2209,86 @@ function renderLaminationAdmin(){
   const faces = Object.fromEntries(Object.keys(facesRaw).sort(naturalSort).map(k => [k, facesRaw[k]]));
   const cores = Object.fromEntries(Object.keys(coresRaw).sort(naturalSort).map(k => [k, coresRaw[k]]));
 
+  const thickHdr = LAM_THICK_KEYS.map(t =>
+    `<th colspan="2" style="text-align:center;padding:3px 4px;color:var(--mid);border-left:1px solid var(--bdr)">${t.label}</th>`
+  ).join('');
+  const sizeHdr = LAM_THICK_KEYS.map(() =>
+    LAM_SIZES.map(s=>`<th style="text-align:center;padding:2px 3px;color:var(--mid);font-weight:500;font-size:11px">${s}</th>`).join('')
+  ).join('');
+  const priceInputs = (name, d, attr, fn) =>
+    LAM_THICK_KEYS.map(t => LAM_SIZES.map(s => {
+      const k = `${t.k}_${s}`;
+      return `<td style="padding:2px 3px;border-left:1px solid var(--bdr)">
+        <input type="number" class="admin-price-input" value="${d[k]||0}" step="0.01" style="width:56px"
+          data-${attr}="${name}" data-key="${k}" oninput="${fn}(this)">
+      </td>`;
+    }).join('')).join('');
+
   el.innerHTML = `
     <div style="grid-column:1/-1;margin-top:12px;padding-bottom:6px;border-bottom:1px solid var(--bdr2)">
       <span style="font-size:13px;font-weight:700;color:#c084fc;letter-spacing:.5px;text-transform:uppercase">Lamination Faces</span>
+      <span style="font-size:11px;color:var(--mid);margin-left:8px">Price per sheet ($) by thickness and size</span>
     </div>
-    <div style="grid-column:1/-1">
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead><tr>
-          <th style="text-align:left;padding:4px 8px;color:var(--mid)">Face Name</th>
-          <th style="text-align:center;padding:4px 8px;color:var(--mid)">Price/Sheet ($)</th>
-          <th style="text-align:center;padding:4px 8px;color:var(--mid)">EB Roll Price ($)</th>
-          <th style="width:36px"></th>
-        </tr></thead>
+    <div style="grid-column:1/-1;overflow-x:auto">
+      <table style="border-collapse:collapse;font-size:12px;min-width:700px">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:3px 6px;color:var(--mid)" rowspan="2">Face Name</th>
+            ${thickHdr}
+            <th style="text-align:center;padding:3px 4px;color:var(--mid);border-left:1px solid var(--bdr)" rowspan="2">EB Roll ($)</th>
+            <th rowspan="2" style="width:32px"></th>
+          </tr>
+          <tr>${sizeHdr}</tr>
+        </thead>
         <tbody id="lamFacesBody">
           ${Object.entries(faces).map(([name,d]) => `<tr>
-            <td style="padding:4px 4px;min-width:110px">
+            <td style="padding:2px 4px;min-width:120px;white-space:nowrap">
               <input type="text" class="admin-name-input" value="${name}"
-                data-oldname="${name}" data-type="lamface" onchange="renameItem(this)">
+                data-oldname="${name}" data-type="lamface" onchange="renameItem(this)" style="min-width:110px">
             </td>
-            <td style="padding:4px 8px;text-align:center">
-              <input type="number" class="admin-price-input" value="${d.pricePerSheet||0}" step="0.01"
-                data-lamface="${name}" data-key="pricePerSheet" oninput="lamFacePriceInput(this)">
-            </td>
-            <td style="padding:4px 8px;text-align:center">
-              <input type="number" class="admin-price-input" value="${d.ebRoll||0}" step="0.01"
+            ${priceInputs(name, d, 'lamface', 'lamFacePriceInput')}
+            <td style="padding:2px 4px;border-left:1px solid var(--bdr)">
+              <input type="number" class="admin-price-input" value="${d.ebRoll||0}" step="0.01" style="width:60px"
                 data-lamface="${name}" data-key="ebRoll" oninput="lamFacePriceInput(this)">
             </td>
-            <td style="padding:4px 8px">
+            <td style="padding:2px 4px">
               <button class="btn-danger" data-lamface="${name.replace(/"/g,'&quot;')}"
-                onclick="removeLaminationFace(this.dataset.lamface)" style="padding:2px 8px;font-size:12px">✕</button>
+                onclick="removeLaminationFace(this.dataset.lamface)" style="padding:2px 6px;font-size:11px">✕</button>
             </td>
           </tr>`).join('')}
         </tbody>
       </table>
       <div style="display:flex;gap:8px;margin-top:8px">
-        <input type="text" id="newLamFaceName" placeholder="Face name (e.g. Maple 2-ply)"
+        <input type="text" id="newLamFaceName" placeholder="Face name (e.g. Formica 909)"
           style="flex:1;background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px">
         <button class="btn-secondary" onclick="addLaminationFace()">+ Add Face</button>
       </div>
     </div>
 
-    <div style="grid-column:1/-1;margin-top:12px;padding-bottom:6px;border-bottom:1px solid var(--bdr2)">
+    <div style="grid-column:1/-1;margin-top:16px;padding-bottom:6px;border-bottom:1px solid var(--bdr2)">
       <span style="font-size:13px;font-weight:700;color:#c084fc;letter-spacing:.5px;text-transform:uppercase">Lamination Cores</span>
+      <span style="font-size:11px;color:var(--mid);margin-left:8px">Price per sheet ($) by thickness and size</span>
     </div>
-    <div style="grid-column:1/-1">
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead><tr>
-          <th style="text-align:left;padding:4px 8px;color:var(--mid)">Core Name</th>
-          <th style="text-align:center;padding:4px 8px;color:var(--mid)">Price/Sheet ($)</th>
-          <th style="width:36px"></th>
-        </tr></thead>
+    <div style="grid-column:1/-1;overflow-x:auto">
+      <table style="border-collapse:collapse;font-size:12px;min-width:700px">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:3px 6px;color:var(--mid)" rowspan="2">Core Name</th>
+            ${thickHdr}
+            <th rowspan="2" style="width:32px"></th>
+          </tr>
+          <tr>${sizeHdr}</tr>
+        </thead>
         <tbody id="lamCoresBody">
           ${Object.entries(cores).map(([name,d]) => `<tr>
-            <td style="padding:4px 4px;min-width:110px">
+            <td style="padding:2px 4px;min-width:120px;white-space:nowrap">
               <input type="text" class="admin-name-input" value="${name}"
-                data-oldname="${name}" data-type="lamcore" onchange="renameItem(this)">
+                data-oldname="${name}" data-type="lamcore" onchange="renameItem(this)" style="min-width:110px">
             </td>
-            <td style="padding:4px 8px;text-align:center">
-              <input type="number" class="admin-price-input" value="${d.pricePerSheet||0}" step="0.01"
-                data-lamcore="${name}" data-key="pricePerSheet" oninput="lamCorePriceInput(this)">
-            </td>
-            <td style="padding:4px 8px">
+            ${priceInputs(name, d, 'lamcore', 'lamCorePriceInput')}
+            <td style="padding:2px 4px">
               <button class="btn-danger" data-lamcore="${name.replace(/"/g,'&quot;')}"
-                onclick="removeLaminationCore(this.dataset.lamcore)" style="padding:2px 8px;font-size:12px">✕</button>
+                onclick="removeLaminationCore(this.dataset.lamcore)" style="padding:2px 6px;font-size:11px">✕</button>
             </td>
           </tr>`).join('')}
         </tbody>
@@ -2261,7 +2309,7 @@ function addLaminationFace(){
   if(!pricing.laminationFaces) pricing.laminationFaces = {};
   if(pricing.laminationFaces[name]){ showToast('Face already exists'); return; }
   collectAdminForm();
-  pricing.laminationFaces[name] = { pricePerSheet:0, ebRoll:0 };
+  pricing.laminationFaces[name] = blankLamFace();
   input.value = '';
   renderLaminationAdmin();
 }
@@ -2280,7 +2328,7 @@ function addLaminationCore(){
   if(!pricing.laminationCores) pricing.laminationCores = {};
   if(pricing.laminationCores[name]){ showToast('Core already exists'); return; }
   collectAdminForm();
-  pricing.laminationCores[name] = { pricePerSheet:0 };
+  pricing.laminationCores[name] = blankLamCore();
   input.value = '';
   renderLaminationAdmin();
 }
