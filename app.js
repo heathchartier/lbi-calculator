@@ -8,7 +8,8 @@ const THICK_OPTIONS = [
   { key:'100', label:'1"'   },
 ];
 function thickToKey(t){ return { '1/4"':'025','1/2"':'050','3/4"':'075','1"':'100' }[t] || '075'; }
-const KERF = 0.125;
+const KERF = 0.1875;
+const SQUARING = 0.25;
 const RESAW_KERF = 0.0625;   // thin-kerf blade for resaw/rip operations on 2x6
 const TWO_X_SIX_T = 1.5;    // 2x6 actual thickness (inches)
 const TWO_X_SIX_W = 6.0;    // 2x6 nominal width (inches, rough/green)
@@ -511,8 +512,9 @@ function renderVeneerConfigs(){
             <select id="v-ebsides-${cfg.id}" onchange="vUpdate(${cfg.id})">
               <option value="4" ${cfg.ebSides===4?'selected':''}>4 sides</option>
               <option value="3" ${cfg.ebSides===3?'selected':''}>3 sides</option>
+              ${cfg.orientation !== 'Vertical' ? `
               <option value="2" ${cfg.ebSides===2?'selected':''}>2 long sides</option>
-              <option value="1" ${cfg.ebSides===1?'selected':''}>1 long side</option>
+              <option value="1" ${cfg.ebSides===1?'selected':''}>1 long side</option>` : ''}
               <option value="0" ${cfg.ebSides===0?'selected':''}>No edge banding</option>
             </select>
           </div>
@@ -538,6 +540,7 @@ function renderVeneerConfigs(){
 function vUpdate(id){
   const cfg = veneerConfigs.find(c => c.id === id);
   if(!cfg) return;
+  const prevOrientation = cfg.orientation;
   cfg.orientation    = document.getElementById('v-orient-'+id)?.value || cfg.orientation;
   cfg.grade          = document.getElementById('v-grade-'+id)?.value || cfg.grade || 'talbert';
   cfg.core           = document.getElementById('v-core-'+id)?.value  || cfg.core;
@@ -550,6 +553,9 @@ function vUpdate(id){
   cfg.bracketsPerPanel = parseInt(document.getElementById('v-brackets-'+id)?.value) || 0;
   const ebSidesEl = document.getElementById('v-ebsides-'+id);
   cfg.ebSides        = ebSidesEl ? parseInt(ebSidesEl.value) : cfg.ebSides;
+  // Clamp ebSides when switching to Vertical — 2 long sides / 1 side not offered
+  if(cfg.orientation === 'Vertical' && cfg.ebSides < 3 && cfg.ebSides > 0) cfg.ebSides = 4;
+  const orientationChanged = cfg.orientation !== prevOrientation;
   cfg.assembly       = document.getElementById('v-assembly-'+id)?.checked ?? true;
   cfg.satinFinish    = document.getElementById('v-satin-'+id)?.value === 'satin';
   cfg.wasteOn        = document.getElementById('v-waste-'+id)?.checked ?? true;
@@ -579,8 +585,8 @@ function vUpdate(id){
   const titleEl = document.getElementById('vtitle-'+id);
   if(titleEl) titleEl.textContent = cfg.species || 'New Configuration';
 
-  // Re-render only when mode actually changes (shows/hides sqft vs manual qty field)
-  if(prevMode !== cfg.calcMode){
+  // Re-render when mode or orientation changes (updates EB dropdown options)
+  if(prevMode !== cfg.calcMode || orientationChanged){
     renderVeneerConfigs();
   }
 
@@ -615,8 +621,8 @@ function resolveVeneerQty(cfg){
 // (or by yield if prices are 0). Tries both normal and rotated orientation.
 function chooseVeneerSheet(slatW, slatL, price4x8, price4x10){
   function yieldFor(sheetW, sheetL){
-    const cols = Math.floor((sheetW + KERF) / (slatW + KERF));
-    const rows = Math.floor((sheetL + KERF) / (slatL + KERF));
+    const cols = Math.floor((sheetW - SQUARING + KERF) / (slatW + KERF));
+    const rows = Math.floor((sheetL - SQUARING + KERF) / (slatL + KERF));
     return Math.max(1, cols * rows);
   }
   const sw8 = SHEET_WIDTHS['4x8'], sl8 = SHEET_LENGTHS['4x8'];
