@@ -485,19 +485,19 @@ function renderVeneerConfigs(){
         <div class="config-grid">
           <div>
             <label class="field-label">Panel Width</label>
-            <input type="text" inputmode="decimal" id="v-panelW-${cfg.id}" value="${cfg.panelW||''}" placeholder="e.g. 12" oninput="vUpdate(${cfg.id})">
+            <input type="text" id="v-panelW-${cfg.id}" value="${cfg.panelW||''}" placeholder="e.g. 12" oninput="vUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Panel Length</label>
-            <input type="text" inputmode="decimal" id="v-panelL-${cfg.id}" value="${cfg.panelL||''}" placeholder="e.g. 96" oninput="vUpdate(${cfg.id})">
+            <input type="text" id="v-panelL-${cfg.id}" value="${cfg.panelL||''}" placeholder="e.g. 96" oninput="vUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Slat Width</label>
-            <input type="text" inputmode="decimal" id="v-slatW-${cfg.id}" value="${cfg.slatW||''}" placeholder="e.g. 3.25 or 3-1/4" oninput="vUpdate(${cfg.id})">
+            <input type="text" id="v-slatW-${cfg.id}" value="${cfg.slatW||''}" placeholder="e.g. 3.25 or 3-1/4" oninput="vUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Slat Length</label>
-            <input type="text" inputmode="decimal" id="v-slatL-${cfg.id}" value="${cfg.slatL||''}" placeholder="e.g. 96" oninput="vUpdate(${cfg.id})">
+            <input type="text" id="v-slatL-${cfg.id}" value="${cfg.slatL||''}" placeholder="e.g. 96" oninput="vUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Slats / Panel</label>
@@ -512,9 +512,8 @@ function renderVeneerConfigs(){
             <select id="v-ebsides-${cfg.id}" onchange="vUpdate(${cfg.id})">
               <option value="4" ${cfg.ebSides===4?'selected':''}>4 sides</option>
               <option value="3" ${cfg.ebSides===3?'selected':''}>3 sides</option>
-              ${cfg.orientation !== 'Vertical' ? `
               <option value="2" ${cfg.ebSides===2?'selected':''}>2 long sides</option>
-              <option value="1" ${cfg.ebSides===1?'selected':''}>1 long side</option>` : ''}
+              <option value="1" ${cfg.ebSides===1?'selected':''}>1 long side</option>
               <option value="0" ${cfg.ebSides===0?'selected':''}>No edge banding</option>
             </select>
           </div>
@@ -553,8 +552,6 @@ function vUpdate(id){
   cfg.bracketsPerPanel = parseInt(document.getElementById('v-brackets-'+id)?.value) || 0;
   const ebSidesEl = document.getElementById('v-ebsides-'+id);
   cfg.ebSides        = ebSidesEl ? parseInt(ebSidesEl.value) : cfg.ebSides;
-  // Clamp ebSides when switching to Vertical — 2 long sides / 1 side not offered
-  if(cfg.orientation === 'Vertical' && cfg.ebSides < 3 && cfg.ebSides > 0) cfg.ebSides = 4;
   const orientationChanged = cfg.orientation !== prevOrientation;
   cfg.assembly       = document.getElementById('v-assembly-'+id)?.checked ?? true;
   cfg.satinFinish    = document.getElementById('v-satin-'+id)?.value === 'satin';
@@ -909,11 +906,11 @@ function renderLumberConfigs(){
           </div>
           <div>
             <label class="field-label">Finished Width</label>
-            <input type="text" inputmode="decimal" id="l-slatW-${cfg.id}" value="${cfg.slatW||''}" placeholder="e.g. 3.25 or 3-1/4" oninput="lUpdate(${cfg.id})">
+            <input type="text" id="l-slatW-${cfg.id}" value="${cfg.slatW||''}" placeholder="e.g. 3.25 or 3-1/4" oninput="lUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Finished Length</label>
-            <input type="text" inputmode="decimal" id="l-slatL-${cfg.id}" value="${cfg.slatL||''}" placeholder="e.g. 96" oninput="lUpdate(${cfg.id})">
+            <input type="text" id="l-slatL-${cfg.id}" value="${cfg.slatL||''}" placeholder="e.g. 96" oninput="lUpdate(${cfg.id})">
             ${cfg.slatL ? `<span class="stock-tag" id="l-stock-${cfg.id}">📏 ${stockFt}' stock · ${pcsPerLen} pc/length</span>` : `<span class="stock-tag" id="l-stock-${cfg.id}" style="display:none"></span>`}
           </div>
           <div>
@@ -922,11 +919,11 @@ function renderLumberConfigs(){
           </div>
           <div>
             <label class="field-label">Panel Width</label>
-            <input type="text" inputmode="decimal" id="l-panelW-${cfg.id}" value="${cfg.panelW||''}" placeholder="e.g. 12" oninput="lUpdate(${cfg.id})">
+            <input type="text" id="l-panelW-${cfg.id}" value="${cfg.panelW||''}" placeholder="e.g. 12" oninput="lUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Panel Length</label>
-            <input type="text" inputmode="decimal" id="l-panelL-${cfg.id}" value="${cfg.panelL||''}" placeholder="e.g. 96" oninput="lUpdate(${cfg.id})">
+            <input type="text" id="l-panelL-${cfg.id}" value="${cfg.panelL||''}" placeholder="e.g. 96" oninput="lUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Brackets / Panel</label>
@@ -1990,19 +1987,19 @@ function renderLaminationConfigs(){
         <div class="config-grid">
           <div>
             <label class="field-label">Panel Width</label>
-            <input type="text" inputmode="decimal" id="l2-panelW-${cfg.id}" value="${cfg.panelW||''}" placeholder="e.g. 12" oninput="lamUpdate(${cfg.id})">
+            <input type="text" id="l2-panelW-${cfg.id}" value="${cfg.panelW||''}" placeholder="e.g. 12" oninput="lamUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Panel Length</label>
-            <input type="text" inputmode="decimal" id="l2-panelL-${cfg.id}" value="${cfg.panelL||''}" placeholder="e.g. 96" oninput="lamUpdate(${cfg.id})">
+            <input type="text" id="l2-panelL-${cfg.id}" value="${cfg.panelL||''}" placeholder="e.g. 96" oninput="lamUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Slat Width</label>
-            <input type="text" inputmode="decimal" id="l2-slatW-${cfg.id}" value="${cfg.slatW||''}" placeholder="e.g. 3.25 or 3-1/4" oninput="lamUpdate(${cfg.id})">
+            <input type="text" id="l2-slatW-${cfg.id}" value="${cfg.slatW||''}" placeholder="e.g. 3.25 or 3-1/4" oninput="lamUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Slat Length</label>
-            <input type="text" inputmode="decimal" id="l2-slatL-${cfg.id}" value="${cfg.slatL||''}" placeholder="e.g. 96" oninput="lamUpdate(${cfg.id})">
+            <input type="text" id="l2-slatL-${cfg.id}" value="${cfg.slatL||''}" placeholder="e.g. 96" oninput="lamUpdate(${cfg.id})">
           </div>
           <div>
             <label class="field-label">Slats / Panel</label>
