@@ -664,9 +664,10 @@ function calcVeneerPreview(cfg){
   const { size, slatsPerSheet } = opt;
   const wasteMult   = cfg.wasteOn !== false ? 1.10 : 1.0;
   const sheetsNeeded = Math.ceil(totalSlats / slatsPerSheet * wasteMult);
-  const longSides = cfg.ebSides >= 2 ? 2 : cfg.ebSides;
+  const longSides  = (cfg.ebSides===4||cfg.ebSides===2)?2:(cfg.ebSides===3||cfg.ebSides===1)?1:0;
+  const shortSides = (cfg.ebSides===4||cfg.ebSides===3)?2:0;
   const ebLong  = (cfg.slatL / 12) * totalSlats * longSides;
-  const ebShort = (cfg.slatW / 12) * totalSlats * (cfg.ebSides === 4 ? 2 : cfg.ebSides === 3 ? 1 : 0);
+  const ebShort = (cfg.slatW / 12) * totalSlats * shortSides;
   const ebFt    = ebLong + ebShort;
   const ebRolls = Math.ceil(ebFt * EB_WASTE_FACTOR / EB_ROLL_FEET);
 
@@ -706,9 +707,10 @@ function calcVeneerCost(cfg, cutCostOverride){
     ? panelQty * cfg.customPricePerPanel
     : sheetsNeeded * sheetPrice;
 
-  const longSides = cfg.ebSides >= 2 ? 2 : cfg.ebSides;
+  const longSides  = (cfg.ebSides===4||cfg.ebSides===2)?2:(cfg.ebSides===3||cfg.ebSides===1)?1:0;
+  const shortSides = (cfg.ebSides===4||cfg.ebSides===3)?2:0;
   const ebLong  = (cfg.slatL/12) * totalSlats * longSides;
-  const ebShort = (cfg.slatW/12) * totalSlats * (cfg.ebSides===4?2:cfg.ebSides===3?1:0);
+  const ebShort = (cfg.slatW/12) * totalSlats * shortSides;
   const ebFt    = ebLong + ebShort;
   const ebRolls     = Math.ceil(ebFt * EB_WASTE_FACTOR / EB_ROLL_FEET);
   const isCustom    = cfg.species === 'Custom';
@@ -2123,9 +2125,10 @@ function calcLaminationCost(cfg){
   const glueCost = effectiveSqft * (pricing.services.glueLine || 0);
 
   // EB
-  const longSides = cfg.ebSides >= 2 ? 2 : cfg.ebSides;
+  const longSides  = (cfg.ebSides===4||cfg.ebSides===2)?2:(cfg.ebSides===3||cfg.ebSides===1)?1:0;
+  const shortSides = (cfg.ebSides===4||cfg.ebSides===3)?2:0;
   const ebLong  = (cfg.slatL / 12) * totalSlats * longSides;
-  const ebShort = (cfg.slatW / 12) * totalSlats * (cfg.ebSides===4?2:cfg.ebSides===3?1:0);
+  const ebShort = (cfg.slatW / 12) * totalSlats * shortSides;
   const ebFt    = ebLong + ebShort;
   const ebRolls = cfg.ebSides > 0 ? Math.ceil(ebFt * EB_WASTE_FACTOR / EB_ROLL_FEET) : 0;
   const ebRollPrice   = isCustomer ? 0 : (faceData?.ebRoll || 0);
@@ -2192,9 +2195,10 @@ function calcLaminationPreview(cfg){
   const corePPS   = coreData?.pricePerSheet||0;
   const coreOpt   = chooseVeneerSheet(cfg.slatW, cfg.slatL, corePPS, corePPS);
   const coreSheets= Math.ceil(totalSlats/coreOpt.slatsPerSheet*wasteMult);
-  const longSides = cfg.ebSides>=2?2:cfg.ebSides;
+  const longSides  = (cfg.ebSides===4||cfg.ebSides===2)?2:(cfg.ebSides===3||cfg.ebSides===1)?1:0;
+  const shortSides = (cfg.ebSides===4||cfg.ebSides===3)?2:0;
   const ebLong    = (cfg.slatL/12)*totalSlats*longSides;
-  const ebShort   = (cfg.slatW/12)*totalSlats*(cfg.ebSides===4?2:cfg.ebSides===3?1:0);
+  const ebShort   = (cfg.slatW/12)*totalSlats*shortSides;
   const ebRolls   = cfg.ebSides>0?Math.ceil((ebLong+ebShort)*EB_WASTE_FACTOR/EB_ROLL_FEET):0;
   let rows = `<div class="preview-row"><span>${fmtN(totalSlats)} slats · ${fmtN(effectiveSqft,1)} sqft · ${fmtN(panelQty)} panels</span></div>`;
   if(!isCustomer && facePPS>0)
