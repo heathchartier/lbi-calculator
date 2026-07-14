@@ -661,7 +661,7 @@ function calcVeneerPreview(cfg){
   const p8  = sData[`${sup}_${grade}_4x8_${coreK}_${thickK}${finSfx}`]  || 0;
   const p10 = sData[`${sup}_${grade}_4x10_${coreK}_${thickK}${finSfx}`] || 0;
   const opt = chooseVeneerSheet(cfg.slatW, cfg.slatL, p8, p10);
-  const { size, slatsPerSheet } = opt;
+  const { size, slatsPerSheet, sheetPrice: previewSheetPrice } = opt;
   const wasteMult   = cfg.wasteOn !== false ? 1.10 : 1.0;
   const sheetsNeeded = Math.ceil(totalSlats / slatsPerSheet * wasteMult);
   const longSides  = (cfg.ebSides===4||cfg.ebSides===2)?2:(cfg.ebSides===3||cfg.ebSides===1)?1:0;
@@ -670,8 +670,10 @@ function calcVeneerPreview(cfg){
   const ebShort = (cfg.slatW / 12) * totalSlats * shortSides;
   const ebFt    = ebLong + ebShort;
   const ebRolls = Math.ceil(ebFt * EB_WASTE_FACTOR / EB_ROLL_FEET);
+  const noPricing = cfg.species !== 'Custom' && !previewSheetPrice;
 
   preview.innerHTML = `
+    ${noPricing ? `<div style="grid-column:1/-1;background:var(--warn-bg,#7c3d0020);border:1px solid var(--warn,#f59e0b);border-radius:6px;padding:6px 10px;color:var(--warn,#f59e0b);font-size:12px;font-weight:600">⚠ No ${grade} ${size} pricing found — update admin or call supplier for quote</div>` : ''}
     <div class="calc-preview-item"><div class="calc-preview-label">Sq Ft / Panel</div><div class="calc-preview-val">${fmtN(qty.sqftPerPanel,2)} sqft</div></div>
     <div class="calc-preview-item"><div class="calc-preview-label">Panels Needed</div><div class="calc-preview-val">${fmtN(panelQty)}</div></div>
     <div class="calc-preview-item"><div class="calc-preview-label">Total Slats</div><div class="calc-preview-val">${fmtN(totalSlats)}</div></div>
@@ -741,7 +743,7 @@ function calcVeneerCost(cfg, cutCostOverride){
     lines:{
       [isCustom
         ? 'Sheet Material ('+fmtN(sheetsNeeded)+' x '+sheetSize+')'
-        : 'Sheet Material ('+fmtN(sheetsNeeded)+' x '+grade+' '+sheetSize+')'
+        : 'Sheet Material ('+fmtN(sheetsNeeded)+' x '+grade+' '+sheetSize+')' + (sheetPrice ? '' : ' ⚠ Call for pricing')
       ]: panelLine,
       ['Edge Band Material ('+fmtN(ebRolls)+' rolls)']: ebMatLine,
       ['Edge Band Service ('+fmtN(ebFt,0)+' ft)']: ebSvcLine,
