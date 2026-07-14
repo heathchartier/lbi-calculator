@@ -638,7 +638,7 @@ function chooseVeneerSheet(slatW, slatL, price4x8, price4x10){
   }
   if(price4x10 && !price4x8) return { size: '4x10', slatsPerSheet: sps10, sheetPrice: price4x10 };
   if(price4x8  && !price4x10) return { size: '4x8',  slatsPerSheet: sps8,  sheetPrice: price4x8  };
-  return sps10 >= sps8
+  return sps10 > sps8
     ? { size: '4x10', slatsPerSheet: sps10, sheetPrice: 0 }
     : { size: '4x8',  slatsPerSheet: sps8,  sheetPrice: 0 };
 }
