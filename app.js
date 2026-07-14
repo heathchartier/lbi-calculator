@@ -725,9 +725,9 @@ function calcVeneerCost(cfg, cutCostOverride){
   const bracketCount = panelQty * cfg.bracketsPerPanel;
   const bracketCost  = bracketCount * pricing.services.bracketPrice;
 
-  // Custom sheet cost is a cost input — markup applies just like non-custom species
-  const panelLine = withMarkup(sheetCost,      'panels');
-  const ebMatLine = withMarkup(ebMaterialCost, 'edgeBand');
+  // Custom: user enters sell price directly — skip markup on materials only
+  const panelLine = isCustom ? sheetCost      : withMarkup(sheetCost,      'panels');
+  const ebMatLine = isCustom ? ebMaterialCost : withMarkup(ebMaterialCost, 'edgeBand');
   const ebSvcLine = withMarkup(ebServiceCost,  'ebService');
   const cutLine   = withMarkup(cutCost,        'cutService');
   const asmLine   = withMarkup(assemblyCost,   'assembly');
