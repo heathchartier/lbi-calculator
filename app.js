@@ -457,11 +457,11 @@ function renderVeneerConfigs(){
             </select>
           </div>
           <div id="v-customprice-wrap-${cfg.id}" style="${cfg.species==='Custom'?'':'display:none'}">
-            <label class="field-label">Panel Sell Price / Panel ($)</label>
+            <label class="field-label">Sheet Cost / Sheet ($)</label>
             <input type="number" id="v-customprice-${cfg.id}" value="${cfg.customPricePerPanel||''}" step="0.01" min="0" placeholder="e.g. 250.00" oninput="vUpdate(${cfg.id})">
           </div>
           <div id="v-customeb-wrap-${cfg.id}" style="${cfg.species==='Custom'?'':'display:none'}">
-            <label class="field-label">EB Sell Price / Roll ($)</label>
+            <label class="field-label">EB Cost / Roll ($)</label>
             <input type="number" id="v-customeb-${cfg.id}" value="${cfg.customEBRollPrice||''}" step="0.01" min="0" placeholder="e.g. 75.00" oninput="vUpdate(${cfg.id})">
           </div>
           <div>
@@ -704,7 +704,7 @@ function calcVeneerCost(cfg, cutCostOverride){
   const wasteMult   = cfg.wasteOn !== false ? 1.10 : 1.0;
   const sheetsNeeded = Math.ceil(totalSlats / slatsPerSheet * wasteMult);
   const sheetCost  = cfg.species === 'Custom' && cfg.customPricePerPanel
-    ? panelQty * cfg.customPricePerPanel
+    ? sheetsNeeded * cfg.customPricePerPanel
     : sheetsNeeded * sheetPrice;
 
   const longSides  = (cfg.ebSides===4||cfg.ebSides===2)?2:(cfg.ebSides===3||cfg.ebSides===1)?1:0;
@@ -725,13 +725,11 @@ function calcVeneerCost(cfg, cutCostOverride){
   const bracketCount = panelQty * cfg.bracketsPerPanel;
   const bracketCost  = bracketCount * pricing.services.bracketPrice;
 
-  // Custom prices are already sell prices — skip markup on panels and EB material.
-  // Also skip EB service and cut service: they're included in the custom panel sell price.
-  const customSellPrice = isCustom && cfg.customPricePerPanel > 0;
-  const panelLine = isCustom ? sheetCost      : withMarkup(sheetCost,      'panels');
-  const ebMatLine = isCustom ? ebMaterialCost : withMarkup(ebMaterialCost, 'edgeBand');
-  const ebSvcLine = customSellPrice ? 0 : withMarkup(ebServiceCost, 'ebService');
-  const cutLine   = customSellPrice ? 0 : withMarkup(cutCost,       'cutService');
+  // Custom sheet cost is a cost input — markup applies just like non-custom species
+  const panelLine = withMarkup(sheetCost,      'panels');
+  const ebMatLine = withMarkup(ebMaterialCost, 'edgeBand');
+  const ebSvcLine = withMarkup(ebServiceCost,  'ebService');
+  const cutLine   = withMarkup(cutCost,        'cutService');
   const asmLine   = withMarkup(assemblyCost,   'assembly');
   const bktLine   = withMarkup(bracketCost,    'brackets');
 
@@ -741,10 +739,13 @@ function calcVeneerCost(cfg, cutCostOverride){
     sqftPerPanel:qty.sqftPerPanel, panelQty, totalSlats, sheetsNeeded,
     sheetPrice, slatsPerSheet, ebFt, ebRolls, ebRollPrice, bracketCount, effectiveSqft,
     lines:{
-      [isCustom ? 'Sheet Material ('+fmtN(panelQty)+' panels)' : 'Sheet Material ('+fmtN(sheetsNeeded)+' x '+grade+' '+sheetSize+')']: panelLine,
+      [isCustom
+        ? 'Sheet Material ('+fmtN(sheetsNeeded)+' x '+sheetSize+')'
+        : 'Sheet Material ('+fmtN(sheetsNeeded)+' x '+grade+' '+sheetSize+')'
+      ]: panelLine,
       ['Edge Band Material ('+fmtN(ebRolls)+' rolls)']: ebMatLine,
-      ...(!customSellPrice ? {['Edge Band Service ('+fmtN(ebFt,0)+' ft)']: ebSvcLine} : {}),
-      ...(!customSellPrice ? {[cutCostOverride !== undefined ? 'Cut Service (flat)' : 'Cut Service']: cutLine} : {}),
+      ['Edge Band Service ('+fmtN(ebFt,0)+' ft)']: ebSvcLine,
+      [cutCostOverride !== undefined ? 'Cut Service (flat)' : 'Cut Service']: cutLine,
       ...(cfg.assembly ? {'Assembly / Packing': asmLine} : {}),
       ['Black Brackets ('+fmtN(bracketCount)+')']: bktLine,
     },
