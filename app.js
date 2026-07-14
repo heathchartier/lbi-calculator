@@ -725,11 +725,13 @@ function calcVeneerCost(cfg, cutCostOverride){
   const bracketCount = panelQty * cfg.bracketsPerPanel;
   const bracketCost  = bracketCount * pricing.services.bracketPrice;
 
-  // Custom prices are already sell prices — skip markup on panels and EB material
+  // Custom prices are already sell prices — skip markup on panels and EB material.
+  // Also skip EB service and cut service: they're included in the custom panel sell price.
+  const customSellPrice = isCustom && cfg.customPricePerPanel > 0;
   const panelLine = isCustom ? sheetCost      : withMarkup(sheetCost,      'panels');
   const ebMatLine = isCustom ? ebMaterialCost : withMarkup(ebMaterialCost, 'edgeBand');
-  const ebSvcLine = withMarkup(ebServiceCost,  'ebService');
-  const cutLine   = withMarkup(cutCost,        'cutService');
+  const ebSvcLine = customSellPrice ? 0 : withMarkup(ebServiceCost, 'ebService');
+  const cutLine   = customSellPrice ? 0 : withMarkup(cutCost,       'cutService');
   const asmLine   = withMarkup(assemblyCost,   'assembly');
   const bktLine   = withMarkup(bracketCost,    'brackets');
 
@@ -739,10 +741,10 @@ function calcVeneerCost(cfg, cutCostOverride){
     sqftPerPanel:qty.sqftPerPanel, panelQty, totalSlats, sheetsNeeded,
     sheetPrice, slatsPerSheet, ebFt, ebRolls, ebRollPrice, bracketCount, effectiveSqft,
     lines:{
-      [cfg.species==='Custom' ? 'Panel Material ('+fmtN(panelQty)+' panels)' : 'Panel Sheets ('+fmtN(sheetsNeeded)+' x '+grade+' '+sheetSize+')']: panelLine,
+      [isCustom ? 'Sheet Material ('+fmtN(panelQty)+' panels)' : 'Sheet Material ('+fmtN(sheetsNeeded)+' x '+grade+' '+sheetSize+')']: panelLine,
       ['Edge Band Material ('+fmtN(ebRolls)+' rolls)']: ebMatLine,
-      ['Edge Band Service ('+fmtN(ebFt,0)+' ft)']: ebSvcLine,
-      [cutCostOverride !== undefined ? 'Cut Service (flat)' : 'Cut Service']: cutLine,
+      ...(!customSellPrice ? {['Edge Band Service ('+fmtN(ebFt,0)+' ft)']: ebSvcLine} : {}),
+      ...(!customSellPrice ? {[cutCostOverride !== undefined ? 'Cut Service (flat)' : 'Cut Service']: cutLine} : {}),
       ...(cfg.assembly ? {'Assembly / Packing': asmLine} : {}),
       ['Black Brackets ('+fmtN(bracketCount)+')']: bktLine,
     },
