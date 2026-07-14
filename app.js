@@ -338,7 +338,7 @@ function switchTab(name, btn){
 // --- HELPERS ----------------------------------------------------------
 function fmt(n){ return n == null ? '—' : '$' + Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function fmtN(n, dec=0){ return n == null ? '—' : Number(n).toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec}); }
-function withMarkup(cost, cat){ const m = pricing.markup[cat]||0; return cost*(1+m/100); }
+function withMarkup(cost, cat){ const m = pricing.markup[cat]||0; return m>=100 ? cost : cost/(1-m/100); }
 function markDirty(){ isDirty = true; }
 function getSupplier(){ return document.getElementById('jobSupplier')?.value || 'talbert'; }
 
@@ -1347,7 +1347,7 @@ function renderResults(){
   (pricing.standardProducts || []).forEach(p => {
     const qty = productCart[p.name];
     if(!qty) return;
-    const sell = (p.cost||0) * (1 + (p.markup||0)/100);
+    const sell = (p.markup||0)>=100 ? (p.cost||0) : (p.cost||0)/(1-(p.markup||0)/100);
     const lineVal = qty * sell;
     if(lineVal > 0){ stockLines.push({ label:`${p.name} × ${fmtN(qty,2)}`, val:lineVal }); stockTotal += lineVal; }
   });
@@ -1686,7 +1686,7 @@ function renderAdminModal(){
   };
   mg.innerHTML = Object.entries(markupLabels).map(([k,lbl]) => `
     <div>
-      <label class="field-label">${lbl} Markup %</label>
+      <label class="field-label">${lbl} Margin %</label>
       <input type="number" id="mkp-${k}" value="${pricing.markup[k]||0}" step="0.5" min="0" max="200"
         style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
     </div>
@@ -2395,7 +2395,7 @@ function renderProductsTab(){
     return;
   }
   const renderCard = p => {
-    const sell = (p.cost||0) * (1 + (p.markup||0)/100);
+    const sell = (p.markup||0)>=100 ? (p.cost||0) : (p.cost||0)/(1-(p.markup||0)/100);
     if(!sell) return '';
     const qty = productCart[p.name] || 0;
     const lineTotal = qty > 0 ? `<span class="product-line-total">${fmt(qty * sell)}</span>` : '';
@@ -2630,7 +2630,7 @@ function renderAdminProducts(){
     return;
   }
   const renderRow = p => {
-    const sell = (p.cost||0) * (1 + (p.markup||0)/100);
+    const sell = (p.markup||0)>=100 ? (p.cost||0) : (p.cost||0)/(1-(p.markup||0)/100);
     const price = p.cost ? `Cost: ${fmt(p.cost)} → Sell: ${fmt(sell)}` : '— no cost set';
     return `<div class="prod-drag-row" draggable="true"
       ondragstart="prodDragStart(event,${p.id})"
