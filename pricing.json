@@ -7018,59 +7018,73 @@
   "lumberSpecies": {
     "Flat Cut White Oak": {
       "price": 6.21,
-      "resaw": false
+      "resaw": false,
+      "price2x8": 0
     },
     "Rift White Oak": {
       "price": 9.83,
-      "resaw": false
+      "resaw": false,
+      "price2x8": 0
     },
     "Walnut": {
       "price": 9.49,
-      "resaw": false
+      "resaw": false,
+      "price2x8": 0
     },
     "Stain Grade Poplar": {
       "price": 1.91,
-      "resaw": false
+      "resaw": false,
+      "price2x8": 0
     },
     "Hard Maple": {
       "price": 2.94,
-      "resaw": false
+      "resaw": false,
+      "price2x8": 0
     },
     "V.G. Hemlock": {
       "price": 6.17,
-      "resaw": true
+      "resaw": true,
+      "price2x8": 7
     },
     "V.G. Fir": {
       "price": 7.82,
-      "resaw": true
+      "resaw": true,
+      "price2x8": 0
     },
     "Therm Ash": {
       "price": 6.1,
-      "resaw": false
+      "resaw": false,
+      "price2x8": 0
     },
     "Therm Poplar": {
       "price": 4.71,
-      "resaw": false
+      "resaw": false,
+      "price2x8": 0
     },
     "Therm Oak": {
       "price": 5.3,
-      "resaw": false
+      "resaw": false,
+      "price2x8": 0
     },
     "Therm Pine": {
       "price": 3.51,
-      "resaw": false
+      "resaw": false,
+      "price2x8": 0
     },
     "Therm VG Hemlock": {
       "price": 11.03,
-      "resaw": true
+      "resaw": true,
+      "price2x8": 0
     },
     "Grey Accoya": {
       "price": 10.43,
-      "resaw": false
+      "resaw": false,
+      "price2x8": 0
     },
     "Custom": {
       "price": 3.25,
-      "resaw": false
+      "resaw": false,
+      "price2x8": 0
     }
   },
   "services": {
