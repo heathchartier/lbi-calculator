@@ -10,9 +10,10 @@ const THICK_OPTIONS = [
 function thickToKey(t){ return { '1/4"':'025','1/2"':'050','3/4"':'075','1"':'100' }[t] || '075'; }
 const KERF = 0.1875;
 const SQUARING = 0.25;
-const RESAW_KERF = 0.0625;   // thin-kerf blade for resaw/rip operations on 2x6
-const TWO_X_SIX_T = 1.5;    // 2x6 actual thickness (inches)
-const TWO_X_SIX_W = 6.0;    // 2x6 nominal width (inches, rough/green)
+const RESAW_KERF = 0.0625;   // thin-kerf blade for resaw/rip operations on 2x6/2x8
+const TWO_X_SIX_T = 1.5;    // 2x6/2x8 shared actual thickness for resaw slabs (inches)
+const TWO_X_SIX_W = 6.0;    // 2x6 rough width (inches)
+const TWO_X_EIGHT_W = 8.0;  // 2x8 rough width (inches)
 const END_TRIM = 4.0;
 const STOCK_LENGTHS      = [96, 120, 144, 168, 192]; // all lengths (long-stock species)
 const STOCK_LENGTHS_STD  = [96, 120, 144];            // max 12' — most species
@@ -817,17 +818,26 @@ function getMillStockLength(slatL, species){
   return getBestStock(slatL, species).stockIn;
 }
 
-// VG Fir/Hemlock: pieces per 2×6 board — width rips × thickness slabs
-// 2×6 stock: 1.5" actual thickness, ~6" rough width; thin-kerf resaw/rip (RESAW_KERF = 1/16")
+// Picks 2x6 vs 2x8 rough stock by slat width. Widths above 7.5" have no valid resaw stock.
+function chooseResawStock(slatW){
+  if(slatW <= 2.5)  return { stock:'2x6', width:TWO_X_SIX_W,   nominalW:6 };
+  if(slatW <= 3.25) return { stock:'2x8', width:TWO_X_EIGHT_W, nominalW:8 };
+  if(slatW <= 5.5)  return { stock:'2x6', width:TWO_X_SIX_W,   nominalW:6 };
+  if(slatW <= 7.5)  return { stock:'2x8', width:TWO_X_EIGHT_W, nominalW:8 };
+  return null;
+}
+
+// VG Fir/Hemlock: pieces per board — width rips × thickness slabs
+// 2x6/2x8 stock: 1.5" actual thickness; thin-kerf resaw/rip (RESAW_KERF = 1/16")
 // Slabs from thickness:  floor(1.5 / (slatT + RESAW_KERF))
 //   11/16" (0.6875): 1.5/0.75 = 2 slabs  |  3/4" (0.75): 1.5/0.8125 = 1 slab
-// Strips from width:     floor(6 / (slatW + RESAW_KERF))
-//   1.75":  6/1.8125 = 3 strips  |  2.75":  6/2.8125 = 2 strips
+// Strips from width:     floor(stockWidth / (slatW + RESAW_KERF))
+//   1.75" from 2x6:  6/1.8125 = 3 strips  |  2.75" from 2x6:  6/2.8125 = 2 strips
 // Examples: 11/16"×1.75" → 2×3=6 ✓  3/4"×1.75" → 1×3=3 ✓
 //           11/16"×2.75" → 2×2=4 ✓  3/4"×2.75" → 1×2=2 ✓
-function getVGPcsPerBoard(slatT, slatW){
+function getVGPcsPerBoard(slatT, slatW, stockWidth = TWO_X_SIX_W){
   const slabs  = Math.floor(TWO_X_SIX_T / (slatT + RESAW_KERF));
-  const strips = Math.floor(TWO_X_SIX_W / (slatW + RESAW_KERF));
+  const strips = Math.floor(stockWidth / (slatW + RESAW_KERF));
   return Math.max(1, slabs * strips);
 }
 
@@ -1071,24 +1081,35 @@ function millLumberCalc(cfg, totalSlats){
   let roughT, widthWaste, pcsWide, bfPerSlat, vgWarning = false;
 
   if(isVGResaw){
+    const picked = chooseResawStock(cfg.slatW);
+    if(!picked){
+      // Wider than 7.5" — no 2x6 or 2x8 rough stock fits. Flag for manual pricing.
+      return {
+        isVGResaw, vgWarning:false, noStock:true, stockUsed:null,
+        stockIn, stockFt, piecesPerLen,
+        roughT:2.0, widthWaste:null, pcsWide:0,
+        boardsNeeded:0, bfPerBoard:0, pcsPerBoard:0,
+        bfPerSlat:0, rawBFTotal:0, defectPct:0,
+      };
+    }
     roughT     = 2.0;
     widthWaste = null;
-    pcsWide    = getVGPcsPerBoard(cfg.thickness, cfg.slatW);
-    const vgAltPcs = getVGPcsPerBoard(0.6875, cfg.slatW); // 11/16" yield for comparison
+    pcsWide    = getVGPcsPerBoard(cfg.thickness, cfg.slatW, picked.width);
+    const vgAltPcs = getVGPcsPerBoard(0.6875, cfg.slatW, picked.width); // 11/16" yield for comparison, same stock
     if(cfg.thickness > 0.6875) vgWarning = true; // suggest 11/16" for better yield
 
-    // Board-based: buy whole 2×6 boards, each yields pcsWide × piecesPerLen slats
+    // Board-based: buy whole boards, each yields pcsWide × piecesPerLen slats
     // You can't buy a fraction of a board so ceil first, then multiply by BF/board
     const pcsPerBoard  = pcsWide * piecesPerLen;
     const boardsNeeded = Math.ceil(totalSlats / pcsPerBoard);
-    const bfPerBoard   = (2 * 6 * stockIn) / 144;
+    const bfPerBoard   = (2 * picked.nominalW * stockIn) / 144;
     // Store for return, then override rawBFTotal calculation below
     bfPerSlat = bfPerBoard / pcsPerBoard; // per-slat rate (for display)
     const rawBFResaw = boardsNeeded * bfPerBoard;
     // Apply safety buffer if on
     const safetyMult = cfg.safetyBuffer ? 1.10 : 1;
     return {
-      isVGResaw, vgWarning, vgAltPcs,
+      isVGResaw, vgWarning, vgAltPcs, noStock:false, stockUsed:picked.stock,
       stockIn, stockFt, piecesPerLen,
       roughT, widthWaste, pcsWide,
       boardsNeeded, bfPerBoard, pcsPerBoard,
@@ -1167,10 +1188,10 @@ function calcLumberPreview(cfg){
   // Update VG resaw note banner — show/hide and update text based on current species
   const resawNote = document.getElementById('lresaw-note-' + cfg.id);
   if(resawNote){
-    if(m.isVGResaw){
+    if(m.isVGResaw && !m.noStock){
       const tLabel = fractionLabel(cfg.thickness.toString());
       const wLabel = fractionLabel(cfg.slatW.toString());
-      resawNote.textContent = `⚠ Hemlock/Fir: Milled from 2×6 rough stock — ${m.pcsWide} pcs @ ${tLabel} × ${wLabel} per board. BF calculated on nominal 2×6.`;
+      resawNote.textContent = `⚠ Hemlock/Fir: Milled from ${m.stockUsed} rough stock — ${m.pcsWide} pcs @ ${tLabel} × ${wLabel} per board. BF calculated on nominal ${m.stockUsed}.`;
       resawNote.style.display = '';
     } else {
       resawNote.style.display = 'none';
@@ -1178,18 +1199,24 @@ function calcLumberPreview(cfg){
   }
 
   const roughLabel = m.isVGResaw
-    ? `2×6 (${m.pcsWide} pcs/board)`
+    ? (m.noStock ? '— (over 7.5" max)' : `${m.stockUsed} (${m.pcsWide} pcs/board)`)
     : m.stockLabel
       ? `${m.stockLabel}${m.isThickResaw ? ' · '+m.pcsWide+' pcs/board' : ''}`
       : (ROUGH_THICKNESSES.find(r=>Math.abs(r.val-m.roughT)<0.001)?.label || m.roughT+'"');
 
+  const noStockHTML = m.noStock ? `
+    <div style="grid-column:1/-1;background:var(--warn-bg,#7c3d0020);border:1px solid var(--warn,#f59e0b);border-radius:6px;padding:6px 10px;color:var(--warn,#f59e0b);font-size:12px;font-weight:600">
+      ⚠ Slat width ${fractionLabel(cfg.slatW.toString())} exceeds 7.5" max for 2×6/2×8 resaw stock — call for pricing
+    </div>` : '';
+
   const vgWarnHTML = m.vgWarning ? `
     <div style="grid-column:1/-1;background:#3a1a00;border:1px solid var(--gold);border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--gold);line-height:1.5">
-      ⚠ ${fractionLabel(cfg.thickness.toString())} VG ${cfg.species} yields only <strong>${m.pcsWide} pcs</strong> per 2×6 board — higher cost.
+      ⚠ ${fractionLabel(cfg.thickness.toString())} VG ${cfg.species} yields only <strong>${m.pcsWide} pcs</strong> per ${m.stockUsed} board — higher cost.
       <strong>Consider 11/16" (${m.vgAltPcs} pcs/board) for better yield.</strong>
     </div>` : '';
 
   preview.innerHTML = `
+    ${noStockHTML}
     ${vgWarnHTML}
     <div class="calc-preview-item"><div class="calc-preview-label">Panels Needed</div><div class="calc-preview-val">${fmtN(panelQty)}</div></div>
     <div class="calc-preview-item"><div class="calc-preview-label">Total Slats</div><div class="calc-preview-val">${fmtN(totalSlats)}</div></div>
@@ -1197,7 +1224,7 @@ function calcLumberPreview(cfg){
     ${m.piecesPerLen > 1 ? `<div class="calc-preview-item"><div class="calc-preview-label">Pcs / Board (length)</div><div class="calc-preview-val">${m.piecesPerLen}</div></div>` : ''}
     <div class="calc-preview-item"><div class="calc-preview-label">Rough Stock</div><div class="calc-preview-val">${roughLabel}</div></div>
     ${m.widthWaste !== null ? `<div class="calc-preview-item"><div class="calc-preview-label">Width Waste Factor</div><div class="calc-preview-val">${m.widthWaste}"</div></div>` : ''}
-    ${m.boardsNeeded ? `<div class="calc-preview-item"><div class="calc-preview-label">Boards to Buy</div><div class="calc-preview-val">${m.boardsNeeded}${m.isVGResaw ? ' × 2×6' : ''} (${m.pcsPerBoard} slat${m.pcsPerBoard!==1?'s':''}/board)</div></div>` : ''}
+    ${m.boardsNeeded ? `<div class="calc-preview-item"><div class="calc-preview-label">Boards to Buy</div><div class="calc-preview-val">${m.boardsNeeded}${m.isVGResaw ? ' × '+m.stockUsed : ''} (${m.pcsPerBoard} slat${m.pcsPerBoard!==1?'s':''}/board)</div></div>` : ''}
     ${m.boardsNeeded && m.bfPerBoard ? `<div class="calc-preview-item"><div class="calc-preview-label">BF / Board</div><div class="calc-preview-val">${fmtN(m.bfPerBoard,0)} BF</div></div>` : `<div class="calc-preview-item"><div class="calc-preview-label">BF / Slat</div><div class="calc-preview-val">${fmtN(m.bfPerSlat,3)} BF</div></div>`}
     <div class="calc-preview-item"><div class="calc-preview-label">Raw BF to Order${m.safetyBuffer?' (+10% waste)':''}</div><div class="calc-preview-val" style="color:var(--teal);font-weight:700;font-size:16px">${fmtN(m.rawBFTotal,0)} BF</div></div>
     <div class="calc-preview-item"><div class="calc-preview-label">Brackets</div><div class="calc-preview-val">${fmtN(panelQty * cfg.bracketsPerPanel)}</div></div>
@@ -1207,8 +1234,7 @@ function calcLumberPreview(cfg){
 function calcLumberCost(cfg){
   if(!cfg.species || !cfg.slatW || !cfg.panelW || !cfg.panelL) return null;
   const sData = pricing.lumberSpecies[cfg.species] || {};
-  const bfPrice = cfg.species === 'Custom' ? (cfg.customPricePerBF || 0) : (sData.price || 0);
-  if(!bfPrice) return null;
+  const isCustom = cfg.species === 'Custom';
 
   const qty = resolveLumberQty(cfg);
   if(!qty) return null;
@@ -1216,6 +1242,15 @@ function calcLumberCost(cfg){
 
   const m = millLumberCalc(cfg, totalSlats);
   const { rawBFTotal } = m;
+
+  const bfPrice = isCustom
+    ? (cfg.customPricePerBF || 0)
+    : (m.isVGResaw && m.stockUsed === '2x8')
+      ? (sData.price2x8 || 0)
+      : (sData.price || 0);
+
+  // Non-resaw species still require a price to appear at all (species picker already filters on it)
+  if(!isCustom && !m.isVGResaw && !bfPrice) return null;
 
   const lumberCost = rawBFTotal * bfPrice;
   const assemblyCost = cfg.assembly ? effectiveSqft * pricing.services.assembly : 0;
@@ -1227,11 +1262,17 @@ function calcLumberCost(cfg){
 
   const subtotal = lumberLine + asmLine + bktLine;
   const lf = totalSlats * cfg.slatL / 12;
+
+  const missingPrice = !isCustom && !m.noStock && !bfPrice;
+  const lumberLabel = m.noStock
+    ? `Raw Lumber — width exceeds 7.5" max ⚠ Call for pricing`
+    : `Raw Lumber (${fmtN(rawBFTotal,0)} BF${m.isVGResaw ? ' · '+m.stockUsed : ''})` + (missingPrice ? ' ⚠ Call for pricing' : '');
+
   return {
     species:cfg.species, isVGResaw:m.isVGResaw, rawBFTotal,
     panelQty, totalSlats, effectiveSqft, lf,
     lines:{
-      [`Raw Lumber (${fmtN(rawBFTotal,0)} BF)`]: lumberLine,
+      [lumberLabel]: lumberLine,
       ...(cfg.assembly ? {'Assembly / Packing': asmLine} : {}),
       [`Black Brackets (${fmtN(panelQty*cfg.bracketsPerPanel)})`]: bktLine,
     },
@@ -1712,6 +1753,8 @@ function renderAdminModal(){
       </td>
       <td><input type="number" class="admin-price-input" value="${p.price||0}" step="0.01"
           data-species="${name}" data-key="price" data-table="lumber"></td>
+      <td><input type="number" class="admin-price-input" value="${p.price2x8||0}" step="0.01"
+          data-species="${name}" data-key="price2x8" data-table="lumber" placeholder="${p.resaw?'':'—'}"></td>
       <td style="text-align:center"><input type="checkbox" ${p.resaw?'checked':''}
           data-species="${name}" data-key="resaw" data-table="lumber"></td>
     </tr>
@@ -3022,21 +3065,31 @@ function calcSlat(){
   let roughLabel, widthWasteLabel, warningHTML = '';
 
   if(isVG){
-    // V.G. Fir / Hemlock: milled from 2×6 rough stock
-    pcsWide      = getVGPcsPerBoard(thick, slatW);
-    const pcsPerBoard = pcsWide * piecesPerLen;
-    boardsNeeded = Math.ceil(totalSlats / pcsPerBoard);
-    bfPerBoard   = (2 * 6 * stockIn) / 144;
-    bfPerSlat    = bfPerBoard / pcsPerBoard;
-    rawBFTotal   = Math.ceil(boardsNeeded * bfPerBoard * safetyMult);
-    roughLabel   = `2×6 rough · ${pcsWide} pcs/board`;
-    widthWasteLabel = '— (2×6 board)';
-    if(thick > 0.6875){
-      const altPcs = getVGPcsPerBoard(0.6875, slatW);
-      warningHTML = `<div style="grid-column:1/-1;background:#3a1a00;border:1px solid var(--gold);border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--gold);line-height:1.5">
-        ⚠ At this thickness you get <strong>${pcsWide} pcs</strong> per 2×6 board.
-        Consider <strong>11/16" (${altPcs} pcs/board)</strong> for better yield.
+    // V.G. Fir / Hemlock: milled from 2×6 or 2×8 rough stock, chosen by slat width
+    const picked = chooseResawStock(slatW);
+    if(!picked){
+      pcsWide = 0; boardsNeeded = 0; bfPerSlat = 0; bfPerBoard = 0; rawBFTotal = 0;
+      roughLabel = '— (over 7.5" max)';
+      widthWasteLabel = '—';
+      warningHTML = `<div style="grid-column:1/-1;background:var(--warn-bg,#7c3d0020);border:1px solid var(--warn,#f59e0b);border-radius:6px;padding:6px 10px;color:var(--warn,#f59e0b);font-size:12px;font-weight:600">
+        ⚠ Slat width exceeds 7.5" max for 2×6/2×8 resaw stock — call for pricing
       </div>`;
+    } else {
+      pcsWide      = getVGPcsPerBoard(thick, slatW, picked.width);
+      const pcsPerBoard = pcsWide * piecesPerLen;
+      boardsNeeded = Math.ceil(totalSlats / pcsPerBoard);
+      bfPerBoard   = (2 * picked.nominalW * stockIn) / 144;
+      bfPerSlat    = bfPerBoard / pcsPerBoard;
+      rawBFTotal   = Math.ceil(boardsNeeded * bfPerBoard * safetyMult);
+      roughLabel   = `${picked.stock} rough · ${pcsWide} pcs/board`;
+      widthWasteLabel = `— (${picked.stock} board)`;
+      if(thick > 0.6875){
+        const altPcs = getVGPcsPerBoard(0.6875, slatW, picked.width);
+        warningHTML = `<div style="grid-column:1/-1;background:#3a1a00;border:1px solid var(--gold);border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--gold);line-height:1.5">
+          ⚠ At this thickness you get <strong>${pcsWide} pcs</strong> per ${picked.stock} board.
+          Consider <strong>11/16" (${altPcs} pcs/board)</strong> for better yield.
+        </div>`;
+      }
     }
   } else {
     // Standard path: lookup rough stock, apply widthWaste
