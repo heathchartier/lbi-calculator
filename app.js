@@ -67,6 +67,15 @@ const STOCK_LOOKUP = [
   { min:2.875,  max:3.8125, stock:4.0,  label:'Milled from 16/4', resaw:false },
 ];
 
+// Maps a STOCK_LOOKUP stock value to its admin price field + short label.
+// 10/4, 12/4, 16/4 (stock 2.5/3.0/4.0) fall back to the 8/4 price — not stocked separately.
+function tierPriceInfo(stockVal){
+  if(stockVal <= 1.0)  return { key:'price',    label:'4/4' };
+  if(stockVal <= 1.25) return { key:'price5_4', label:'5/4' };
+  if(stockVal <= 1.5)  return { key:'price6_4', label:'6/4' };
+  return { key:'price8_4', label:'8/4' };
+}
+
 function parseFraction(str){
   str = (str||'').trim();
   if(!str) return NaN;
@@ -1243,14 +1252,12 @@ function calcLumberCost(cfg){
   const m = millLumberCalc(cfg, totalSlats);
   const { rawBFTotal } = m;
 
+  const tier = m.isVGResaw ? null : tierPriceInfo(m.roughT);
   const bfPrice = isCustom
     ? (cfg.customPricePerBF || 0)
-    : (m.isVGResaw && m.stockUsed === '2x8')
-      ? (sData.price2x8 || 0)
-      : (sData.price || 0);
-
-  // Non-resaw species still require a price to appear at all (species picker already filters on it)
-  if(!isCustom && !m.isVGResaw && !bfPrice) return null;
+    : m.isVGResaw
+      ? (m.stockUsed === '2x8' ? (sData.price2x8 || 0) : (sData.price || 0))
+      : (sData[tier.key] || 0);
 
   const lumberCost = rawBFTotal * bfPrice;
   const assemblyCost = cfg.assembly ? effectiveSqft * pricing.services.assembly : 0;
@@ -1264,9 +1271,10 @@ function calcLumberCost(cfg){
   const lf = totalSlats * cfg.slatL / 12;
 
   const missingPrice = !isCustom && !m.noStock && !bfPrice;
+  const tierTag = m.isVGResaw ? m.stockUsed : (tier ? tier.label : null);
   const lumberLabel = m.noStock
     ? `Raw Lumber — width exceeds 7.5" max ⚠ Call for pricing`
-    : `Raw Lumber (${fmtN(rawBFTotal,0)} BF${m.isVGResaw ? ' · '+m.stockUsed : ''})` + (missingPrice ? ' ⚠ Call for pricing' : '');
+    : `Raw Lumber (${fmtN(rawBFTotal,0)} BF${tierTag ? ' · '+tierTag : ''})` + (missingPrice ? ' ⚠ Call for pricing' : '');
 
   return {
     species:cfg.species, isVGResaw:m.isVGResaw, rawBFTotal,
@@ -1752,7 +1760,14 @@ function renderAdminModal(){
           data-oldname="${name}" data-type="lumber" onchange="renameItem(this)">
       </td>
       <td><input type="number" class="admin-price-input" value="${p.price||0}" step="0.01"
-          data-species="${name}" data-key="price" data-table="lumber"></td>
+          data-species="${name}" data-key="price" data-table="lumber"
+          title="${p.resaw?'2×6 price (VG resaw species)':'4/4 price'}"></td>
+      <td><input type="number" class="admin-price-input" value="${p.price5_4||0}" step="0.01"
+          data-species="${name}" data-key="price5_4" data-table="lumber" placeholder="${p.resaw?'—':''}"></td>
+      <td><input type="number" class="admin-price-input" value="${p.price6_4||0}" step="0.01"
+          data-species="${name}" data-key="price6_4" data-table="lumber" placeholder="${p.resaw?'—':''}"></td>
+      <td><input type="number" class="admin-price-input" value="${p.price8_4||0}" step="0.01"
+          data-species="${name}" data-key="price8_4" data-table="lumber" placeholder="${p.resaw?'—':''}"></td>
       <td><input type="number" class="admin-price-input" value="${p.price2x8||0}" step="0.01"
           data-species="${name}" data-key="price2x8" data-table="lumber" placeholder="${p.resaw?'':'—'}"></td>
       <td style="text-align:center"><input type="checkbox" ${p.resaw?'checked':''}
@@ -2405,7 +2420,8 @@ function calcPanelProduct(p){
   const costPerSheet = sData[`${p.grade}_${p.sheetGrade}_${p.sheetSize}_${c}`] || 0;
   if(!costPerSheet) return null;
   const sqft = p.sheetSize === '4x10' ? 40 : 32;
-  const sellPerSheet = costPerSheet * (1 + (p.markup||0)/100);
+  const margin = (p.markup||0);
+  const sellPerSheet = margin>=100 ? costPerSheet : costPerSheet/(1-margin/100);
   return { costPerSheet, sellPerSheet, sellPerSqft: sellPerSheet / sqft, sqft };
 }
 
@@ -2415,10 +2431,16 @@ function calcLumberProduct(p){
   if(!p.thickness || !p.slatW || !p.slatL) return null;
   const cfg = { species: p.lSpecies, thickness: p.thickness, slatW: p.slatW, slatL: p.slatL, safetyBuffer: false };
   const m = millLumberCalc(cfg, 1);
+  if(m.noStock) return null;
+  const bfPrice = m.isVGResaw
+    ? (m.stockUsed === '2x8' ? (sData.price2x8 || 0) : (sData.price || 0))
+    : (sData[tierPriceInfo(m.roughT).key] || 0);
+  if(!bfPrice) return null;
   const finishedSqft = (p.slatW * p.slatL) / 144;
   const rawBFPerSqft = m.bfPerSlat / finishedSqft;
-  const costPerSqft = rawBFPerSqft * sData.price;
-  return { costPerSqft, sellPerSqft: costPerSqft * (1 + (p.markup||0)/100), rawBFPerSqft };
+  const costPerSqft = rawBFPerSqft * bfPrice;
+  const margin = (p.markup||0);
+  return { costPerSqft, sellPerSqft: margin>=100 ? costPerSqft : costPerSqft/(1-margin/100), rawBFPerSqft };
 }
 
 function renderProductsTab(){
