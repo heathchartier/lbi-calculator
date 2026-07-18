@@ -7638,91 +7638,103 @@
       "ebRoll": 50,
       "price4x8": 49.92,
       "price4x10": 0,
-      "price5x12": 0
+      "price5x12": 93.6
     },
     "Formica 909 or 949 vertical (58 finish)": {
       "ebRoll": 50,
       "price4x8": 44.8,
       "price4x10": 0,
-      "price5x12": 0
+      "price5x12": 84
     },
     "Formica (00, 43, 58 finish) post": {
       "ebRoll": 80,
       "price4x8": 53.76,
       "price4x10": 0,
-      "price5x12": 0
+      "price5x12": 100.8
     },
     "Formica (00, 43, 58 finish) vertical": {
       "ebRoll": 80,
       "price4x8": 50.56,
       "price4x10": 0,
-      "price5x12": 0
+      "price5x12": 94.8
     },
     "Formica (26, 34, 42, 46 finish) post": {
       "ebRoll": 80,
       "price4x8": 64.64,
       "price4x10": 0,
-      "price5x12": 0
+      "price5x12": 121.2
     },
     "Formica (26, 34, 42, 46 finish) vertical": {
       "ebRoll": 80,
       "price4x8": 61.44,
       "price4x10": 0,
-      "price5x12": 0
+      "price5x12": 115.2
     },
     "Formica (BH, RD, ML finish) post": {
       "ebRoll": 80,
       "price4x8": 64.64,
       "price4x10": 0,
-      "price5x12": 0
+      "price5x12": 121.2
     },
     "Formica (BH, RD, ML finish) vertical": {
       "ebRoll": 80,
       "price4x8": 61.44,
       "price4x10": 0,
-      "price5x12": 0
+      "price5x12": 115.2
     },
     "Formica (90, MC, SP finish) vertical": {
       "ebRoll": 80,
-      "price4x8": 53.76,
+      "price4x8": 50.56,
       "price4x10": 0,
-      "price5x12": 0
+      "price5x12": 94.8
     },
     "Formica (90, MC, SP finish) post": {
       "ebRoll": 80,
-      "price4x8": 56.96,
+      "price4x8": 53.76,
       "price4x10": 0,
-      "price5x12": 0
+      "price5x12": 100.8
     },
     "Formica (NG, PG, PX, WR finish) post": {
       "ebRoll": 80,
       "price4x8": 64.64,
       "price4x10": 0,
-      "price5x12": 0
+      "price5x12": 121.2
     },
     "Formica (NG, PG, PX, WR finish) vertical": {
       "ebRoll": 80,
       "price4x8": 61.44,
       "price4x10": 0,
-      "price5x12": 0
+      "price5x12": 115.2
     },
     "Formical ColorCore (58, 90 finish)": {
       "ebRoll": 80,
       "price4x8": 158.4,
-      "price4x10": 0,
+      "price4x10": 198,
       "price5x12": 0
     },
     "Formica phenolic backer post": {
-      "ebRoll": 80,
-      "price4x8": 19.01,
-      "price4x10": 0,
-      "price5x12": 0
+      "ebRoll": 0,
+      "price4x8": 23.04,
+      "price4x10": 28.76,
+      "price5x12": 37.84
     },
     "Formica phenolic backer vertical": {
       "ebRoll": 0,
-      "price4x8": 26.24,
+      "price4x8": 15.36,
+      "price4x10": 18.76,
+      "price5x12": 28.8
+    },
+    "Formica 909 or 949 post (90 finish)": {
+      "price4x8": 57.6,
       "price4x10": 0,
-      "price5x12": 0
+      "price5x12": 108,
+      "ebRoll": 50
+    },
+    "Formica 909 or 949 vertical (90 finish)": {
+      "price4x8": 54.4,
+      "price4x10": 0,
+      "price5x12": 102,
+      "ebRoll": 50
     }
   },
   "laminationCores": {
@@ -8140,7 +8152,8 @@
       "Formica 909 black or 949 white (58 finish) vertical": "Formica 909 or 949 vertical (58 finish)",
       "Formica (00, 43, 58 finish)": "Formica (00, 43, 58 finish) post",
       "Formica (90, MC, SP Finish) vertical": "Formica (90, MC, SP finish) vertical",
-      "Formica (90, MC, SP Finish) post": "Formica (90, MC, SP finish) post"
+      "Formica (90, MC, SP Finish) post": "Formica (90, MC, SP finish) post",
+      "Formica 909 or 949 vert (90 finish)": "Formica 909 or 949 vertical (90 finish)"
     },
     "laminationCores": {
       "FR MDF": "MDF FR",
