@@ -7405,58 +7405,58 @@
   },
   "lumberSpecies": {
     "Flat Cut White Oak": {
-      "price": 6.21,
+      "price": 6.37,
       "resaw": false,
       "price2x8": 0,
-      "price5_4": 0,
-      "price6_4": 0,
-      "price8_4": 0,
+      "price5_4": 6.26,
+      "price6_4": 6.26,
+      "price8_4": 6.24,
       "price2x6": 0
     },
     "Rift White Oak": {
-      "price": 9.83,
+      "price": 10.06,
       "resaw": false,
       "price2x8": 0,
-      "price5_4": 0,
-      "price6_4": 0,
-      "price8_4": 0,
+      "price5_4": 10.69,
+      "price6_4": 10.8,
+      "price8_4": 11.84,
       "price2x6": 0
     },
     "Walnut": {
-      "price": 9.49,
+      "price": 9.77,
       "resaw": false,
       "price2x8": 0,
-      "price5_4": 0,
-      "price6_4": 0,
-      "price8_4": 0,
+      "price5_4": 9.8,
+      "price6_4": 9.84,
+      "price8_4": 9.84,
       "price2x6": 0
     },
     "Stain Grade Poplar": {
       "price": 1.91,
       "resaw": false,
       "price2x8": 0,
-      "price5_4": 0,
-      "price6_4": 0,
-      "price8_4": 0,
+      "price5_4": 1.94,
+      "price6_4": 2.38,
+      "price8_4": 2.38,
       "price2x6": 0
     },
     "Hard Maple": {
-      "price": 2.94,
+      "price": 2.8,
       "resaw": false,
       "price2x8": 0,
-      "price5_4": 0,
-      "price6_4": 0,
-      "price8_4": 0,
+      "price5_4": 3.28,
+      "price6_4": 3.94,
+      "price8_4": 4.14,
       "price2x6": 0
     },
     "V.G. Hemlock": {
-      "price": 0,
+      "price": 7.39,
       "resaw": true,
       "price2x8": 8,
       "price5_4": 0,
       "price6_4": 0,
       "price8_4": 0,
-      "price2x6": 6.17
+      "price2x6": 7.65
     },
     "V.G. Fir": {
       "price": 0,
@@ -7468,13 +7468,13 @@
       "price2x6": 7.82
     },
     "Therm Ash": {
-      "price": 6.1,
+      "price": 9.18,
       "resaw": false,
       "price2x8": 0,
       "price5_4": 0,
       "price6_4": 0,
       "price8_4": 0,
-      "price2x6": 0
+      "price2x6": 11.9
     },
     "Therm Poplar": {
       "price": 4.71,
@@ -7486,7 +7486,7 @@
       "price2x6": 0
     },
     "Therm Oak": {
-      "price": 5.3,
+      "price": 10.58,
       "resaw": false,
       "price2x8": 0,
       "price5_4": 0,
@@ -7495,34 +7495,34 @@
       "price2x6": 0
     },
     "Therm Pine": {
-      "price": 3.51,
+      "price": 7.02,
+      "resaw": false,
+      "price2x8": 0,
+      "price5_4": 0,
+      "price6_4": 0,
+      "price8_4": 0,
+      "price2x6": 5.28
+    },
+    "Therm VG Hemlock": {
+      "price": 11.03,
       "resaw": false,
       "price2x8": 0,
       "price5_4": 0,
       "price6_4": 0,
       "price8_4": 0,
       "price2x6": 0
-    },
-    "Therm VG Hemlock": {
-      "price": 0,
-      "resaw": true,
-      "price2x8": 0,
-      "price5_4": 0,
-      "price6_4": 0,
-      "price8_4": 0,
-      "price2x6": 11.03
     },
     "Grey Accoya": {
       "price": 10.43,
       "resaw": false,
       "price2x8": 0,
-      "price5_4": 0,
+      "price5_4": 11.82,
       "price6_4": 0,
       "price8_4": 0,
       "price2x6": 0
     },
     "Custom": {
-      "price": 3.25,
+      "price": 0,
       "resaw": false,
       "price2x8": 0,
       "price5_4": 0,
