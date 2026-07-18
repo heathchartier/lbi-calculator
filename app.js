@@ -26,29 +26,97 @@ const LONG_STOCK_SPECIES = new Set([
   'Therm Pine',
   'Grey Accoya',
 ]);
-const SHEET_WIDTHS  = { '4x8': 49, '4x10': 49 };
-const SHEET_LENGTHS = { '4x8': 97, '4x10': 121 };
+const SHEET_WIDTHS  = { '4x8': 49, '4x10': 49, '5x10': 61, '5x12': 61 };
+const SHEET_LENGTHS = { '4x8': 97, '4x10': 121, '5x10': 121, '5x12': 145 };
 const EB_ROLL_FEET   = 500;
 const EB_WASTE_FACTOR = 1.1;
 // Lamination thickness definitions. user:false = admin-only (3/4 fallback)
 const LAM_THICK_KEYS = [
+  { k:'t0_25',   label:'1/4"',   val:0.25,   user:true  },
+  { k:'t0_375',  label:'3/8"',   val:0.375,  user:true  },
   { k:'t0_5',    label:'1/2"',   val:0.5,    user:true  },
   { k:'t0_625',  label:'5/8"',   val:0.625,  user:true  },
   { k:'t0_6875', label:'11/16"', val:0.6875, user:false },
   { k:'t0_75',   label:'3/4"',   val:0.75,   user:true  },
   { k:'t1_0',    label:'1"',     val:1.0,    user:true  },
 ];
-const LAM_SIZES = ['4x8','4x10'];
-function blankLamFace(){ return { pricePerSheet:0, ebRoll:0 }; }
-function blankLamCore(){ const o={}; LAM_THICK_KEYS.forEach(t=>LAM_SIZES.forEach(s=>{o[`${t.k}_${s}`]=0;})); return o; }
-// For a chosen thickness value, get {price4x8, price4x10}. 3/4 tries 11/16 first.
+// Core sizes: 4x8, 4x10, 5x10, 5x12. Face/back sheets never come in 5x10 (Baltic Birch net-size only).
+const LAM_SIZES = ['4x8','4x10','5x10','5x12'];
+const LAM_FACE_SIZES = ['4x8','4x10','5x12'];
+// Baltic Birch (or any "net size" flagged core) ships as true net dimensions, not oversize —
+// and only in 48x96 / 60x120. Trimmed 1/4" per edge for squaring before cutting slats.
+const LAM_NET_DIMS = { '4x8': {w:47.5, l:95.5}, '5x10': {w:59.5, l:119.5} };
+const LAM_NET_SIZES = ['4x8','5x10'];
+const LAM_SIZE_AREA = { '4x8': 4608, '4x10': 5760, '5x10': 7200, '5x12': 8640 };
+function blankLamFace(){ return { price4x8:0, price4x10:0, price5x12:0, ebRoll:0 }; }
+function blankLamCore(){ const o={netSize:false}; LAM_THICK_KEYS.forEach(t=>LAM_SIZES.forEach(s=>{o[`${t.k}_${s}`]=0;})); return o; }
+// For a chosen thickness value, get a {size: price} map across all LAM_SIZES. 3/4 tries 11/16 first.
 function getLamSheetPrices(item, thickVal){
   const fallback = thickVal === 0.75 ? 't0_6875' : null;
   const primary  = LAM_THICK_KEYS.find(t => t.val === thickVal)?.k || 't0_75';
   const get = (tk, sz) => (item && item[`${tk}_${sz}`]) || 0;
-  const p4x8  = (fallback && get(fallback,'4x8'))  || get(primary,'4x8');
-  const p4x10 = (fallback && get(fallback,'4x10')) || get(primary,'4x10');
-  return { p4x8, p4x10 };
+  const prices = {};
+  LAM_SIZES.forEach(sz => { prices[sz] = (fallback && get(fallback,sz)) || get(primary,sz); });
+  return prices;
+}
+// Face/back sheets only ever come in 4x8, 4x10, 5x12 (never 5x10). Only priced (>0) sizes count as available.
+function getLamFacePrices(faceData){
+  const out = {};
+  if(!faceData) return out;
+  LAM_FACE_SIZES.forEach(sz => { const p = faceData[`price${sz}`]||0; if(p > 0) out[sz] = p; });
+  return out;
+}
+// Core's actually-available priced sizes at a thickness, respecting the net-size (Baltic Birch) size cap.
+function getLamCoreAvailSizes(coreData, thickVal){
+  const prices = getLamSheetPrices(coreData, thickVal);
+  const allowedSizes = coreData?.netSize ? LAM_NET_SIZES : LAM_SIZES;
+  const out = {};
+  allowedSizes.forEach(sz => { if((prices[sz]||0) > 0) out[sz] = prices[sz]; });
+  return out;
+}
+// Usable cutting dims for a given sheet size — net sheets are already trimmed; oversize sheets get the standard squaring cut.
+function lamUsableDims(sizeKey, isNet){
+  if(isNet){
+    const d = LAM_NET_DIMS[sizeKey];
+    return d ? { w: d.w, l: d.l } : null;
+  }
+  const w = SHEET_WIDTHS[sizeKey], l = SHEET_LENGTHS[sizeKey];
+  return (w && l) ? { w: w - SQUARING, l: l - SQUARING } : null;
+}
+// Brute-force search over every valid (core size × face size × back size) combo, picking the
+// cheapest cost-per-slat. Yield for a combo is capped by whichever item (core/face/back) is
+// physically smallest in each dimension — handles both "core is the limiting factor" (e.g. Baltic
+// Birch net sizes smaller than the laminate) and "face is the limiting factor" (face only comes in
+// a size smaller than the core offers) without needing separate branches for each direction.
+function chooseLamSizes(slatW, slatL, faceAvail, coreAvail, backAvail, coreIsNet){
+  let best = null;
+  const coreSizes = Object.keys(coreAvail);
+  const faceSizes = Object.keys(faceAvail).length ? Object.keys(faceAvail) : [null];
+  const backSizes = Object.keys(backAvail).length ? Object.keys(backAvail) : [null];
+  coreSizes.forEach(coreSz => {
+    const coreDims = lamUsableDims(coreSz, !!coreIsNet);
+    if(!coreDims) return;
+    faceSizes.forEach(faceSz => {
+      const faceDims = faceSz ? lamUsableDims(faceSz, false) : null;
+      backSizes.forEach(backSz => {
+        const backDims = backSz ? lamUsableDims(backSz, false) : null;
+        const effW = Math.min(coreDims.w, faceDims?.w ?? Infinity, backDims?.w ?? Infinity);
+        const effL = Math.min(coreDims.l, faceDims?.l ?? Infinity, backDims?.l ?? Infinity);
+        const cols = Math.floor((effW + KERF) / (slatW + KERF));
+        const rows = Math.floor((effL + KERF) / (slatL + KERF));
+        const yieldPerSheet = Math.max(0, cols * rows);
+        if(yieldPerSheet <= 0) return;
+        const facePrice = faceSz ? (faceAvail[faceSz]||0) : 0;
+        const backPrice = backSz ? (backAvail[backSz]||0) : 0;
+        const corePrice = coreAvail[coreSz]||0;
+        const costPerSlat = (facePrice + backPrice + corePrice) / yieldPerSheet;
+        if(!best || costPerSlat < best.costPerSlat){
+          best = { coreSz, faceSz, backSz, yieldPerSheet, facePrice, backPrice, corePrice, costPerSlat };
+        }
+      });
+    });
+  });
+  return best;
 }
 const SUPPLIER_LABELS = { talbert: 'Talbert (Premium)', timber: 'Timber (Standard)' };
 
@@ -1853,15 +1921,16 @@ function collectAdminForm(){
   // Lamination faces
   document.querySelectorAll('#lamFacesBody input[data-lamface]').forEach(el => {
     const name = el.dataset.lamface, key = el.dataset.key;
-    if(!pricing.laminationFaces[name]) pricing.laminationFaces[name] = { pricePerSheet:0, ebRoll:0 };
+    if(!pricing.laminationFaces[name]) pricing.laminationFaces[name] = blankLamFace();
     pricing.laminationFaces[name][key] = parseFloat(el.value) || 0;
   });
 
   // Lamination cores
   document.querySelectorAll('#lamCoresBody input[data-lamcore]').forEach(el => {
     const name = el.dataset.lamcore, key = el.dataset.key;
-    if(!pricing.laminationCores[name]) pricing.laminationCores[name] = { pricePerSheet:0 };
-    pricing.laminationCores[name][key] = parseFloat(el.value) || 0;
+    if(!pricing.laminationCores[name]) pricing.laminationCores[name] = blankLamCore();
+    if(key === 'netSize') pricing.laminationCores[name].netSize = el.checked;
+    else pricing.laminationCores[name][key] = parseFloat(el.value) || 0;
   });
 
   // Services
@@ -1983,9 +2052,12 @@ function renderLaminationConfigs(){
   cont.innerHTML = '';
   const faces = pricing.laminationFaces || {};
   const cores = pricing.laminationCores || {};
-  const faceKeys = Object.keys(faces).filter(k => (faces[k]?.pricePerSheet||0) > 0);
+  const hasAnyFacePrice = (item) => LAM_FACE_SIZES.some(s => (item?.[`price${s}`]||0) > 0);
+  const faceKeys = Object.keys(faces).filter(k => hasAnyFacePrice(faces[k]));
   const hasAnyCorePrice = (item) => LAM_THICK_KEYS.some(t => LAM_SIZES.some(s => (item[`${t.k}_${s}`]||0) > 0));
   const coreKeys = Object.keys(cores).filter(k => hasAnyCorePrice(cores[k]));
+  // Largest priced sheet size for a face, so the Back dropdown can be filtered to sizes >= the front face
+  const lamFaceMaxArea = (item) => LAM_FACE_SIZES.reduce((max,s) => (item?.[`price${s}`]||0) > 0 ? Math.max(max, LAM_SIZE_AREA[s]) : max, 0);
 
   laminationConfigs.forEach(cfg => {
     const modeLabels = {sqft:'By Sq Ft', slats:'By Slat Count', panels:'By Panel Count'};
@@ -2013,9 +2085,13 @@ function renderLaminationConfigs(){
           <div>
             <label class="field-label">Laminated Back</label>
             <select id="l2-back-${cfg.id}" onchange="lamUpdate(${cfg.id})">
-              ${faceKeys.length
-                ? ['Customer Supplied',...faceKeys].map(f=>`<option value="${f}" ${(cfg.back||cfg.face)===f?'selected':''}>${f}</option>`).join('')
-                : '<option value="Customer Supplied">Customer Supplied (no faces priced — see admin)</option>'}
+              ${(() => {
+                const frontArea = (cfg.face && cfg.face !== 'Customer Supplied') ? lamFaceMaxArea(faces[cfg.face]) : 0;
+                const backKeys = frontArea > 0 ? faceKeys.filter(k => lamFaceMaxArea(faces[k]) >= frontArea) : faceKeys;
+                return backKeys.length
+                  ? ['Customer Supplied',...backKeys].map(f=>`<option value="${f}" ${(cfg.back||cfg.face)===f?'selected':''}>${f}</option>`).join('')
+                  : '<option value="Customer Supplied">Customer Supplied (no faces large enough — see admin)</option>';
+              })()}
             </select>
           </div>
           <div>
@@ -2107,6 +2183,7 @@ function renderLaminationConfigs(){
 function lamUpdate(id){
   const cfg = laminationConfigs.find(c => c.id === id);
   if(!cfg) return;
+  const prevFace = cfg.face;
   cfg.face      = document.getElementById('l2-face-'+id)?.value  || cfg.face;
   cfg.back      = document.getElementById('l2-back-'+id)?.value  || cfg.back;
   cfg.core      = document.getElementById('l2-core-'+id)?.value  || cfg.core;
@@ -2126,7 +2203,7 @@ function lamUpdate(id){
   cfg.manualQty= parseInt(document.getElementById('l2-manualQty-'+id)?.value) || 0;
   const titleEl = document.getElementById('ltitle-'+id);
   if(titleEl) titleEl.textContent = cfg.face || 'New Configuration';
-  if(prevMode !== cfg.calcMode) renderLaminationConfigs();
+  if(prevMode !== cfg.calcMode || prevFace !== cfg.face) renderLaminationConfigs();
   calcLaminationPreview(cfg);
   recalcAll();
   markDirty();
@@ -2167,23 +2244,17 @@ function calcLaminationCost(cfg){
 
   const thick = cfg.thickness || 0.75;
 
-  // Face sheets (single price per sheet, no thickness grid)
-  const facePPS    = isCustomer ? 0 : (faceData?.pricePerSheet || 0);
-  const faceOpt    = chooseVeneerSheet(cfg.slatW, cfg.slatL, facePPS, facePPS);
-  const faceSheets = isCustomer ? 0 : Math.ceil(totalSlats / faceOpt.slatsPerSheet * wasteMult);
-  const faceMat    = isCustomer ? 0 : faceSheets * facePPS;
+  const faceAvail = isCustomer ? {} : getLamFacePrices(faceData);
+  const backAvail = isBackCustomer ? {} : getLamFacePrices(backData);
+  const coreAvail = getLamCoreAvailSizes(coreData, thick);
+  const coreIsNet = !!coreData?.netSize;
+  const combo = chooseLamSizes(cfg.slatW, cfg.slatL, faceAvail, coreAvail, backAvail, coreIsNet);
 
-  // Back sheets (single price per sheet)
-  const backPPS    = isBackCustomer ? 0 : (backData?.pricePerSheet || 0);
-  const backOpt    = chooseVeneerSheet(cfg.slatW, cfg.slatL, backPPS, backPPS);
-  const backSheets = isBackCustomer ? 0 : Math.ceil(totalSlats / backOpt.slatsPerSheet * wasteMult);
-  const backMat    = isBackCustomer ? 0 : backSheets * backPPS;
-
-  // Core sheets
-  const { p4x8: coreP4x8, p4x10: coreP4x10 } = getLamSheetPrices(coreData, thick);
-  const coreOpt    = chooseVeneerSheet(cfg.slatW, cfg.slatL, coreP4x8, coreP4x10);
-  const coreSheets = Math.ceil(totalSlats / coreOpt.slatsPerSheet * wasteMult);
-  const coreMat    = coreSheets * coreOpt.sheetPrice;
+  const sheetsNeeded = combo ? Math.ceil(totalSlats / combo.yieldPerSheet * wasteMult) : 0;
+  const faceMat = (!isCustomer && combo) ? sheetsNeeded * combo.facePrice : 0;
+  const backMat = (!isBackCustomer && combo) ? sheetsNeeded * combo.backPrice : 0;
+  const coreMat = combo ? sheetsNeeded * combo.corePrice : 0;
+  const noPricing = !combo; // no size combo fits at all — missing face/core pricing or slats too big for any size
 
   // Glue line
   const glueCost = effectiveSqft * (pricing.services.glueLine || 0);
@@ -2219,11 +2290,15 @@ function calcLaminationCost(cfg){
   const bktLine     = withMarkup(bracketCost,   'brackets');
 
   const lines = {};
-  if(!isCustomer && faceMat > 0)       lines[`Face Sheets (${fmtN(faceSheets)} × ${cfg.face})`] = faceMatLine;
-  if(isCustomer)                       lines['Face Material (Customer Supplied)'] = 0;
-  if(!isBackCustomer && backMat > 0)   lines[`Back Sheets (${fmtN(backSheets)} × ${cfg.back || cfg.face})`] = backMatLine;
-  if(isBackCustomer)                   lines['Back Material (Customer Supplied)'] = 0;
-  if(coreMat > 0)  lines[`Core Sheets (${fmtN(coreSheets)} × ${cfg.core} ${coreOpt.size})`]  = coreMatLine;
+  if(noPricing){
+    lines['Face / Core / Back — ⚠ No sheet size fits or pricing missing, call for pricing'] = 0;
+  } else {
+    if(!isCustomer && faceMat > 0)       lines[`Face Sheets (${fmtN(sheetsNeeded)} × ${cfg.face} ${combo.faceSz})`] = faceMatLine;
+    if(isCustomer)                       lines['Face Material (Customer Supplied)'] = 0;
+    if(!isBackCustomer && backMat > 0)   lines[`Back Sheets (${fmtN(sheetsNeeded)} × ${cfg.back || cfg.face} ${combo.backSz})`] = backMatLine;
+    if(isBackCustomer)                   lines['Back Material (Customer Supplied)'] = 0;
+    if(coreMat > 0)  lines[`Core Sheets (${fmtN(sheetsNeeded)} × ${cfg.core} ${combo.coreSz})`]  = coreMatLine;
+  }
   if(glueCost > 0) lines['Glue Line']      = glueLineAmt;
   if(cfg.ebSides > 0){
     if(ebMaterialCost > 0) lines[`Edge Band Material (${fmtN(ebRolls)} rolls)`] = ebMatLine;
@@ -2237,7 +2312,7 @@ function calcLaminationCost(cfg){
   return {
     face:cfg.face, back:cfg.back||cfg.face, core:cfg.core,
     effectiveSqft, panelQty, totalSlats,
-    faceSheets, backSheets, coreSheets, ebFt, ebRolls, bracketCount,
+    sheetsNeeded, ebFt, ebRolls, bracketCount,
     lines, subtotal,
     sqftCost: effectiveSqft > 0 && subtotal > 0 ? subtotal/effectiveSqft : null,
   };
@@ -2250,29 +2325,38 @@ function calcLaminationPreview(cfg){
   if(!qty){ el.innerHTML=''; return; }
   const { panelQty, totalSlats, effectiveSqft } = qty;
   const isCustomer = cfg.face === 'Customer Supplied';
+  const isBackCustomer = (cfg.back || cfg.face) === 'Customer Supplied';
   const faceData  = isCustomer ? null : (pricing.laminationFaces||{})[cfg.face];
+  const backData  = isBackCustomer ? null : (pricing.laminationFaces||{})[cfg.back || cfg.face];
   const coreData  = (pricing.laminationCores||{})[cfg.core];
   const wasteMult = cfg.wasteOn !== false ? 1.10 : 1.0;
-  const facePPS   = isCustomer ? 0 : (faceData?.pricePerSheet||0);
-  const faceOpt   = chooseVeneerSheet(cfg.slatW, cfg.slatL, facePPS, facePPS);
-  const faceSheets= isCustomer ? 0 : Math.ceil(totalSlats/faceOpt.slatsPerSheet*wasteMult);
-  const corePPS   = coreData?.pricePerSheet||0;
-  const coreOpt   = chooseVeneerSheet(cfg.slatW, cfg.slatL, corePPS, corePPS);
-  const coreSheets= Math.ceil(totalSlats/coreOpt.slatsPerSheet*wasteMult);
+  const thick     = cfg.thickness || 0.75;
+
+  const faceAvail = isCustomer ? {} : getLamFacePrices(faceData);
+  const backAvail = isBackCustomer ? {} : getLamFacePrices(backData);
+  const coreAvail = getLamCoreAvailSizes(coreData, thick);
+  const coreIsNet = !!coreData?.netSize;
+  const combo = chooseLamSizes(cfg.slatW, cfg.slatL, faceAvail, coreAvail, backAvail, coreIsNet);
+  const sheetsNeeded = combo ? Math.ceil(totalSlats/combo.yieldPerSheet*wasteMult) : 0;
+
   const longSides  = (cfg.ebSides===4||cfg.ebSides===2)?2:(cfg.ebSides===3||cfg.ebSides===1)?1:0;
   const shortSides = (cfg.ebSides===4||cfg.ebSides===3)?2:0;
   const ebLong    = (cfg.slatL/12)*totalSlats*longSides;
   const ebShort   = (cfg.slatW/12)*totalSlats*shortSides;
   const ebRolls   = cfg.ebSides>0?Math.ceil((ebLong+ebShort)*EB_WASTE_FACTOR/EB_ROLL_FEET):0;
   let rows = `<div class="preview-row"><span>${fmtN(totalSlats)} slats · ${fmtN(effectiveSqft,1)} sqft · ${fmtN(panelQty)} panels</span></div>`;
-  if(!isCustomer && facePPS>0)
-    rows += `<div class="preview-row"><span>${isCustomer?'Customer Supplied':cfg.face}</span><span>${fmtN(faceSheets)} sheets (${faceOpt.size})</span></div>`;
-  else if(!isCustomer)
-    rows += `<div class="preview-row"><span>${cfg.face||'Face'}</span><span>${fmtN(faceSheets)} sheets — no price set</span></div>`;
-  else
-    rows += `<div class="preview-row"><span>Face: Customer Supplied</span></div>`;
-  if(cfg.core)
-    rows += `<div class="preview-row"><span>${cfg.core}</span><span>${fmtN(coreSheets)} sheets (${coreOpt.size})</span></div>`;
+  if(!combo){
+    rows += `<div class="preview-row" style="color:var(--warn,#f59e0b)"><span>⚠ No sheet size fits these dimensions, or face/core pricing is missing</span></div>`;
+  } else {
+    if(!isCustomer)
+      rows += `<div class="preview-row"><span>${cfg.face}</span><span>${fmtN(sheetsNeeded)} sheets (${combo.faceSz})</span></div>`;
+    else
+      rows += `<div class="preview-row"><span>Face: Customer Supplied</span></div>`;
+    if(!isBackCustomer && combo.backSz)
+      rows += `<div class="preview-row"><span>${cfg.back||cfg.face}</span><span>${fmtN(sheetsNeeded)} sheets (${combo.backSz})</span></div>`;
+    if(cfg.core)
+      rows += `<div class="preview-row"><span>${cfg.core}</span><span>${fmtN(sheetsNeeded)} sheets (${combo.coreSz})</span></div>`;
+  }
   if(ebRolls>0)
     rows += `<div class="preview-row"><span>EB Material</span><span>${fmtN(ebRolls)} rolls</span></div>`;
   el.innerHTML = `<div class="preview-grid">${rows}</div>`;
@@ -2287,7 +2371,7 @@ function renderLaminationAdmin(){
   const cores = Object.fromEntries(Object.keys(coresRaw).sort(naturalSort).map(k => [k, coresRaw[k]]));
 
   const thickHdr = LAM_THICK_KEYS.map(t =>
-    `<th colspan="2" style="text-align:center;padding:3px 4px;color:var(--mid);border-left:1px solid var(--bdr)">${t.label}</th>`
+    `<th colspan="${LAM_SIZES.length}" style="text-align:center;padding:3px 4px;color:var(--mid);border-left:1px solid var(--bdr)">${t.label}</th>`
   ).join('');
   const sizeHdr = LAM_THICK_KEYS.map(() =>
     LAM_SIZES.map(s=>`<th style="text-align:center;padding:2px 3px;color:var(--mid);font-weight:500;font-size:11px">${s}</th>`).join('')
@@ -2295,9 +2379,10 @@ function renderLaminationAdmin(){
   const priceInputs = (name, d, attr, fn) =>
     LAM_THICK_KEYS.map(t => LAM_SIZES.map(s => {
       const k = `${t.k}_${s}`;
+      const netBlocked = d.netSize && !LAM_NET_SIZES.includes(s);
       return `<td style="padding:2px 3px;border-left:1px solid var(--bdr)">
-        <input type="number" class="admin-price-input" value="${d[k]||0}" step="0.01" style="width:56px"
-          data-${attr}="${name}" data-key="${k}" oninput="${fn}(this)">
+        <input type="number" class="admin-price-input" value="${netBlocked?0:(d[k]||0)}" step="0.01" style="width:56px"
+          data-${attr}="${name}" data-key="${k}" oninput="${fn}(this)" placeholder="${netBlocked?'—':''}" ${netBlocked?'disabled':''}>
       </td>`;
     }).join('')).join('');
 
@@ -2309,7 +2394,9 @@ function renderLaminationAdmin(){
       <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead><tr>
           <th style="text-align:left;padding:4px 8px;color:var(--mid)">Face Name</th>
-          <th style="text-align:center;padding:4px 8px;color:var(--mid)">Price/Sheet ($)</th>
+          <th style="text-align:center;padding:4px 8px;color:var(--mid)">4x8 Price/Sheet ($)</th>
+          <th style="text-align:center;padding:4px 8px;color:var(--mid)">4x10 Price/Sheet ($)</th>
+          <th style="text-align:center;padding:4px 8px;color:var(--mid)">5x12 Price/Sheet ($)</th>
           <th style="text-align:center;padding:4px 8px;color:var(--mid)">EB Roll Price ($)</th>
           <th style="width:36px"></th>
         </tr></thead>
@@ -2320,8 +2407,16 @@ function renderLaminationAdmin(){
                 data-oldname="${name}" data-type="lamface" onchange="renameItem(this)">
             </td>
             <td style="padding:4px 8px;text-align:center">
-              <input type="number" class="admin-price-input" value="${d.pricePerSheet||0}" step="0.01"
-                data-lamface="${name}" data-key="pricePerSheet" oninput="lamFacePriceInput(this)">
+              <input type="number" class="admin-price-input" value="${d.price4x8||0}" step="0.01"
+                data-lamface="${name}" data-key="price4x8" oninput="lamFacePriceInput(this)">
+            </td>
+            <td style="padding:4px 8px;text-align:center">
+              <input type="number" class="admin-price-input" value="${d.price4x10||0}" step="0.01"
+                data-lamface="${name}" data-key="price4x10" oninput="lamFacePriceInput(this)">
+            </td>
+            <td style="padding:4px 8px;text-align:center">
+              <input type="number" class="admin-price-input" value="${d.price5x12||0}" step="0.01"
+                data-lamface="${name}" data-key="price5x12" oninput="lamFacePriceInput(this)">
             </td>
             <td style="padding:4px 8px;text-align:center">
               <input type="number" class="admin-price-input" value="${d.ebRoll||0}" step="0.01"
@@ -2343,13 +2438,14 @@ function renderLaminationAdmin(){
 
     <div style="grid-column:1/-1;margin-top:16px;padding-bottom:6px;border-bottom:1px solid var(--bdr2)">
       <span style="font-size:13px;font-weight:700;color:#c084fc;letter-spacing:.5px;text-transform:uppercase">Lamination Cores</span>
-      <span style="font-size:11px;color:var(--mid);margin-left:8px">Price per sheet ($) by thickness and size</span>
+      <span style="font-size:11px;color:var(--mid);margin-left:8px">Price per sheet ($) by thickness and size. Check "Net Size" for cores (like Baltic Birch) that only come in true 48x96 / 60x120 net dimensions — the 4x10 and 5x12 columns are disabled for those.</span>
     </div>
     <div style="grid-column:1/-1;overflow-x:auto">
       <table style="border-collapse:collapse;font-size:12px;min-width:700px">
         <thead>
           <tr>
             <th style="text-align:left;padding:3px 6px;color:var(--mid)" rowspan="2">Core Name</th>
+            <th style="text-align:center;padding:3px 4px;color:var(--mid)" rowspan="2">Net Size</th>
             ${thickHdr}
             <th rowspan="2" style="width:32px"></th>
           </tr>
@@ -2360,6 +2456,9 @@ function renderLaminationAdmin(){
             <td style="padding:2px 4px;min-width:120px;white-space:nowrap">
               <input type="text" class="admin-name-input" value="${name}"
                 data-oldname="${name}" data-type="lamcore" onchange="renameItem(this)" style="min-width:110px">
+            </td>
+            <td style="padding:2px 4px;text-align:center">
+              <input type="checkbox" ${d.netSize?'checked':''} data-lamcore="${name}" data-key="netSize" onchange="lamCoreNetToggle(this)">
             </td>
             ${priceInputs(name, d, 'lamcore', 'lamCorePriceInput')}
             <td style="padding:2px 4px">
@@ -2642,13 +2741,21 @@ function vPriceInput(el){
 }
 function lamFacePriceInput(el){
   const name = el.dataset.lamface, k = el.dataset.key;
-  if(!pricing.laminationFaces[name]) pricing.laminationFaces[name] = { pricePerSheet:0, ebRoll:0 };
+  if(!pricing.laminationFaces[name]) pricing.laminationFaces[name] = blankLamFace();
   pricing.laminationFaces[name][k] = parseFloat(el.value) || 0;
 }
 function lamCorePriceInput(el){
   const name = el.dataset.lamcore, k = el.dataset.key;
   if(!pricing.laminationCores[name]) pricing.laminationCores[name] = blankLamCore();
   pricing.laminationCores[name][k] = parseFloat(el.value) || 0;
+}
+function lamCoreNetToggle(el){
+  const name = el.dataset.lamcore;
+  if(!pricing.laminationCores[name]) pricing.laminationCores[name] = blankLamCore();
+  pricing.laminationCores[name].netSize = el.checked;
+  renderLaminationAdmin();
+  recalcAll();
+  markDirty();
 }
 
 function renameItem(el){
