@@ -364,7 +364,9 @@ function visibleVeneerSpecies(orientation, supplier, core, thickness){
   }).map(([name]) => name);
 }
 function visibleLumberSpecies(){
-  return Object.entries(pricing.lumberSpecies).filter(([,p]) => (p.price||0) > 0).map(([name]) => name);
+  return Object.entries(pricing.lumberSpecies)
+    .filter(([,p]) => p.resaw ? (p.price2x6||0) > 0 || (p.price2x8||0) > 0 : (p.price||0) > 0)
+    .map(([name]) => name);
 }
 
 // --- VENEER CONFIG ----------------------------------------------------
@@ -1256,7 +1258,7 @@ function calcLumberCost(cfg){
   const bfPrice = isCustom
     ? (cfg.customPricePerBF || 0)
     : m.isVGResaw
-      ? (m.stockUsed === '2x8' ? (sData.price2x8 || 0) : (sData.price || 0))
+      ? (m.stockUsed === '2x8' ? (sData.price2x8 || 0) : (sData.price2x6 || 0))
       : (sData[tier.key] || 0);
 
   const lumberCost = rawBFTotal * bfPrice;
@@ -1760,14 +1762,15 @@ function renderAdminModal(){
           data-oldname="${name}" data-type="lumber" onchange="renameItem(this)">
       </td>
       <td><input type="number" class="admin-price-input" value="${p.price||0}" step="0.01"
-          data-species="${name}" data-key="price" data-table="lumber"
-          title="${p.resaw?'2×6 price (VG resaw species)':'4/4 price'}"></td>
+          data-species="${name}" data-key="price" data-table="lumber" placeholder="${p.resaw?'—':''}"></td>
       <td><input type="number" class="admin-price-input" value="${p.price5_4||0}" step="0.01"
           data-species="${name}" data-key="price5_4" data-table="lumber" placeholder="${p.resaw?'—':''}"></td>
       <td><input type="number" class="admin-price-input" value="${p.price6_4||0}" step="0.01"
           data-species="${name}" data-key="price6_4" data-table="lumber" placeholder="${p.resaw?'—':''}"></td>
       <td><input type="number" class="admin-price-input" value="${p.price8_4||0}" step="0.01"
           data-species="${name}" data-key="price8_4" data-table="lumber" placeholder="${p.resaw?'—':''}"></td>
+      <td><input type="number" class="admin-price-input" value="${p.price2x6||0}" step="0.01"
+          data-species="${name}" data-key="price2x6" data-table="lumber" placeholder="${p.resaw?'':'—'}"></td>
       <td><input type="number" class="admin-price-input" value="${p.price2x8||0}" step="0.01"
           data-species="${name}" data-key="price2x8" data-table="lumber" placeholder="${p.resaw?'':'—'}"></td>
       <td style="text-align:center"><input type="checkbox" ${p.resaw?'checked':''}
@@ -2427,13 +2430,13 @@ function calcPanelProduct(p){
 
 function calcLumberProduct(p){
   const sData = pricing.lumberSpecies[p.lSpecies];
-  if(!sData || !sData.price) return null;
+  if(!sData) return null;
   if(!p.thickness || !p.slatW || !p.slatL) return null;
   const cfg = { species: p.lSpecies, thickness: p.thickness, slatW: p.slatW, slatL: p.slatL, safetyBuffer: false };
   const m = millLumberCalc(cfg, 1);
   if(m.noStock) return null;
   const bfPrice = m.isVGResaw
-    ? (m.stockUsed === '2x8' ? (sData.price2x8 || 0) : (sData.price || 0))
+    ? (m.stockUsed === '2x8' ? (sData.price2x8 || 0) : (sData.price2x6 || 0))
     : (sData[tierPriceInfo(m.roughT).key] || 0);
   if(!bfPrice) return null;
   const finishedSqft = (p.slatW * p.slatL) / 144;

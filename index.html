@@ -853,16 +853,17 @@ select option{background:#1e2226}
     <!-- Lumber Pricing -->
     <div class="modal-section">
       <h3>Lumber Pricing (per board foot)</h3>
-      <p style="font-size:12px;color:var(--mid);margin-bottom:12px">Set to $0 to hide from LBI. Standard species price by rough stock tier (4/4–8/4), auto-detected from finished thickness. Check "Resaw" for Hemlock/Fir — those use the 4/4 column as 2×6 price and 2×8 column separately; narrow slats auto-select 2×6, wider auto-select 2×8 (up to 7.5")</p>
+      <p style="font-size:12px;color:var(--mid);margin-bottom:12px">Set to $0 to hide from LBI. Standard species price by rough stock tier (4/4–8/4), auto-detected from finished thickness. Check "Resaw" for Hemlock/Fir — those use the separate 2×6/2×8 columns instead; narrow slats auto-select 2×6, wider auto-select 2×8 (up to 7.5")</p>
       <div style="overflow-x:auto">
         <table class="pricing-table" id="lumberPricingTable">
           <thead>
             <tr>
               <th>Species</th>
-              <th>$/BF (4/4 · 2×6)</th>
+              <th>$/BF (4/4)</th>
               <th>$/BF (5/4)</th>
               <th>$/BF (6/4)</th>
               <th>$/BF (8/4)</th>
+              <th>$/BF (2×6)</th>
               <th>$/BF (2×8)</th>
               <th>Resaw</th>
             </tr>
@@ -959,7 +960,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260718a"></script>
+<script src="app.js?v=20260718b"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });

@@ -7042,14 +7042,16 @@
       "price2x8": 0
     },
     "V.G. Hemlock": {
-      "price": 6.17,
+      "price": 0,
       "resaw": true,
-      "price2x8": 8
+      "price2x8": 8,
+      "price2x6": 6.17
     },
     "V.G. Fir": {
-      "price": 7.82,
+      "price": 0,
       "resaw": true,
-      "price2x8": 0
+      "price2x8": 0,
+      "price2x6": 7.82
     },
     "Therm Ash": {
       "price": 6.1,
@@ -7072,9 +7074,10 @@
       "price2x8": 0
     },
     "Therm VG Hemlock": {
-      "price": 11.03,
+      "price": 0,
       "resaw": true,
-      "price2x8": 0
+      "price2x8": 0,
+      "price2x6": 11.03
     },
     "Grey Accoya": {
       "price": 10.43,
