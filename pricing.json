@@ -8507,6 +8507,126 @@
       "cost": 92.45,
       "markup": 15,
       "category": 14
+    },
+    {
+      "id": 119,
+      "type": "panel",
+      "name": "3/8 4x8 PB",
+      "cost": 18.96,
+      "markup": 15,
+      "category": 15
+    },
+    {
+      "id": 120,
+      "type": "panel",
+      "name": "1/2 4x8 PB",
+      "cost": 19.53,
+      "markup": 15,
+      "category": 15
+    },
+    {
+      "id": 121,
+      "type": "panel",
+      "name": "1/2 4x10 PB",
+      "cost": 32.12,
+      "markup": 15,
+      "category": 15
+    },
+    {
+      "id": 122,
+      "type": "panel",
+      "name": "1/2 5x12 PB",
+      "cost": 37.27,
+      "markup": 15,
+      "category": 15
+    },
+    {
+      "id": 123,
+      "type": "panel",
+      "name": "5/8 4x8 PB",
+      "cost": 20.98,
+      "markup": 15,
+      "category": 15
+    },
+    {
+      "id": 124,
+      "type": "panel",
+      "name": "5/8 4x10 PB",
+      "cost": 27.19,
+      "markup": 15,
+      "category": 15
+    },
+    {
+      "id": 125,
+      "type": "panel",
+      "name": "11/16 4x8 PB",
+      "cost": 20.43,
+      "markup": 15,
+      "category": 15
+    },
+    {
+      "id": 126,
+      "type": "panel",
+      "name": "11/16 4x10 PB",
+      "cost": 27.18,
+      "markup": 15,
+      "category": 15
+    },
+    {
+      "id": 127,
+      "type": "panel",
+      "name": "11/16 5x12 PB",
+      "cost": 43.84,
+      "markup": 15,
+      "category": 15
+    },
+    {
+      "id": 128,
+      "type": "panel",
+      "name": "3/4 4x8 PB",
+      "cost": 23.76,
+      "markup": 15,
+      "category": 15
+    },
+    {
+      "id": 129,
+      "type": "panel",
+      "name": "3/4 4x10 PB",
+      "cost": 30.3,
+      "markup": 15,
+      "category": 15
+    },
+    {
+      "id": 130,
+      "type": "panel",
+      "name": "3/4 5x12 PB",
+      "cost": 45.02,
+      "markup": 15,
+      "category": 15
+    },
+    {
+      "id": 131,
+      "type": "panel",
+      "name": "1\" 4x8 PB",
+      "cost": 32.68,
+      "markup": 15,
+      "category": 15
+    },
+    {
+      "id": 132,
+      "type": "panel",
+      "name": "1\" 4x10 PB",
+      "cost": 43.7,
+      "markup": 15,
+      "category": 15
+    },
+    {
+      "id": 133,
+      "type": "panel",
+      "name": "1\" 5x12 PB",
+      "cost": 61.94,
+      "markup": 15,
+      "category": 15
     }
   ],
   "productCategories": [
@@ -8557,6 +8677,10 @@
     {
       "id": 14,
       "name": "MR MDF"
+    },
+    {
+      "id": 15,
+      "name": "Regular Particle Board"
     }
   ],
   "veneerCores": [
