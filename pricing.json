@@ -8627,6 +8627,46 @@
       "cost": 61.94,
       "markup": 15,
       "category": 15
+    },
+    {
+      "id": 134,
+      "type": "panel",
+      "name": "1/2 4x8 FR Garnica",
+      "cost": 109.47,
+      "markup": 15,
+      "category": 16
+    },
+    {
+      "id": 135,
+      "type": "panel",
+      "name": "1/2 4x10 FR Garnica",
+      "cost": 185.24,
+      "markup": 15,
+      "category": 16
+    },
+    {
+      "id": 136,
+      "type": "panel",
+      "name": "3/4 4x8 FR Garnica",
+      "cost": 126.16,
+      "markup": 15,
+      "category": 16
+    },
+    {
+      "id": 137,
+      "type": "panel",
+      "name": "3/4 4x10 FR Garnica",
+      "cost": 204.6,
+      "markup": 15,
+      "category": 16
+    },
+    {
+      "id": 138,
+      "type": "panel",
+      "name": "1\" 4x8 FR Garnica",
+      "cost": 134.11,
+      "markup": 15,
+      "category": 16
     }
   ],
   "productCategories": [
@@ -8681,6 +8721,10 @@
     {
       "id": 15,
       "name": "Regular Particle Board"
+    },
+    {
+      "id": 16,
+      "name": "FR Plywood"
     }
   ],
   "veneerCores": [
