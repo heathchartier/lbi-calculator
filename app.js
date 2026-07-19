@@ -300,7 +300,7 @@ let productCart = {};
 let currentJobId = null;
 let productSearch = '';
 let productCatCollapsed = {}; // catId -> bool; unset defaults to collapsed
-let adminProdCatCollapsed = {}; // catId -> bool; unset defaults to expanded
+let adminProdCatCollapsed = {}; // catId -> bool; unset defaults to collapsed
 let productCounter = 0;
 let categoryCounter = 0;
 let _dragProdId = null;
@@ -312,7 +312,6 @@ let _adminVeneerThick  = '075';
 function deepCopy(o){ return JSON.parse(JSON.stringify(o)); }
 function naturalSort(a, b){ return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }); }
 function sortedCats(cats){ return [...cats].sort((a,b) => naturalSort(a.name, b.name)); }
-function sortedProds(prods){ return [...prods].sort((a,b) => naturalSort(a.name, b.name)); }
 
 // --- AUTH -------------------------------------------------------------
 function saveSession(role){
@@ -2592,14 +2591,14 @@ function renderProductsTab(){
   let html = '';
   if(cats.length){
     cats.forEach(cat => {
-      const catProds = sortedProds(products.filter(p => p.category === cat.id));
+      const catProds = products.filter(p => p.category === cat.id);
       html += renderSection('cat-'+cat.id, cat.name, catProds, renderCard, !!html);
     });
-    const uncat = sortedProds(products.filter(p => !p.category || !cats.find(c => c.id === p.category)));
+    const uncat = products.filter(p => !p.category || !cats.find(c => c.id === p.category));
     html += renderSection('uncat', 'Other', uncat, renderCard, !!html);
   } else {
-    const panels = sortedProds(products.filter(p => p.type === 'panel'));
-    const lumber = sortedProds(products.filter(p => p.type === 'lumber'));
+    const panels = products.filter(p => p.type === 'panel');
+    const lumber = products.filter(p => p.type === 'lumber');
     html += renderSection('panels', 'Panel Products', panels, renderPanelCard, !!html);
     html += renderSection('lumber', 'Lumber Products', lumber, renderLumberCard, !!html);
   }
@@ -2836,7 +2835,7 @@ function renderAdminProducts(){
   };
   const sortedCatList = sortedCats(cats);
   const renderCatHeader = (id, label, count, color) => {
-    const collapsed = adminProdCatCollapsed[id] ?? false;
+    const collapsed = adminProdCatCollapsed[id] ?? true;
     return `<div style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;padding:10px 0 2px" onclick="toggleAdminProdCat('${id}')">
       <span style="font-size:10px;color:var(--mid);transition:transform .2s;transform:rotate(${collapsed?'-90deg':'0deg'})">▼</span>
       <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:${color}">${label}</span>
@@ -2845,17 +2844,17 @@ function renderAdminProducts(){
   };
   let html = '';
   sortedCatList.forEach(cat => {
-    const catProds = sortedProds(products.filter(p => p.category === cat.id));
+    const catProds = products.filter(p => p.category === cat.id);
     if(!catProds.length) return;
     const id = 'cat-'+cat.id;
     html += renderCatHeader(id, cat.name, catProds.length, 'var(--teal)');
-    if(!(adminProdCatCollapsed[id] ?? false)) catProds.forEach(p => { html += renderRow(p); });
+    if(!(adminProdCatCollapsed[id] ?? true)) catProds.forEach(p => { html += renderRow(p); });
   });
-  const uncat = sortedProds(products.filter(p => !p.category || !cats.find(c => c.id === p.category)));
+  const uncat = products.filter(p => !p.category || !cats.find(c => c.id === p.category));
   if(uncat.length){
     if(cats.length){
       html += renderCatHeader('uncat', 'Uncategorized', uncat.length, 'var(--mid)');
-      if(!(adminProdCatCollapsed['uncat'] ?? false)) uncat.forEach(p => { html += renderRow(p); });
+      if(!(adminProdCatCollapsed['uncat'] ?? true)) uncat.forEach(p => { html += renderRow(p); });
     } else {
       uncat.forEach(p => { html += renderRow(p); });
     }
@@ -2864,7 +2863,7 @@ function renderAdminProducts(){
 }
 
 function toggleAdminProdCat(id){
-  adminProdCatCollapsed[id] = !(adminProdCatCollapsed[id] ?? false);
+  adminProdCatCollapsed[id] = !(adminProdCatCollapsed[id] ?? true);
   renderAdminProducts();
 }
 
