@@ -844,7 +844,7 @@ function addLumberConfig(){
     species:      last?.species      || '',
     orientation:  last?.orientation  || 'Horizontal',
     thickness:    thick,
-    sanding:      last?.sanding      || false,
+    sanding:      last != null ? (last.sanding ?? true) : true,
     cutToLength:  last?.cutToLength  || false,
     calcMode:     last?.calcMode     || 'sqft',
     safetyBuffer: last != null ? (last.safetyBuffer ?? true) : true,
@@ -1069,7 +1069,7 @@ function lUpdate(id){
   cfg.panelL       = parseFraction(document.getElementById('l-panelL-'+id)?.value) || cfg.panelL;
   cfg.bracketsPerPanel = parseInt(document.getElementById('l-brackets-'+id)?.value) || 0;
   cfg.assembly     = document.getElementById('l-assembly-'+id)?.checked ?? true;
-  cfg.sanding      = document.getElementById('l-sanding-'+id)?.checked ?? false;
+  cfg.sanding      = document.getElementById('l-sanding-'+id)?.checked ?? true;
   cfg.cutToLength  = document.getElementById('l-cut-'+id)?.checked ?? true;
   const prevMode   = cfg.calcMode;
   cfg.calcMode     = document.getElementById('l-mode-'+id)?.value || cfg.calcMode;
