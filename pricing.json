@@ -7831,6 +7831,30 @@
       "price4x10": 0,
       "price5x12": 0,
       "ebRoll": 42.47
+    },
+    "Arpa - Touch of Wood": {
+      "price4x8": 0,
+      "price4x10": 105.4,
+      "price5x12": 0,
+      "ebRoll": 51.12
+    },
+    "Arpa - Tuet": {
+      "price4x8": 0,
+      "price4x10": 220.04,
+      "price5x12": 0,
+      "ebRoll": 51.12
+    },
+    "Krono Span Laminate": {
+      "price4x8": 0,
+      "price4x10": 76.45,
+      "price5x12": 0,
+      "ebRoll": 49.01
+    },
+    "Swiss Krono Laminate": {
+      "price4x8": 93.62,
+      "price4x10": 0,
+      "price5x12": 0,
+      "ebRoll": 43.68
     }
   },
   "laminationCores": {
