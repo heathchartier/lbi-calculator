@@ -404,7 +404,11 @@ select option{background:#1e2226}
   font-family:var(--font-head);font-size:13px;font-weight:700;
   letter-spacing:.8px;text-transform:uppercase;color:var(--teal);
   margin-bottom:12px;
+  display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;
 }
+.product-section-chevron{font-size:11px;transition:transform .2s;color:var(--mid)}
+.product-section-label.collapsed .product-section-chevron{transform:rotate(-90deg)}
+.product-section-count{color:var(--mid);font-weight:500;text-transform:none;letter-spacing:normal}
 .product-grid{
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
@@ -960,7 +964,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260718d"></script>
+<script src="app.js?v=20260719a"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });

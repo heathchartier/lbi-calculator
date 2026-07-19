@@ -299,6 +299,7 @@ let isDirty = false;
 let productCart = {};
 let currentJobId = null;
 let productSearch = '';
+let productCatCollapsed = {}; // catId -> bool; unset defaults to collapsed
 let productCounter = 0;
 let categoryCounter = 0;
 let _dragProdId = null;
@@ -2579,25 +2580,35 @@ function renderProductsTab(){
       </div>
     </div>`;
   };
+  const isSearching = !!q;
+  const renderSection = (id, label, prods, cardFn, topMargin) => {
+    if(!prods.length) return '';
+    const collapsed = isSearching ? false : (productCatCollapsed[id] ?? true);
+    return `<div class="product-section-label${collapsed?' collapsed':''}" style="margin-top:${topMargin?'28px':'0'}" onclick="toggleProductCat('${id}')">
+      <span class="product-section-chevron">▼</span>${label} <span class="product-section-count">(${prods.length})</span>
+    </div>${collapsed ? '' : `<div class="product-grid">${prods.map(cardFn).join('')}</div>`}`;
+  };
   let html = '';
   if(cats.length){
     cats.forEach(cat => {
       const catProds = sortedProds(products.filter(p => p.category === cat.id));
-      if(!catProds.length) return;
-      html += `<div class="product-section-label" style="margin-top:${html?'28px':'0'}">${cat.name}</div><div class="product-grid">${catProds.map(renderCard).join('')}</div>`;
+      html += renderSection('cat-'+cat.id, cat.name, catProds, renderCard, !!html);
     });
     const uncat = sortedProds(products.filter(p => !p.category || !cats.find(c => c.id === p.category)));
-    if(uncat.length){
-      html += `<div class="product-section-label" style="margin-top:${html?'28px':'0'}">Other</div><div class="product-grid">${uncat.map(renderCard).join('')}</div>`;
-    }
+    html += renderSection('uncat', 'Other', uncat, renderCard, !!html);
   } else {
     const panels = sortedProds(products.filter(p => p.type === 'panel'));
     const lumber = sortedProds(products.filter(p => p.type === 'lumber'));
-    if(panels.length) html += `<div class="product-section-label">Panel Products</div><div class="product-grid">${panels.map(renderPanelCard).join('')}</div>`;
-    if(lumber.length) html += `<div class="product-section-label" style="margin-top:${panels.length?'28px':'0'}">Lumber Products</div><div class="product-grid">${lumber.map(renderLumberCard).join('')}</div>`;
+    html += renderSection('panels', 'Panel Products', panels, renderPanelCard, !!html);
+    html += renderSection('lumber', 'Lumber Products', lumber, renderLumberCard, !!html);
   }
   if(!html) html = '<div style="text-align:center;padding:48px 0;color:var(--mid);font-size:15px">No products match your search.</div>';
   cont.innerHTML = searchBar + html;
+}
+
+function toggleProductCat(id){
+  productCatCollapsed[id] = !(productCatCollapsed[id] ?? true);
+  renderProductsTab();
 }
 
 function updateProductQty(name, qty){
