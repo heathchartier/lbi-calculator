@@ -7963,6 +7963,22 @@
       "cost": 211.7,
       "markup": 15,
       "category": 1
+    },
+    {
+      "id": 51,
+      "type": "panel",
+      "name": "3/4 4x8 Black Mdf (MR)",
+      "cost": 79.64,
+      "markup": 15,
+      "category": 1
+    },
+    {
+      "id": 52,
+      "type": "panel",
+      "name": "3/4 4x10 Black MDF (Reg)",
+      "cost": 177.58,
+      "markup": 15,
+      "category": 1
     }
   ],
   "productCategories": [
