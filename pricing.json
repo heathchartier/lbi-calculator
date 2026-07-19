@@ -7567,7 +7567,7 @@
     {
       "id": 1,
       "type": "panel",
-      "name": "Arpa Tuet Laminate",
+      "name": "Arpa Tuet Laminate 4x10",
       "cost": 0,
       "markup": 18,
       "category": 3
@@ -7575,7 +7575,8 @@
     {
       "id": 2,
       "type": "panel",
-      "name": "Arpa Laminate",
+      "name": "Arpa Laminate 4x10",
+      "cost": 0,
       "markup": 18,
       "category": 3
     }
@@ -7604,6 +7605,10 @@
     {
       "id": 6,
       "name": "Services"
+    },
+    {
+      "id": 7,
+      "name": "Mirlux"
     }
   ],
   "veneerCores": [
