@@ -7494,15 +7494,6 @@
       "price8_4": 0,
       "price2x6": 0
     },
-    "Therm Pine": {
-      "price": 7.02,
-      "resaw": false,
-      "price2x8": 0,
-      "price5_4": 0,
-      "price6_4": 0,
-      "price8_4": 0,
-      "price2x6": 5.28
-    },
     "Therm VG Hemlock": {
       "price": 11.03,
       "resaw": false,
@@ -7529,6 +7520,15 @@
       "price6_4": 0,
       "price8_4": 0,
       "price2x6": 0
+    },
+    "Therm Clear Pine": {
+      "price": 7.02,
+      "resaw": false,
+      "price2x8": 0,
+      "price5_4": 0,
+      "price6_4": 0,
+      "price8_4": 0,
+      "price2x6": 5.28
     }
   },
   "services": {
@@ -8995,6 +8995,342 @@
       "cost": 55.36,
       "markup": 15,
       "category": 19
+    },
+    {
+      "id": 180,
+      "type": "panel",
+      "name": "Maple FC Unfinished (500')",
+      "cost": 33.21,
+      "markup": 25,
+      "category": 5
+    },
+    {
+      "id": 181,
+      "type": "panel",
+      "name": "White Oak Rift Unfinished (500')",
+      "cost": 62.72,
+      "markup": 25,
+      "category": 5
+    },
+    {
+      "id": 182,
+      "type": "panel",
+      "name": "Walnut FC Unfinished (500')",
+      "cost": 45.81,
+      "markup": 25,
+      "category": 5
+    },
+    {
+      "id": 183,
+      "type": "panel",
+      "name": "Birch White WPF Unfinished (500')",
+      "cost": 31.69,
+      "markup": 25,
+      "category": 5
+    },
+    {
+      "id": 184,
+      "type": "panel",
+      "name": "Red Oak FC Unfinished (500')",
+      "cost": 36.45,
+      "markup": 25,
+      "category": 5
+    },
+    {
+      "id": 185,
+      "type": "panel",
+      "name": "White Oak FC Unfinished (500')",
+      "cost": 42.82,
+      "markup": 25,
+      "category": 5
+    },
+    {
+      "id": 186,
+      "type": "panel",
+      "name": "African Mahogany FC Unfinished (500')",
+      "cost": 41.85,
+      "markup": 25,
+      "category": 5
+    },
+    {
+      "id": 187,
+      "type": "panel",
+      "name": "Cherry FC Unfinished (500')",
+      "cost": 42.47,
+      "markup": 25,
+      "category": 5
+    },
+    {
+      "id": 188,
+      "type": "panel",
+      "name": "Alder FC Unfinished (500')",
+      "cost": 37.96,
+      "markup": 25,
+      "category": 5
+    },
+    {
+      "id": 189,
+      "type": "panel",
+      "name": "Ash FC Unfinished (500')",
+      "cost": 48.69,
+      "markup": 25,
+      "category": 5
+    },
+    {
+      "id": 190,
+      "type": "lumber",
+      "name": "4/4 FC White Oak",
+      "cost": 6.37,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 191,
+      "type": "lumber",
+      "name": "5/4 FC White Oak",
+      "cost": 6.26,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 192,
+      "type": "lumber",
+      "name": "6/4 FC White Oak",
+      "cost": 6.26,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 193,
+      "type": "panel",
+      "name": "8/4 FC White Oak",
+      "cost": 6.24,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 194,
+      "type": "lumber",
+      "name": "4/4 Grey Accoya",
+      "cost": 10.43,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 195,
+      "type": "lumber",
+      "name": "5/4 Grey Accoya",
+      "cost": 11.82,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 196,
+      "type": "lumber",
+      "name": "4/4 Maple",
+      "cost": 2.8,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 197,
+      "type": "lumber",
+      "name": "5/4 Maple",
+      "cost": 3.28,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 198,
+      "type": "lumber",
+      "name": "6/4 Maple",
+      "cost": 3.94,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 199,
+      "type": "lumber",
+      "name": "8/4 Maple",
+      "cost": 4.14,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 200,
+      "type": "lumber",
+      "name": "4/4 Rift White Oak",
+      "cost": 10.06,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 201,
+      "type": "lumber",
+      "name": "5/4 Rift White Oak",
+      "cost": 10.69,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 202,
+      "type": "lumber",
+      "name": "6/4 Rift White Oak",
+      "cost": 10.8,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 203,
+      "type": "lumber",
+      "name": "8/4 Rift White Oak",
+      "cost": 11.84,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 204,
+      "type": "lumber",
+      "name": "4/4 Poplar",
+      "cost": 1.91,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 205,
+      "type": "lumber",
+      "name": "5/4 Poplar",
+      "cost": 1.94,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 206,
+      "type": "lumber",
+      "name": "6/4 Poplar",
+      "cost": 2.38,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 207,
+      "type": "lumber",
+      "name": "8/4 Poplar",
+      "cost": 2.38,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 208,
+      "type": "lumber",
+      "name": "1x6 Therm Ash",
+      "cost": 9.18,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 209,
+      "type": "lumber",
+      "name": "2x6 Therm Ash",
+      "cost": 11.9,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 210,
+      "type": "lumber",
+      "name": "1x5 Therm Oak",
+      "cost": 10.58,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 211,
+      "type": "lumber",
+      "name": "1x6 Therm Clear Pine",
+      "cost": 7.02,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 212,
+      "type": "lumber",
+      "name": "2x6 Therm Clear Pine",
+      "cost": 5.28,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 213,
+      "type": "lumber",
+      "name": "4/4 Therm Poplar",
+      "cost": 4.71,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 214,
+      "type": "lumber",
+      "name": "1x6 Therm VG Hemlock",
+      "cost": 11.03,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 215,
+      "type": "lumber",
+      "name": "2x6 VG Fir",
+      "cost": 7.82,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 216,
+      "type": "lumber",
+      "name": "1x6 VG Hemlock",
+      "cost": 7.39,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 217,
+      "type": "lumber",
+      "name": "2x6 VG Hemlock",
+      "cost": 7.65,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 218,
+      "type": "lumber",
+      "name": "4/4 Walnut",
+      "cost": 9.77,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 219,
+      "type": "lumber",
+      "name": "5/4 Walnut",
+      "cost": 9.8,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 220,
+      "type": "lumber",
+      "name": "6/4 Walnut",
+      "cost": 9.84,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 221,
+      "type": "lumber",
+      "name": "8/4 Walnut",
+      "cost": 9.84,
+      "markup": 15,
+      "category": 20
     }
   ],
   "productCategories": [
@@ -9061,6 +9397,10 @@
     {
       "id": 19,
       "name": "Wood Veneer"
+    },
+    {
+      "id": 20,
+      "name": "Solid Lumber"
     }
   ],
   "veneerCores": [
@@ -9723,7 +10063,9 @@
   "workerKey": "!!Miles-1227!!",
   "renameMap": {
     "veneerSpecies": {},
-    "lumberSpecies": {},
+    "lumberSpecies": {
+      "Therm Pine": "Therm Clear Pine"
+    },
     "laminationFaces": {
       "Formica 909 black or 949 white (58 finish) post": "Formica 909 or 949 post (58 finish)",
       "Formica 909 black or 949 white (58 finish) vertical": "Formica 909 or 949 vertical (58 finish)",
