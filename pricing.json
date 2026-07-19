@@ -7946,7 +7946,7 @@
       "name": "1/2 4x8 Black MDF (MR)",
       "cost": 48.5,
       "markup": 15,
-      "category": 1
+      "category": 8
     },
     {
       "id": 49,
@@ -7954,7 +7954,7 @@
       "name": "1/2 4x10 Black MDF (FR)",
       "cost": 111.31,
       "markup": 15,
-      "category": 1
+      "category": 8
     },
     {
       "id": 50,
@@ -7962,30 +7962,98 @@
       "name": "3/4 4x8 Black MDF (FR)",
       "cost": 211.7,
       "markup": 15,
-      "category": 1
+      "category": 8
     },
     {
       "id": 51,
       "type": "panel",
-      "name": "3/4 4x8 Black Mdf (MR)",
-      "cost": 79.64,
+      "name": "1/4 4x8 Baltic Birch",
+      "cost": 29.38,
       "markup": 15,
-      "category": 1
+      "category": 9
     },
     {
       "id": 52,
       "type": "panel",
-      "name": "3/4 4x10 Black MDF (Reg)",
-      "cost": 177.58,
+      "name": "1/4 5x10 Baltic Birch",
+      "cost": 65.88,
       "markup": 15,
-      "category": 1
+      "category": 9
+    },
+    {
+      "id": 53,
+      "type": "panel",
+      "name": "3/8 4x8 Baltic Birch",
+      "cost": 37.16,
+      "markup": 15,
+      "category": 9
+    },
+    {
+      "id": 54,
+      "type": "panel",
+      "name": "1/2 4x8 Baltic Birch",
+      "cost": 49.42,
+      "markup": 15,
+      "category": 9
+    },
+    {
+      "id": 55,
+      "type": "panel",
+      "name": "1/2 5x10 Baltic Birch",
+      "cost": 97.2,
+      "markup": 15,
+      "category": 9
+    },
+    {
+      "id": 56,
+      "type": "panel",
+      "name": "5/8 4x8 Baltic Birch",
+      "cost": 54.26,
+      "markup": 15,
+      "category": 9
+    },
+    {
+      "id": 57,
+      "type": "panel",
+      "name": "5/8 5x10 Baltic Birch",
+      "cost": 143.1,
+      "markup": 15,
+      "category": 9
+    },
+    {
+      "id": 58,
+      "type": "panel",
+      "name": "3/4 4x8 Baltic Birch",
+      "cost": 68.95,
+      "markup": 15,
+      "category": 9
+    },
+    {
+      "id": 59,
+      "type": "panel",
+      "name": "3/4 5x10 Baltic Birch",
+      "cost": 135,
+      "markup": 15,
+      "category": 9
+    },
+    {
+      "id": 60,
+      "type": "panel",
+      "name": "1\" 4x8 Baltic Birch",
+      "cost": 89.68,
+      "markup": 15,
+      "category": 9
+    },
+    {
+      "id": 61,
+      "type": "panel",
+      "name": "1\" 5x10 Baltic Birch",
+      "cost": 184.41,
+      "markup": 15,
+      "category": 9
     }
   ],
   "productCategories": [
-    {
-      "id": 1,
-      "name": "MDF"
-    },
     {
       "id": 2,
       "name": "Particle Board"
@@ -8009,6 +8077,18 @@
     {
       "id": 7,
       "name": "Mirlux"
+    },
+    {
+      "id": 8,
+      "name": "Black MDF"
+    },
+    {
+      "id": 9,
+      "name": "Baltic Birch"
+    },
+    {
+      "id": 10,
+      "name": "FR MDF"
     }
   ],
   "veneerCores": [
