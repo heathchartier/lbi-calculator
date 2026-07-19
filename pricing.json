@@ -7717,14 +7717,6 @@
       "category": 7
     },
     {
-      "id": 21,
-      "type": "panel",
-      "name": "3/4 Black Super Matte 1S 4x10 MDF",
-      "cost": 170.31,
-      "markup": 15,
-      "category": 7
-    },
-    {
       "id": 20,
       "type": "panel",
       "name": "3/4 Black Super Matte 1S 4x8 MDF",
@@ -7733,10 +7725,10 @@
       "category": 7
     },
     {
-      "id": 23,
+      "id": 21,
       "type": "panel",
-      "name": "3/4 Black High Gloss 1S 4x10 MDF",
-      "cost": 180.31,
+      "name": "3/4 Black Super Matte 1S 4x10 MDF",
+      "cost": 170.31,
       "markup": 15,
       "category": 7
     },
@@ -7745,6 +7737,14 @@
       "type": "panel",
       "name": "3/4 Black High Gloss 1S 4x8 MDF",
       "cost": 137.29,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 23,
+      "type": "panel",
+      "name": "3/4 Black High Gloss 1S 4x10 MDF",
+      "cost": 180.31,
       "markup": 15,
       "category": 7
     },
@@ -8051,6 +8051,142 @@
       "cost": 184.41,
       "markup": 15,
       "category": 9
+    },
+    {
+      "id": 62,
+      "type": "panel",
+      "name": "1/4 4x8 FR MDF",
+      "cost": 48.09,
+      "markup": 15,
+      "category": 10
+    },
+    {
+      "id": 63,
+      "type": "panel",
+      "name": "1/4 4x10 FR MDF",
+      "cost": 60.87,
+      "markup": 15,
+      "category": 10
+    },
+    {
+      "id": 64,
+      "type": "panel",
+      "name": "3/8 4x8 FR MDF",
+      "cost": 52.85,
+      "markup": 15,
+      "category": 10
+    },
+    {
+      "id": 65,
+      "type": "panel",
+      "name": "3/8 4x10 FR MDF",
+      "cost": 66.69,
+      "markup": 15,
+      "category": 10
+    },
+    {
+      "id": 66,
+      "type": "panel",
+      "name": "1/2 4x8 FR MDF",
+      "cost": 33.63,
+      "markup": 15,
+      "category": 10
+    },
+    {
+      "id": 67,
+      "type": "panel",
+      "name": "1/2 4x10 FR MDF",
+      "cost": 42.65,
+      "markup": 15,
+      "category": 10
+    },
+    {
+      "id": 68,
+      "type": "panel",
+      "name": "1/2 5x12 FR MDF",
+      "cost": 153.44,
+      "markup": 15,
+      "category": 10
+    },
+    {
+      "id": 69,
+      "type": "panel",
+      "name": "5/8 4x8 FR MDF",
+      "cost": 63.5,
+      "markup": 15,
+      "category": 10
+    },
+    {
+      "id": 70,
+      "type": "panel",
+      "name": "5/8 4x10 FR MDF",
+      "cost": 85.7,
+      "markup": 15,
+      "category": 10
+    },
+    {
+      "id": 71,
+      "type": "panel",
+      "name": "11/16 4x8 FR MDF",
+      "cost": 44.82,
+      "markup": 15,
+      "category": 10
+    },
+    {
+      "id": 72,
+      "type": "panel",
+      "name": "11/16 4x10 FR MDF",
+      "cost": 58.6,
+      "markup": 15,
+      "category": 10
+    },
+    {
+      "id": 73,
+      "type": "panel",
+      "name": "11/16 5x12 FR MDF",
+      "cost": 182.35,
+      "markup": 15,
+      "category": 10
+    },
+    {
+      "id": 74,
+      "type": "panel",
+      "name": "3/4 4x8 FR MDF",
+      "cost": 48.67,
+      "markup": 15,
+      "category": 10
+    },
+    {
+      "id": 75,
+      "type": "panel",
+      "name": "3/4 4x10 FR MDF",
+      "cost": 82.92,
+      "markup": 15,
+      "category": 10
+    },
+    {
+      "id": 76,
+      "type": "panel",
+      "name": "3/4 5x12 FR MDF",
+      "cost": 160.65,
+      "markup": 15,
+      "category": 10
+    },
+    {
+      "id": 77,
+      "type": "panel",
+      "name": "1\" 4x8 FR MDF",
+      "cost": 105.07,
+      "markup": 15,
+      "category": 10
+    },
+    {
+      "id": 78,
+      "type": "panel",
+      "name": "1\" 4x10 FR MDF",
+      "cost": 126.39,
+      "markup": 15,
+      "category": 10
     }
   ],
   "productCategories": [
