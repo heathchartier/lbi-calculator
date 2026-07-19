@@ -2382,7 +2382,7 @@ function renderLaminationAdmin(){
       const k = `${t.k}_${s}`;
       const netBlocked = d.netSize && !LAM_NET_SIZES.includes(s);
       return `<td style="padding:2px 3px;border-left:1px solid var(--bdr)">
-        <input type="number" class="admin-price-input" value="${netBlocked?0:(d[k]||0)}" step="0.01" style="width:56px"
+        <input type="number" class="admin-price-input" value="${netBlocked?0:(d[k]||0)}" step="0.01" style="width:78px"
           data-${attr}="${name}" data-key="${k}" oninput="${fn}(this)" placeholder="${netBlocked?'—':''}" ${netBlocked?'disabled':''}>
       </td>`;
     }).join('')).join('');
