@@ -7939,6 +7939,30 @@
       "cost": 49.01,
       "markup": 15,
       "category": 5
+    },
+    {
+      "id": 48,
+      "type": "panel",
+      "name": "1/2 4x8 Black MDF (MR)",
+      "cost": 48.5,
+      "markup": 15,
+      "category": 1
+    },
+    {
+      "id": 49,
+      "type": "panel",
+      "name": "1/2 4x10 Black MDF (FR)",
+      "cost": 111.31,
+      "markup": 15,
+      "category": 1
+    },
+    {
+      "id": 50,
+      "type": "panel",
+      "name": "3/4 4x8 Black MDF (FR)",
+      "cost": 211.7,
+      "markup": 15,
+      "category": 1
     }
   ],
   "productCategories": [
