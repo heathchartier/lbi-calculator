@@ -7579,6 +7579,214 @@
       "cost": 0,
       "markup": 18,
       "category": 3
+    },
+    {
+      "id": 3,
+      "type": "panel",
+      "name": "3/4 White Super Matte 1S 4x8 MDF",
+      "cost": 129.76,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 4,
+      "type": "panel",
+      "name": "3/4 White Super Matte 2S 4x8 MDF",
+      "cost": 173.94,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 5,
+      "type": "panel",
+      "name": "3/4 White Super Matte 1S 4x10 MDF",
+      "cost": 165.08,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 6,
+      "type": "panel",
+      "name": "3/4 White High Gloss 2S 4x8 MDF",
+      "cost": 174.89,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 7,
+      "type": "panel",
+      "name": "3/4 White High Gloss 1S 4x8 MDF",
+      "cost": 129.09,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 8,
+      "type": "panel",
+      "name": "3/4 White High Gloss 1S 4x10 MDF",
+      "cost": 165.49,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 9,
+      "type": "panel",
+      "name": "3/4 Warm White Super Matte 1S 4x8 MDF",
+      "cost": 131.57,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 10,
+      "type": "panel",
+      "name": "3/4 Warm White Super Matte 1S 4x10 MDF",
+      "cost": 130.65,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 11,
+      "type": "panel",
+      "name": "3/4 Jade Green Super Matter 1S 4x8 MDF",
+      "cost": 142.35,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 12,
+      "type": "panel",
+      "name": "3/4 Tan Super Matte 1S 4x8 MDF",
+      "cost": 142.79,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 13,
+      "type": "panel",
+      "name": "3/4 Tan Super Matte 2S 4x8 MDF",
+      "cost": 174.25,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 14,
+      "type": "panel",
+      "name": "3/4 Tan Super Matte 1S 4x10 MDF",
+      "cost": 177.99,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 15,
+      "type": "panel",
+      "name": "3/4 Tan High Gloss 1S 4x8 MDF",
+      "cost": 141.74,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 16,
+      "type": "panel",
+      "name": "3/4 Tan High Gloss 1S 4x10 MDF",
+      "cost": 177.08,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 17,
+      "type": "panel",
+      "name": "3/4 Willow Super Matte 1S 4x8 MDF",
+      "cost": 142.39,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 18,
+      "type": "panel",
+      "name": "3/4 Willow Super Matte 2S 4x8 MDF",
+      "cost": 174.89,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 19,
+      "type": "panel",
+      "name": "3/4 Willow Super Matte 1S 4x10 MDF",
+      "cost": 177.97,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 21,
+      "type": "panel",
+      "name": "3/4 Black Super Matte 1S 4x10 MDF",
+      "cost": 170.31,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 20,
+      "type": "panel",
+      "name": "3/4 Black Super Matte 1S 4x8 MDF",
+      "cost": 137.17,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 23,
+      "type": "panel",
+      "name": "3/4 Black High Gloss 1S 4x10 MDF",
+      "cost": 180.31,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 22,
+      "type": "panel",
+      "name": "3/4 Black High Gloss 1S 4x8 MDF",
+      "cost": 137.29,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 24,
+      "type": "panel",
+      "name": "3/4 Dark Grey Super Matte 1S 4x8 MDF",
+      "cost": 142.49,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 25,
+      "type": "panel",
+      "name": "3/4 Dark Grey  Super Matte 2S 4x8 MDF",
+      "cost": 174.21,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 26,
+      "type": "panel",
+      "name": "3/4 Dark Grey High Gloss 1S 4x8 MDF",
+      "cost": 147.08,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 27,
+      "type": "panel",
+      "name": "3/4 Dark Grey High GLoss 2S 4x8 MDF",
+      "cost": 174.4,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 28,
+      "type": "panel",
+      "name": "3/4 Dark Grey High Gloss 1S 4x10 MDF",
+      "cost": 173.34,
+      "markup": 15,
+      "category": 7
     }
   ],
   "productCategories": [
