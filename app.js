@@ -300,6 +300,7 @@ let productCart = {};
 let currentJobId = null;
 let productSearch = '';
 let productCatCollapsed = {}; // catId -> bool; unset defaults to collapsed
+let adminProdCatCollapsed = {}; // catId -> bool; unset defaults to expanded
 let productCounter = 0;
 let categoryCounter = 0;
 let _dragProdId = null;
@@ -2834,19 +2835,37 @@ function renderAdminProducts(){
     </div>`;
   };
   const sortedCatList = sortedCats(cats);
+  const renderCatHeader = (id, label, count, color) => {
+    const collapsed = adminProdCatCollapsed[id] ?? false;
+    return `<div style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;padding:10px 0 2px" onclick="toggleAdminProdCat('${id}')">
+      <span style="font-size:10px;color:var(--mid);transition:transform .2s;transform:rotate(${collapsed?'-90deg':'0deg'})">▼</span>
+      <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:${color}">${label}</span>
+      <span style="font-size:11px;color:var(--mid)">(${count})</span>
+    </div>`;
+  };
   let html = '';
   sortedCatList.forEach(cat => {
     const catProds = sortedProds(products.filter(p => p.category === cat.id));
     if(!catProds.length) return;
-    html += `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--teal);padding:10px 0 2px">${cat.name}</div>`;
-    catProds.forEach(p => { html += renderRow(p); });
+    const id = 'cat-'+cat.id;
+    html += renderCatHeader(id, cat.name, catProds.length, 'var(--teal)');
+    if(!(adminProdCatCollapsed[id] ?? false)) catProds.forEach(p => { html += renderRow(p); });
   });
   const uncat = sortedProds(products.filter(p => !p.category || !cats.find(c => c.id === p.category)));
   if(uncat.length){
-    if(cats.length) html += `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mid);padding:10px 0 2px">Uncategorized</div>`;
-    uncat.forEach(p => { html += renderRow(p); });
+    if(cats.length){
+      html += renderCatHeader('uncat', 'Uncategorized', uncat.length, 'var(--mid)');
+      if(!(adminProdCatCollapsed['uncat'] ?? false)) uncat.forEach(p => { html += renderRow(p); });
+    } else {
+      uncat.forEach(p => { html += renderRow(p); });
+    }
   }
   cont.innerHTML = html;
+}
+
+function toggleAdminProdCat(id){
+  adminProdCatCollapsed[id] = !(adminProdCatCollapsed[id] ?? false);
+  renderAdminProducts();
 }
 
 function renderCategoryManager(){
