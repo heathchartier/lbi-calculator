@@ -8187,6 +8187,78 @@
       "cost": 126.39,
       "markup": 15,
       "category": 10
+    },
+    {
+      "id": 79,
+      "type": "panel",
+      "name": "1/2 4x8 UL MDF",
+      "cost": 19.93,
+      "markup": 15,
+      "category": 12
+    },
+    {
+      "id": 80,
+      "type": "panel",
+      "name": "1/2 4x10 UL MDF",
+      "cost": 24.86,
+      "markup": 15,
+      "category": 12
+    },
+    {
+      "id": 81,
+      "type": "panel",
+      "name": "1/2 5x12 UL MDF",
+      "cost": 53.79,
+      "markup": 15,
+      "category": 12
+    },
+    {
+      "id": 82,
+      "type": "panel",
+      "name": "5/8 4x8 UL MDF",
+      "cost": 24.64,
+      "markup": 15,
+      "category": 12
+    },
+    {
+      "id": 83,
+      "type": "panel",
+      "name": "3/4 4x8 UL MDF",
+      "cost": 28.72,
+      "markup": 15,
+      "category": 12
+    },
+    {
+      "id": 84,
+      "type": "panel",
+      "name": "3/4 4x10 UL MDF",
+      "cost": 36.36,
+      "markup": 15,
+      "category": 12
+    },
+    {
+      "id": 85,
+      "type": "panel",
+      "name": "3/4 5x12 UL MDF",
+      "cost": 62.09,
+      "markup": 15,
+      "category": 12
+    },
+    {
+      "id": 86,
+      "type": "panel",
+      "name": "1\" 4x8 UL MDF",
+      "cost": 43.25,
+      "markup": 15,
+      "category": 12
+    },
+    {
+      "id": 87,
+      "type": "panel",
+      "name": "1\" 4x10 UL MDF",
+      "cost": 54.76,
+      "markup": 15,
+      "category": 12
     }
   ],
   "productCategories": [
@@ -8225,6 +8297,10 @@
     {
       "id": 10,
       "name": "FR MDF"
+    },
+    {
+      "id": 12,
+      "name": "Ultra Light MDF"
     }
   ],
   "veneerCores": [
