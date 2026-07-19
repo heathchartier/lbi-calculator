@@ -7787,6 +7787,110 @@
       "cost": 173.34,
       "markup": 15,
       "category": 7
+    },
+    {
+      "id": 29,
+      "type": "panel",
+      "name": "3/4 Graphite Super Matte 1S 4x8 MDF",
+      "cost": 142.24,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 30,
+      "type": "panel",
+      "name": "3/4 Graphite Super Matte 1S 4x10 MDF",
+      "cost": 176.76,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 31,
+      "type": "panel",
+      "name": "3/4 Graphite High Gloss 1S 4x8 MDF",
+      "cost": 149.39,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 32,
+      "type": "panel",
+      "name": "3/4 Graphite High Gloss 2S 4x8 MDF",
+      "cost": 173.83,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 33,
+      "type": "panel",
+      "name": "3/4 Dove Grey Super Matte 1S 4x8 MDF",
+      "cost": 136.46,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 34,
+      "type": "panel",
+      "name": "3/4 Light Grey Super Matte 1S 4x8 MDF",
+      "cost": 136.78,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 35,
+      "type": "panel",
+      "name": "3/4 Light Grey Super Matte 1S 4x10 MDF",
+      "cost": 170.22,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 36,
+      "type": "panel",
+      "name": "3/4 Light Grey High Gloss 1S 4x8 MDF",
+      "cost": 136.38,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 37,
+      "type": "panel",
+      "name": "3/4 Light Grey High Gloss 2S 4x10 MDF",
+      "cost": 226.57,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 38,
+      "type": "panel",
+      "name": "3/4 Ruby Red High Gloss 2S 4x8 MDF",
+      "cost": 175.82,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 39,
+      "type": "panel",
+      "name": "3/4 Deep Blue Super Matte 1S 4x8 MDF",
+      "cost": 143.25,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 40,
+      "type": "panel",
+      "name": "3/4 Deep Blue High Gloss 1S 4x8 MDF",
+      "cost": 143.04,
+      "markup": 15,
+      "category": 7
+    },
+    {
+      "id": 41,
+      "type": "panel",
+      "name": "3/4 Deep Blue Super Matte 1S 4x10 MDF",
+      "cost": 173.65,
+      "markup": 15,
+      "category": 7
     }
   ],
   "productCategories": [
