@@ -2567,6 +2567,7 @@ function renderProductsTab(){
     if(!sell) return '';
     const qty = productCart[p.name] || 0;
     const lineTotal = qty > 0 ? `<span class="product-line-total">${fmt(qty * sell)}</span>` : '';
+    const unit = p.type === 'lumber' ? 'BF' : 'EA';
     return `<div class="product-card">
       <div class="product-card-name">${p.name}</div>
       <div class="product-card-prices">
@@ -2575,7 +2576,9 @@ function renderProductsTab(){
       <div class="product-qty-row">
         <label class="field-label" style="margin:0;white-space:nowrap">Qty</label>
         <input type="number" min="0" step="1" value="${qty||''}" placeholder="0"
-          oninput="updateProductQty(${JSON.stringify(p.name)},parseFloat(this.value)||0)">
+          data-pname="${p.name.replace(/"/g,'&quot;')}"
+          oninput="updateProductQty(this.dataset.pname,parseFloat(this.value)||0)">
+        <span class="field-label" style="margin:0">${unit}</span>
         ${lineTotal}
       </div>
     </div>`;
@@ -2599,8 +2602,8 @@ function renderProductsTab(){
   } else {
     const panels = products.filter(p => p.type === 'panel');
     const lumber = products.filter(p => p.type === 'lumber');
-    html += renderSection('panels', 'Panel Products', panels, renderPanelCard, !!html);
-    html += renderSection('lumber', 'Lumber Products', lumber, renderLumberCard, !!html);
+    html += renderSection('panels', 'Panel Products', panels, renderCard, !!html);
+    html += renderSection('lumber', 'Lumber Products', lumber, renderCard, !!html);
   }
   if(!html) html = '<div style="text-align:center;padding:48px 0;color:var(--mid);font-size:15px">No products match your search.</div>';
   cont.innerHTML = searchBar + html;
