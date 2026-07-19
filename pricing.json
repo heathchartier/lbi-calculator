@@ -7740,37 +7740,37 @@
       "price4x8": 56.96,
       "price4x10": 76.03,
       "price5x12": 0,
-      "ebRoll": 0
+      "ebRoll": 33.21
     },
     "White Oak FC": {
       "price4x8": 62.92,
       "price4x10": 87.37,
       "price5x12": 0,
-      "ebRoll": 0
+      "ebRoll": 42.82
     },
     "Red Oak FC": {
       "price4x8": 49.2,
       "price4x10": 63.87,
       "price5x12": 0,
-      "ebRoll": 0
+      "ebRoll": 36.45
     },
     "Walnut FC": {
       "price4x8": 72.81,
       "price4x10": 100.2,
       "price5x12": 0,
-      "ebRoll": 0
+      "ebRoll": 45.81
     },
     "White Oak Rift": {
       "price4x8": 91.15,
       "price4x10": 114.36,
       "price5x12": 0,
-      "ebRoll": 0
+      "ebRoll": 62.72
     },
     "African Mahogany FC": {
       "price4x8": 58.69,
       "price4x10": 122.71,
       "price5x12": 0,
-      "ebRoll": 0
+      "ebRoll": 41.85
     },
     "Walnut Qtr": {
       "price4x8": 95.66,
@@ -7794,13 +7794,13 @@
       "price4x8": 62.9,
       "price4x10": 0,
       "price5x12": 0,
-      "ebRoll": 0
+      "ebRoll": 48.69
     },
     "Alder Clear FC": {
       "price4x8": 66.77,
       "price4x10": 142.88,
       "price5x12": 0,
-      "ebRoll": 0
+      "ebRoll": 37.96
     },
     "Alder Knotty FC": {
       "price4x8": 65.25,
@@ -7818,7 +7818,7 @@
       "price4x8": 53.6,
       "price4x10": 0,
       "price5x12": 0,
-      "ebRoll": 0
+      "ebRoll": 31.69
     },
     "White Oak Qtr": {
       "price4x8": 78,
@@ -7830,7 +7830,7 @@
       "price4x8": 55.36,
       "price4x10": 0,
       "price5x12": 0,
-      "ebRoll": 0
+      "ebRoll": 42.47
     }
   },
   "laminationCores": {
