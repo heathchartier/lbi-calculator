@@ -7567,17 +7567,17 @@
     {
       "id": 1,
       "type": "panel",
-      "name": "Arpa Tuet Laminate 4x10",
-      "cost": 0,
-      "markup": 18,
+      "name": "Arpa - Tuet 4x10",
+      "cost": 220.04,
+      "markup": 15,
       "category": 3
     },
     {
       "id": 2,
       "type": "panel",
-      "name": "Arpa Laminate 4x10",
-      "cost": 0,
-      "markup": 18,
+      "name": "Arpa - Touch of Wood 4x10",
+      "cost": 105.4,
+      "markup": 15,
       "category": 3
     },
     {
@@ -7891,6 +7891,54 @@
       "cost": 173.65,
       "markup": 15,
       "category": 7
+    },
+    {
+      "id": 42,
+      "type": "panel",
+      "name": "Apra - Tuet",
+      "cost": 51.12,
+      "markup": 15,
+      "category": 5
+    },
+    {
+      "id": 43,
+      "type": "panel",
+      "name": "Arpa - Touch of Wood",
+      "cost": 51.12,
+      "markup": 15,
+      "category": 5
+    },
+    {
+      "id": 44,
+      "type": "panel",
+      "name": "Swiss Krono",
+      "cost": 93.62,
+      "markup": 15,
+      "category": 3
+    },
+    {
+      "id": 45,
+      "type": "panel",
+      "name": "Swiss Krono",
+      "cost": 43.68,
+      "markup": 15,
+      "category": 5
+    },
+    {
+      "id": 46,
+      "type": "panel",
+      "name": "Krono Span",
+      "cost": 76.45,
+      "markup": 15,
+      "category": 3
+    },
+    {
+      "id": 47,
+      "type": "panel",
+      "name": "Krono Span",
+      "cost": 49.01,
+      "markup": 15,
+      "category": 5
     }
   ],
   "productCategories": [
