@@ -8795,6 +8795,206 @@
       "cost": 130.62,
       "markup": 15,
       "category": 18
+    },
+    {
+      "id": 155,
+      "type": "panel",
+      "name": "4x8 Maple FC",
+      "cost": 56.96,
+      "markup": 15,
+      "category": 19
+    },
+    {
+      "id": 156,
+      "type": "panel",
+      "name": "4x10 Maple FC",
+      "cost": 76.03,
+      "markup": 15,
+      "category": 19
+    },
+    {
+      "id": 157,
+      "type": "panel",
+      "name": "4x8 White Oak FC",
+      "cost": 62.92,
+      "markup": 15,
+      "category": 19
+    },
+    {
+      "id": 158,
+      "type": "panel",
+      "name": "4x10 White Oak FC",
+      "cost": 87.37,
+      "markup": 15,
+      "category": 19
+    },
+    {
+      "id": 159,
+      "type": "panel",
+      "name": "4x8 Red Oak FC",
+      "cost": 49.2,
+      "markup": 15,
+      "category": 19
+    },
+    {
+      "id": 160,
+      "type": "panel",
+      "name": "4x10 Red Oak FC",
+      "cost": 63.87,
+      "markup": 15,
+      "category": 19
+    },
+    {
+      "id": 161,
+      "type": "panel",
+      "name": "4x8 Walnut FC",
+      "cost": 72.81,
+      "markup": 15,
+      "category": 19
+    },
+    {
+      "id": 162,
+      "type": "panel",
+      "name": "4x10 Walnut FC",
+      "cost": 100.2,
+      "markup": 15,
+      "category": 19
+    },
+    {
+      "id": 163,
+      "type": "panel",
+      "name": "4x8 White Oak Rift",
+      "cost": 91.15,
+      "markup": 15,
+      "category": 19
+    },
+    {
+      "id": 164,
+      "type": "panel",
+      "name": "4x10 White Oak Rift",
+      "cost": 114.36,
+      "markup": 15,
+      "category": 19
+    },
+    {
+      "id": 165,
+      "type": "panel",
+      "name": "4x8 African Mahogany FC",
+      "cost": 58.69,
+      "markup": 15,
+      "category": 19
+    },
+    {
+      "id": 166,
+      "type": "panel",
+      "name": "4x10 African Mahogany FC",
+      "cost": 122.71,
+      "markup": 15,
+      "category": 19
+    },
+    {
+      "id": 167,
+      "type": "panel",
+      "name": "4x8 Walnut Qtr",
+      "cost": 95.66,
+      "markup": 15,
+      "category": 19
+    },
+    {
+      "id": 168,
+      "type": "panel",
+      "name": "4x10 Walnut Qtr",
+      "cost": 129.23,
+      "markup": 15,
+      "category": 19
+    },
+    {
+      "id": 169,
+      "type": "panel",
+      "name": "4x8 Alder Clear FC",
+      "cost": 66.77,
+      "markup": 15,
+      "category": 19
+    },
+    {
+      "id": 170,
+      "type": "panel",
+      "name": "4x10 Alder Clear FC",
+      "cost": 142.88,
+      "markup": 15,
+      "category": 19
+    },
+    {
+      "id": 171,
+      "type": "panel",
+      "name": "4x8 Maple Qtr",
+      "cost": 70.48,
+      "markup": 15,
+      "category": 19
+    },
+    {
+      "id": 172,
+      "type": "panel",
+      "name": "4x10 Maple Qtr",
+      "cost": 130,
+      "markup": 15,
+      "category": 19
+    },
+    {
+      "id": 173,
+      "type": "panel",
+      "name": "4x8 Hickory Calico FC",
+      "cost": 60.07,
+      "markup": 15,
+      "category": 19
+    },
+    {
+      "id": 174,
+      "type": "panel",
+      "name": "4x8 Alder Knotty FC",
+      "cost": 65.25,
+      "markup": 15,
+      "category": 19
+    },
+    {
+      "id": 175,
+      "type": "panel",
+      "name": "4x8 Ash White FC",
+      "cost": 62.9,
+      "markup": 15,
+      "category": 19
+    },
+    {
+      "id": 176,
+      "type": "panel",
+      "name": "4x8 Red Oak Rift",
+      "cost": 68.93,
+      "markup": 15,
+      "category": 19
+    },
+    {
+      "id": 177,
+      "type": "panel",
+      "name": "4x8 Birch White WPF",
+      "cost": 53.6,
+      "markup": 15,
+      "category": 19
+    },
+    {
+      "id": 178,
+      "type": "panel",
+      "name": "4x8 White Oak Qtr",
+      "cost": 78,
+      "markup": 15,
+      "category": 19
+    },
+    {
+      "id": 179,
+      "type": "panel",
+      "name": "4x8 Cherry FC",
+      "cost": 55.36,
+      "markup": 15,
+      "category": 19
     }
   ],
   "productCategories": [
@@ -8857,6 +9057,10 @@
     {
       "id": 18,
       "name": "Reg Plywood/Pro Core"
+    },
+    {
+      "id": 19,
+      "name": "Wood Veneer"
     }
   ],
   "veneerCores": [
