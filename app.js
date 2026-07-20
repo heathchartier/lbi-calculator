@@ -1669,6 +1669,12 @@ async function openSavedJobs(){
   // Always fetch from GitHub — reading jobs.json is public, no token required
   const cloudJobs = await fetchJobsFromCloud();
   if(cloudJobs) localStorage.setItem('lbiq_jobs', JSON.stringify(cloudJobs));
+  renderSavedJobsList();
+}
+
+function renderSavedJobsList(){
+  const list = document.getElementById('savedJobsList');
+  if(!list) return;
   const jobs = JSON.parse(localStorage.getItem('lbiq_jobs') || '[]');
   const canDelete = !!localStorage.getItem('lbiq_worker_key');
   if(!jobs.length){
@@ -1730,12 +1736,12 @@ async function deleteJob(id){
   let jobs = JSON.parse(localStorage.getItem('lbiq_jobs') || '[]');
   jobs = jobs.filter(j => j.id !== id);
   localStorage.setItem('lbiq_jobs', JSON.stringify(jobs));
+  renderSavedJobsList(); // reflect the local delete immediately — don't let a stale cloud re-fetch undo it
   if(localStorage.getItem('lbiq_worker_key')){
     showToast('Deleting…');
     const r = await pushJobsToCloud(jobs);
-    if(!r.ok) showToast('⚠ Deleted locally. Cloud sync failed: '+r.msg);
+    if(!r.ok) showToast('⚠ Deleted locally. Cloud sync failed: '+r.msg+' — will retry next successful sync.');
   }
-  openSavedJobs();
 }
 
 function copyJobCode(job){
