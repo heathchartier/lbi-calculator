@@ -9331,6 +9331,54 @@
       "cost": 9.84,
       "markup": 15,
       "category": 20
+    },
+    {
+      "id": 222,
+      "type": "panel",
+      "name": "3/4 4x10 Master Oak (any color) MDF",
+      "cost": 225.25,
+      "markup": 15,
+      "category": 4
+    },
+    {
+      "id": 223,
+      "type": "panel",
+      "name": "1/4 4x10 Master Oak (any color) MDF",
+      "cost": 187,
+      "markup": 15,
+      "category": 4
+    },
+    {
+      "id": 224,
+      "type": "panel",
+      "name": "5/8 4x10 Master Oak (any color) MDF",
+      "cost": 216.75,
+      "markup": 15,
+      "category": 4
+    },
+    {
+      "id": 225,
+      "type": "panel",
+      "name": "3/4 81.5\"x110.2\" Master Oak (any color) MDF",
+      "cost": 344.25,
+      "markup": 15,
+      "category": 4
+    },
+    {
+      "id": 226,
+      "type": "panel",
+      "name": "3/4 81.5\"x110.2\" Master Oak (any color) Black MDF",
+      "cost": 419.05,
+      "markup": 15,
+      "category": 4
+    },
+    {
+      "id": 227,
+      "type": "panel",
+      "name": "4x10 Master Oak (any color) .8mm",
+      "cost": 176.8,
+      "markup": 15,
+      "category": 3
     }
   ],
   "productCategories": [
@@ -9652,6 +9700,12 @@
       "price4x10": 0,
       "price5x12": 0,
       "ebRoll": 43.68
+    },
+    "Master Oak": {
+      "price4x8": 0,
+      "price4x10": 176.8,
+      "price5x12": 0,
+      "ebRoll": 0
     }
   },
   "laminationCores": {
