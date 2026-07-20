@@ -7895,7 +7895,7 @@
     {
       "id": 42,
       "type": "panel",
-      "name": "Apra - Tuet",
+      "name": "Apra - Tuet (300’)",
       "cost": 51.12,
       "markup": 15,
       "category": 5
@@ -7903,7 +7903,7 @@
     {
       "id": 43,
       "type": "panel",
-      "name": "Arpa - Touch of Wood",
+      "name": "Arpa - Touch of Wood (300’)",
       "cost": 51.12,
       "markup": 15,
       "category": 5
@@ -7919,7 +7919,7 @@
     {
       "id": 45,
       "type": "panel",
-      "name": "Swiss Krono",
+      "name": "Swiss Krono (300’)",
       "cost": 43.68,
       "markup": 15,
       "category": 5
@@ -7935,7 +7935,7 @@
     {
       "id": 47,
       "type": "panel",
-      "name": "Krono Span",
+      "name": "Krono Span (300’)",
       "cost": 49.01,
       "markup": 15,
       "category": 5
@@ -9383,8 +9383,16 @@
     {
       "id": 228,
       "type": "panel",
-      "name": "Master Oak",
+      "name": "Master Oak (328’)",
       "cost": 99.47,
+      "markup": 15,
+      "category": 5
+    },
+    {
+      "id": 229,
+      "type": "panel",
+      "name": "Mirlux (328’)",
+      "cost": 59.55,
       "markup": 15,
       "category": 5
     }
