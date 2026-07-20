@@ -7911,7 +7911,7 @@
     {
       "id": 44,
       "type": "panel",
-      "name": "Swiss Krono",
+      "name": "Swiss Krono 4x9",
       "cost": 93.62,
       "markup": 15,
       "category": 3
@@ -7927,7 +7927,7 @@
     {
       "id": 46,
       "type": "panel",
-      "name": "Krono Span",
+      "name": "Krono Span 4x10",
       "cost": 76.45,
       "markup": 15,
       "category": 3
@@ -9375,10 +9375,18 @@
     {
       "id": 227,
       "type": "panel",
-      "name": "4x10 Master Oak (any color) .8mm",
+      "name": "Master Oak (any color) .8mm 4x10",
       "cost": 176.8,
       "markup": 15,
       "category": 3
+    },
+    {
+      "id": 228,
+      "type": "panel",
+      "name": "Master Oak",
+      "cost": 99.47,
+      "markup": 15,
+      "category": 5
     }
   ],
   "productCategories": [
@@ -9705,7 +9713,7 @@
       "price4x8": 0,
       "price4x10": 176.8,
       "price5x12": 0,
-      "ebRoll": 0
+      "ebRoll": 90.47
     }
   },
   "laminationCores": {
