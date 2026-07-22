@@ -1098,7 +1098,7 @@ function renderLumberConfigs(){
     if(!cfg.species && species.length > 0) cfg.species = species[0];
     const sData    = pricing.lumberSpecies[cfg.species] || {};
     const isResaw  = sData.resaw || false;
-    const millStockIn = !isTG && cfg.slatL ? getMillStockLength(cfg.slatL, cfg.species) : 0;
+    const millStockIn = cfg.slatL ? getMillStockLength(cfg.slatL, cfg.species) : 0;
     const stockFt     = millStockIn / 12;
     const pcsPerLen   = cfg.slatL >= 72 ? 1 : Math.max(1, Math.floor((millStockIn - END_TRIM) / cfg.slatL));
     const qtyLabel = isTG ? 'Total Pieces' : (cfg.calcMode === 'slats' ? 'Total Slats' : 'Number of Panels');
@@ -1176,6 +1176,7 @@ function renderLumberConfigs(){
           <div>
             <label class="field-label">Finished Length ${cfg.calcMode==='sqft'?'(optional)':''}</label>
             <input type="text" id="l-slatL-${cfg.id}" value="${cfg.slatL||''}" placeholder="${cfg.calcMode==='sqft'?'e.g. 96 (blank = random)':'e.g. 96'}" oninput="lUpdate(${cfg.id})">
+            ${cfg.slatL ? `<span class="stock-tag" id="l-stock-${cfg.id}">📏 ${stockFt}' stock · ${pcsPerLen} pc/length</span>` : `<span class="stock-tag" id="l-stock-${cfg.id}" style="display:none"></span>`}
           </div>
           ` : `
           <div>
