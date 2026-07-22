@@ -722,6 +722,143 @@ function chooseVeneerSheet(slatW, slatL, price4x8, price4x10){
   return { size: '4x8', slatsPerSheet: sps8, sheetPrice: 0 };
 }
 
+// Nests multiple different slat sizes onto as few sheets as possible, mixing 4x8/4x10 when
+// cheaper. No rotation — veneer grain direction has to stay fixed, so pieces are only ever
+// placed the way they're specified (w along sheet width, l along sheet length).
+// Uses a shelf/best-fit-decreasing-height heuristic: not provably optimal, but a real nesting
+// pass instead of rounding each size up to its own whole sheet independently.
+function packVeneerSheets(pieces, sheetOptions){
+  const usable = sheetOptions
+    .map(s => ({ ...s, uw: s.w - SQUARING, ul: s.l - SQUARING }))
+    .filter(s => s.price > 0 && s.uw > 0 && s.ul > 0);
+  if(!usable.length){
+    const unfitCount = pieces.reduce((s,p) => s + (p.qty||0), 0);
+    return { sheets: [], totalCost: 0, totalSheets: 0, unfitCount };
+  }
+
+  const instances = [];
+  pieces.forEach(p => {
+    if(!p.w || !p.l || !p.qty) return;
+    for(let i=0;i<p.qty;i++) instances.push({ w:p.w, l:p.l });
+  });
+  instances.sort((a,b) => (b.l - a.l) || (b.w - a.w));
+
+  const openSheets = []; // { key, price, uw, ul, usedLength, shelves:[{height, usedWidth}] }
+  let unfitCount = 0;
+
+  function tryPlaceOnExistingShelf(piece){
+    let best = null;
+    openSheets.forEach(sheet => {
+      sheet.shelves.forEach(shelf => {
+        const remainingW = sheet.uw - shelf.usedWidth;
+        if(remainingW >= piece.w && shelf.height >= piece.l){
+          const waste = remainingW - piece.w;
+          if(!best || waste < best.waste) best = { shelf, waste };
+        }
+      });
+    });
+    return best;
+  }
+  function tryNewShelfOnOpenSheet(piece){
+    let best = null;
+    openSheets.forEach(sheet => {
+      const remainingL = sheet.ul - sheet.usedLength;
+      if(remainingL >= piece.l && sheet.uw >= piece.w){
+        const waste = remainingL - piece.l;
+        if(!best || waste < best.waste) best = { sheet, waste };
+      }
+    });
+    return best;
+  }
+  function openNewSheet(piece){
+    const fits = usable.filter(s => s.uw >= piece.w && s.ul >= piece.l);
+    if(!fits.length) return null;
+    fits.sort((a,b) => a.price - b.price);
+    const chosen = fits[0];
+    const sheet = { key: chosen.key, price: chosen.price, uw: chosen.uw, ul: chosen.ul, usedLength: 0, shelves: [] };
+    openSheets.push(sheet);
+    return sheet;
+  }
+
+  instances.forEach(piece => {
+    const onShelf = tryPlaceOnExistingShelf(piece);
+    if(onShelf){ onShelf.shelf.usedWidth += piece.w + KERF; return; }
+    const newShelf = tryNewShelfOnOpenSheet(piece);
+    if(newShelf){
+      newShelf.sheet.shelves.push({ height: piece.l, usedWidth: piece.w + KERF });
+      newShelf.sheet.usedLength += piece.l + KERF;
+      return;
+    }
+    const sheet = openNewSheet(piece);
+    if(!sheet){ unfitCount++; return; }
+    sheet.shelves.push({ height: piece.l, usedWidth: piece.w + KERF });
+    sheet.usedLength += piece.l + KERF;
+  });
+
+  const counts = {};
+  openSheets.forEach(s => { counts[s.key] = (counts[s.key]||0) + 1; });
+  const sheets = Object.entries(counts).map(([key,count]) => ({ key, count, price: usable.find(u=>u.key===key).price }));
+  const totalCost = sheets.reduce((sum,s) => sum + s.count*s.price, 0);
+  return { sheets, totalCost, totalSheets: openSheets.length, unfitCount };
+}
+
+// Groups veneer configs that can share a cut list: same species, grade, core, thickness,
+// finish, and orientation (grain direction can't be mixed). Custom species only pool
+// together when they also share the same entered sheet price.
+function veneerPoolKey(cfg){
+  const sup = cfg.grade || 'talbert';
+  const gr  = cfg.orientation === 'Vertical' ? 'AA' : 'A3';
+  const ck  = coreToKey(cfg.core || 'Fire Rated MDF');
+  const tk  = thickToKey(cfg.thickness || '3/4"');
+  const fin = cfg.satinFinish ? '_satin' : '';
+  let key = `${cfg.species}|${sup}|${gr}|${ck}|${tk}${fin}|${cfg.orientation}`;
+  if(cfg.species === 'Custom') key += `|${cfg.customPricePerPanel||0}`;
+  return key;
+}
+
+function computeVeneerPools(){
+  const pools = {};
+  veneerConfigs.forEach((cfg, idx) => {
+    if(!cfg.species || !cfg.slatW || !cfg.slatL || !cfg.panelW || !cfg.panelL) return;
+    if(!pricing.veneerSpecies[cfg.species]) return;
+    const qty = resolveVeneerQty(cfg);
+    if(!qty) return;
+    const key = veneerPoolKey(cfg);
+    if(!pools[key]) pools[key] = { members: [] };
+    const wasteMult = cfg.wasteOn !== false ? 1.10 : 1.0;
+    const pieceQty = Math.ceil(qty.totalSlats * wasteMult);
+    pools[key].members.push({ idx, cfg, totalSlats: qty.totalSlats, pieceQty });
+  });
+
+  Object.values(pools).forEach(pool => {
+    const first = pool.members[0].cfg;
+    const isCustom = first.species === 'Custom';
+    let p8, p10;
+    if(isCustom){
+      p8 = p10 = first.customPricePerPanel || 0;
+    } else {
+      const sData = pricing.veneerSpecies[first.species];
+      const sup = first.grade || 'talbert';
+      const gr  = first.orientation === 'Vertical' ? 'AA' : 'A3';
+      const ck  = coreToKey(first.core || 'Fire Rated MDF');
+      const tk  = thickToKey(first.thickness || '3/4"');
+      const fin = first.satinFinish ? '_satin' : '';
+      p8  = sData[`${sup}_${gr}_4x8_${ck}_${tk}${fin}`]  || 0;
+      p10 = sData[`${sup}_${gr}_4x10_${ck}_${tk}${fin}`] || 0;
+    }
+    const sheetOptions = [
+      { key:'4x8',  w:SHEET_WIDTHS['4x8'],  l:SHEET_LENGTHS['4x8'],  price:p8  },
+      { key:'4x10', w:SHEET_WIDTHS['4x10'], l:SHEET_LENGTHS['4x10'], price:p10 },
+    ];
+    const pieces = pool.members.map(m => ({ w:m.cfg.slatW, l:m.cfg.slatL, qty:m.pieceQty }));
+    pool.pack = packVeneerSheets(pieces, sheetOptions);
+    pool.repIdx = pool.members[0].idx;
+    pool.noPricing = !sheetOptions.some(s => s.price > 0);
+  });
+
+  return pools;
+}
+
 function calcVeneerPreview(cfg){
   const preview = document.getElementById('v-preview-'+cfg.id);
   if(!preview) return;
@@ -764,7 +901,7 @@ function calcVeneerPreview(cfg){
   `;
 }
 
-function calcVeneerCost(cfg, cutCostOverride){
+function calcVeneerCost(cfg, cutCostOverride, poolInfo){
   if(!cfg.species || !cfg.slatW || !cfg.panelW || !cfg.panelL) return null;
   const sData = pricing.veneerSpecies[cfg.species];
   if(!sData) return null;
@@ -778,15 +915,37 @@ function calcVeneerCost(cfg, cutCostOverride){
   const coreK  = coreToKey(cfg.core || 'Fire Rated MDF');
   const thickK = thickToKey(cfg.thickness || '3/4"');
   const finishSuffix = cfg.satinFinish ? '_satin' : '';
-  const p8  = sData[`${sup}_${grade}_4x8_${coreK}_${thickK}${finishSuffix}`]  || 0;
-  const p10 = sData[`${sup}_${grade}_4x10_${coreK}_${thickK}${finishSuffix}`] || 0;
-  const opt = chooseVeneerSheet(cfg.slatW, cfg.slatL, p8, p10);
-  const { size: sheetSize, slatsPerSheet, sheetPrice } = opt;
-  const wasteMult   = cfg.wasteOn !== false ? 1.10 : 1.0;
-  const sheetsNeeded = Math.ceil(totalSlats / slatsPerSheet * wasteMult);
-  const sheetCost  = cfg.species === 'Custom' && cfg.customPricePerPanel
-    ? sheetsNeeded * cfg.customPricePerPanel
-    : sheetsNeeded * sheetPrice;
+
+  // Sheet material cost comes from the pooled cut list (shared across every config with the
+  // same species/grade/core/thickness/finish/orientation) rather than being rounded up per
+  // config on its own — see computeVeneerPools()/packVeneerSheets().
+  let sheetCost, sheetLineLabel, sheetsNeeded = 0;
+  if(poolInfo){
+    if(poolInfo.isRep){
+      const pk = poolInfo.pack;
+      const sizesDesc = pk.sheets.map(s => `${s.count} × ${grade} ${s.key}`).join(' + ') || 'no sheet fits';
+      sheetCost = pk.totalCost;
+      sheetsNeeded = pk.totalSheets;
+      const warn = (poolInfo.noPricing || pk.unfitCount > 0) ? ' ⚠ Call for pricing' : '';
+      sheetLineLabel = (poolInfo.memberCount > 1
+        ? `Sheet Material — pooled across ${poolInfo.memberCount} configs (${sizesDesc})`
+        : `Sheet Material (${sizesDesc})`) + warn;
+    } else {
+      sheetCost = 0;
+      sheetLineLabel = `Sheet Material — pooled with Panel Config ${poolInfo.repLabel}`;
+    }
+  } else {
+    // Fallback (shouldn't normally happen — renderResults always supplies poolInfo)
+    const p8  = sData[`${sup}_${grade}_4x8_${coreK}_${thickK}${finishSuffix}`]  || 0;
+    const p10 = sData[`${sup}_${grade}_4x10_${coreK}_${thickK}${finishSuffix}`] || 0;
+    const opt = chooseVeneerSheet(cfg.slatW, cfg.slatL, p8, p10);
+    const wasteMult = cfg.wasteOn !== false ? 1.10 : 1.0;
+    sheetsNeeded = Math.ceil(totalSlats / opt.slatsPerSheet * wasteMult);
+    sheetCost = cfg.species === 'Custom' && cfg.customPricePerPanel
+      ? sheetsNeeded * cfg.customPricePerPanel
+      : sheetsNeeded * opt.sheetPrice;
+    sheetLineLabel = `Sheet Material (${fmtN(sheetsNeeded)} x ${opt.size})` + (opt.sheetPrice ? '' : ' ⚠ Call for pricing');
+  }
 
   const longSides  = (cfg.ebSides===4||cfg.ebSides===2)?2:(cfg.ebSides===3||cfg.ebSides===1)?1:0;
   const shortSides = (cfg.ebSides===4||cfg.ebSides===3)?2:0;
@@ -818,12 +977,9 @@ function calcVeneerCost(cfg, cutCostOverride){
   return {
     species:cfg.species, orientation:cfg.orientation, grade, supplier:sup, cfgGrade:sup,
     sqftPerPanel:qty.sqftPerPanel, panelQty, totalSlats, sheetsNeeded,
-    sheetPrice, slatsPerSheet, ebFt, ebRolls, ebRollPrice, bracketCount, effectiveSqft,
+    ebFt, ebRolls, ebRollPrice, bracketCount, effectiveSqft,
     lines:{
-      [isCustom
-        ? 'Sheet Material ('+fmtN(sheetsNeeded)+' x '+sheetSize+')'
-        : 'Sheet Material ('+fmtN(sheetsNeeded)+' x '+grade+' '+sheetSize+')' + (sheetPrice ? '' : ' ⚠ Call for pricing')
-      ]: panelLine,
+      [sheetLineLabel]: panelLine,
       ['Edge Band Material ('+fmtN(ebRolls)+' rolls)']: ebMatLine,
       ['Edge Band Service ('+fmtN(ebFt,0)+' ft)']: ebSvcLine,
       [cutCostOverride !== undefined ? 'Cut Service (flat)' : 'Cut Service']: cutLine,
@@ -1422,22 +1578,29 @@ function renderResults(){
   const cont = document.getElementById('resultsContent');
   const allResults = [];
 
-  // Pre-compute total sheets across all veneer configs to decide flat vs per-sqft cut
+  // Pool veneer configs that share species/grade/core/thickness/finish/orientation so their
+  // slats get nested onto a shared cut list instead of each config rounding up its own sheets.
+  const veneerPools = computeVeneerPools();
+  const poolByIdx = {};
+  Object.values(veneerPools).forEach(pool => {
+    pool.members.forEach(m => {
+      poolByIdx[m.idx] = {
+        isRep: m.idx === pool.repIdx,
+        pack: pool.pack,
+        memberCount: pool.members.length,
+        noPricing: pool.noPricing,
+        repLabel: pool.repIdx + 1,
+      };
+    });
+  });
+
+  // Total sheets across all pools decides flat vs per-sqft cut charge
   let totalVeneerSheets = 0, totalVeneerSqft = 0;
+  Object.values(veneerPools).forEach(pool => { totalVeneerSheets += pool.pack.totalSheets; });
   const veneerSqfts = veneerConfigs.map(cfg => {
     const qty = resolveVeneerQty(cfg);
     if(!qty || !cfg.slatW || !cfg.slatL) return 0;
-    const sData = pricing.veneerSpecies[cfg.species] || {};
-    const sup = cfg.grade || 'talbert';
-    const gr  = cfg.orientation === 'Vertical' ? 'AA' : 'A3';
-    const ck  = coreToKey(cfg.core || 'Fire Rated MDF');
-    const tk  = thickToKey(cfg.thickness || '3/4"');
-    const fin = cfg.satinFinish ? '_satin' : '';
-    const p8  = sData[`${sup}_${gr}_4x8_${ck}_${tk}${fin}`]  || 0;
-    const p10 = sData[`${sup}_${gr}_4x10_${ck}_${tk}${fin}`] || 0;
-    const opt = chooseVeneerSheet(cfg.slatW, cfg.slatL, p8, p10);
-    totalVeneerSheets += Math.ceil(qty.totalSlats / opt.slatsPerSheet);
-    totalVeneerSqft   += qty.effectiveSqft;
+    totalVeneerSqft += qty.effectiveSqft;
     return qty.effectiveSqft;
   });
   const flatCharge   = pricing.services.cutFlatVeneer     || 0;
@@ -1449,7 +1612,7 @@ function renderResults(){
     if(useVeneerFlat && totalVeneerSqft > 0){
       cutOverride = flatCharge * ((veneerSqfts[i] || 0) / totalVeneerSqft);
     }
-    const r = calcVeneerCost(cfg, cutOverride);
+    const r = calcVeneerCost(cfg, cutOverride, poolByIdx[i]);
     if(r) allResults.push({...r, label:`Panel Config ${i+1} — ${r.species} (${r.orientation})`});
   });
   lumberConfigs.forEach((cfg,i) => {
