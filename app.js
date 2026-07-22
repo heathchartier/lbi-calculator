@@ -1752,8 +1752,26 @@ function renderResults(){
     const r = calcLumberCost(cfg);
     if(r) allResults.push({...r, label:`Lumber Config ${i+1} — ${r.species}`});
   });
+
+  // Lamination Cut Service shares the same flat-charge/threshold settings as veneer
+  // (Cut Service Flat Charge / Flat Charge Threshold), decided independently of veneer's own count.
+  let totalLamSheets = 0, totalLamSqft = 0;
+  const lamSqfts = laminationConfigs.map(cfg => {
+    const qty = resolveLaminationQty(cfg);
+    if(!qty) return 0;
+    const preview = calcLaminationCost(cfg);
+    if(preview) totalLamSheets += preview.sheetsNeeded;
+    totalLamSqft += qty.effectiveSqft;
+    return qty.effectiveSqft;
+  });
+  const useLamFlat = flatCharge > 0 && totalLamSheets > 0 && totalLamSheets <= flatThresh;
+
   laminationConfigs.forEach((cfg,i) => {
-    const r = calcLaminationCost(cfg);
+    let cutOverride;
+    if(useLamFlat && totalLamSqft > 0){
+      cutOverride = flatCharge * ((lamSqfts[i] || 0) / totalLamSqft);
+    }
+    const r = calcLaminationCost(cfg, cutOverride);
     if(r) allResults.push({...r, label:`Lam Config ${i+1} — ${cfg.face||'New Config'}`, isLam:true});
   });
 
@@ -2533,7 +2551,7 @@ function resolveLaminationQty(cfg){
   }
 }
 
-function calcLaminationCost(cfg){
+function calcLaminationCost(cfg, cutCostOverride){
   const qty = resolveLaminationQty(cfg);
   if(!qty) return null;
   const { panelQty, totalSlats, effectiveSqft } = qty;
@@ -2573,8 +2591,8 @@ function calcLaminationCost(cfg){
   const ebMaterialCost= ebRolls * ebRollPrice;
   const ebServiceCost = ebFt * (pricing.services.ebServicePerFt || 0);
 
-  // Cut service
-  const cutCost = effectiveSqft * (pricing.services.cutServicePerSqft || 0);
+  // Cut service — flat charge under threshold, same settings as veneer's Cut Service
+  const cutCost = cutCostOverride !== undefined ? cutCostOverride : effectiveSqft * (pricing.services.cutServicePerSqft || 0);
 
   // Assembly + brackets
   const assemblyCost = cfg.assembly ? effectiveSqft * (pricing.services.assembly || 0) : 0;
@@ -2607,7 +2625,7 @@ function calcLaminationCost(cfg){
     if(ebMaterialCost > 0) lines[`Edge Band Material (${fmtN(ebRolls)} rolls)`] = ebMatLine;
     if(ebServiceCost  > 0) lines[`Edge Band Service (${fmtN(ebFt,0)} ft)`]      = ebSvcLine;
   }
-  if(cutCost > 0)      lines['Cut Service']             = cutLine;
+  if(cutCost > 0)      lines[cutCostOverride !== undefined ? 'Cut Service (flat)' : 'Cut Service'] = cutLine;
   if(assemblyCost > 0) lines['Assembly / Packing']       = asmLine;
   if(bracketCost  > 0) lines[`Black Brackets (${fmtN(bracketCount)})`] = bktLine;
 
