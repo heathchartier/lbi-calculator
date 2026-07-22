@@ -526,7 +526,7 @@ function renderVeneerConfigs(){
           <div>
             <label class="field-label">Thickness</label>
             <select id="v-thick-${cfg.id}" onchange="vUpdate(${cfg.id})">
-              ${THICK_OPTIONS.map(({label})=>`<option value="${label}" ${cfg.thickness===label?'selected':''}>${label}</option>`).join('')}
+              ${THICK_OPTIONS.map(({label})=>`<option value="${label.replace(/"/g,'&quot;')}" ${cfg.thickness===label?'selected':''}>${label}</option>`).join('')}
             </select>
           </div>
           <div>
