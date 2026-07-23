@@ -7546,7 +7546,7 @@
     "sandingPerLF": 0.19,
     "cutThreshold": 3000,
     "cutPerLF": 0.21,
-    "cutFlatVeneer": 100,
+    "cutFlatVeneer": 106.25,
     "cutVeneerThreshold": 20,
     "glueLine": 0.5775,
     "resawFlat": 745,
