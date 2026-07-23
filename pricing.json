@@ -9567,12 +9567,6 @@
       "price4x10": 0,
       "price5x12": 115.2
     },
-    "Formical ColorCore (58, 90 finish)": {
-      "ebRoll": 80,
-      "price4x8": 158.4,
-      "price4x10": 198,
-      "price5x12": 0
-    },
     "Formica phenolic backer post": {
       "ebRoll": 0,
       "price4x8": 23.04,
@@ -9722,6 +9716,12 @@
       "price4x10": 176.8,
       "price5x12": 0,
       "ebRoll": 90.47
+    },
+    "Formica ColorCore (58, 90 finish)": {
+      "ebRoll": 80,
+      "price4x8": 158.4,
+      "price4x10": 198,
+      "price5x12": 0
     }
   },
   "laminationCores": {
@@ -10144,7 +10144,8 @@
       "Formica (90, MC, SP Finish) post": "Formica (90, MC, SP finish) post",
       "Formica 909 or 949 vert (90 finish)": "Formica 909 or 949 vertical (90 finish)",
       "Alder Clear": "Alder Clear FC",
-      "Alder Knotty": "Alder Knotty FC"
+      "Alder Knotty": "Alder Knotty FC",
+      "Formical ColorCore (58, 90 finish)": "Formica ColorCore (58, 90 finish)"
     },
     "laminationCores": {
       "FR MDF": "MDF FR",
