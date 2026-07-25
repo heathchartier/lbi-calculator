@@ -9635,6 +9635,38 @@
       "cost": 198,
       "markup": 15,
       "category": 3
+    },
+    {
+      "id": 260,
+      "type": "panel",
+      "name": "Wilsonart (standard finishes) 4x8",
+      "cost": 60.8,
+      "markup": 15,
+      "category": 3
+    },
+    {
+      "id": 261,
+      "type": "panel",
+      "name": "Wilsonart (standard finishes) 5x12",
+      "cost": 114,
+      "markup": 15,
+      "category": 3
+    },
+    {
+      "id": 262,
+      "type": "panel",
+      "name": "Wilsonart (premium finishes) 4x8",
+      "cost": 81.28,
+      "markup": 15,
+      "category": 3
+    },
+    {
+      "id": 263,
+      "type": "panel",
+      "name": "Wilsonart (premium finishes) 5x12",
+      "cost": 152.4,
+      "markup": 15,
+      "category": 3
     }
   ],
   "productCategories": [
