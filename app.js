@@ -1206,10 +1206,17 @@ function chooseResawStock(slatW){
 // two rough stocks price differently and the badge previously always said "2×6" even when
 // the real calculation picked 2×8.
 function resawStockLabel(cfg){
-  const width = cfg.lumberType === 'tg' ? cfg.overallWidth : cfg.slatW;
+  const width = isTGType(cfg) ? cfg.overallWidth : cfg.slatW;
   const picked = width ? chooseResawStock(width) : null;
   return picked ? `Milled from ${picked.stock.replace('x','×')}` : 'Milled from 2×6 or 2×8';
 }
+
+// Trim shares T&G's continuous-LF math (no panel/slat breakdown, no assembly/brackets) but
+// has no separate Face Width — face and overall width are the same board, so Trim only asks
+// for Overall Width and effectiveFaceWidth() below feeds that in wherever T&G would use
+// cfg.faceWidth for coverage math.
+function isTGType(cfg){ return cfg.lumberType === 'tg' || cfg.lumberType === 'trim'; }
+function effectiveFaceWidth(cfg){ return cfg.lumberType === 'trim' ? cfg.overallWidth : cfg.faceWidth; }
 
 // VG Fir/Hemlock: pieces per board — width rips × thickness slabs
 // 2x6/2x8 stock: 1.5" actual thickness; thin-kerf resaw/rip (RESAW_KERF = 1/16")
@@ -1240,7 +1247,8 @@ function renderLumberConfigs(){
   cont.innerHTML = '';
   lumberConfigs.forEach(cfg => {
     cfg.safetyBuffer = normalizeWastePct(cfg.safetyBuffer, 10);
-    const isTG = cfg.lumberType === 'tg';
+    const isTG = isTGType(cfg);
+    const isTrim = cfg.lumberType === 'trim';
     const species  = visibleLumberSpecies();
     if(!cfg.species && species.length > 0) cfg.species = species[0];
     const sData    = pricing.lumberSpecies[cfg.species] || {};
@@ -1266,8 +1274,9 @@ function renderLumberConfigs(){
           <div>
             <label class="field-label">Ceiling Type</label>
             <select id="l-type-${cfg.id}" onchange="lUpdate(${cfg.id})">
-              <option value="grille" ${!isTG?'selected':''}>Ceiling Grille</option>
-              <option value="tg"     ${isTG?'selected':''}>T&amp;G Ceiling</option>
+              <option value="grille" ${cfg.lumberType==='grille'?'selected':''}>Ceiling Grille</option>
+              <option value="tg"     ${cfg.lumberType==='tg'?'selected':''}>T&amp;G Ceiling</option>
+              <option value="trim"   ${isTrim?'selected':''}>Trim</option>
             </select>
           </div>
           <div>
@@ -1304,7 +1313,7 @@ function renderLumberConfigs(){
           </div>`}
         </div>
         <hr class="config-divider">
-        <span class="section-label">${isTG ? 'T&G Finished Dimensions (inches)' : 'Finished Slat Dimensions (inches)'}</span>
+        <span class="section-label">${isTrim ? 'Trim Finished Dimensions (inches)' : isTG ? 'T&G Finished Dimensions (inches)' : 'Finished Slat Dimensions (inches)'}</span>
         <div class="config-grid">
           <div>
             <label class="field-label">Finished Thickness (in)</label>
@@ -1312,10 +1321,10 @@ function renderLumberConfigs(){
             <span class="stock-tag" id="l-thick-tag-${cfg.id}" style="${isResaw||getStockInfo(cfg.thickness)?'':'display:none'}">${isResaw?resawStockLabel(cfg):(getStockInfo(cfg.thickness)?.label||'')}</span>
           </div>
           ${isTG ? `
-          <div>
+          ${isTrim ? '' : `<div>
             <label class="field-label">Face Width (in)</label>
             <input type="text" id="l-faceW-${cfg.id}" value="${cfg.faceWidth||''}" placeholder="e.g. 4" oninput="lUpdate(${cfg.id})">
-          </div>
+          </div>`}
           <div>
             <label class="field-label">Overall Width (in)</label>
             <input type="text" id="l-overallW-${cfg.id}" value="${cfg.overallWidth||''}" placeholder="e.g. 4.25" oninput="lUpdate(${cfg.id})">
@@ -1398,12 +1407,12 @@ function lUpdate(id){
   cfg.panelW       = parseFraction(document.getElementById('l-panelW-'+id)?.value) || cfg.panelW;
   cfg.panelL       = parseFraction(document.getElementById('l-panelL-'+id)?.value) || cfg.panelL;
   cfg.bracketsPerPanel = parseInt(document.getElementById('l-brackets-'+id)?.value) || 0;
-  cfg.assembly     = cfg.lumberType === 'tg' ? false : (document.getElementById('l-assembly-'+id)?.checked ?? true);
+  cfg.assembly     = isTGType(cfg) ? false : (document.getElementById('l-assembly-'+id)?.checked ?? true);
   cfg.sanding      = document.getElementById('l-sanding-'+id)?.checked ?? true;
   cfg.cutToLength  = document.getElementById('l-cut-'+id)?.checked ?? true;
   const prevMode   = cfg.calcMode;
   cfg.calcMode     = document.getElementById('l-mode-'+id)?.value || cfg.calcMode;
-  if(cfg.lumberType === 'tg' && cfg.calcMode === 'panels') cfg.calcMode = 'sqft';
+  if(isTGType(cfg) && cfg.calcMode === 'panels') cfg.calcMode = 'sqft';
   cfg.sqft         = parseFloat(document.getElementById('l-sqft-'+id)?.value) || 0;
   cfg.manualQty    = parseInt(document.getElementById('l-manualQty-'+id)?.value) || 0;
   cfg.roughThick      = getSuggestedRoughThick(cfg.thickness);
@@ -1453,21 +1462,22 @@ function lUpdate(id){
 // lengths assumed) but required in piece-count mode, since totalLF can't be derived from a
 // piece count without a real length.
 function resolveTGQty(cfg){
-  if(!cfg.faceWidth || !cfg.overallWidth) return null;
+  const faceWidth = effectiveFaceWidth(cfg);
+  if(!faceWidth || !cfg.overallWidth) return null;
   if(cfg.calcMode === 'sqft'){
     if(!cfg.sqft) return null;
-    const totalLF = cfg.sqft * 12 / cfg.faceWidth;
+    const totalLF = cfg.sqft * 12 / faceWidth;
     return { panelQty:0, totalSlats:0, effectiveSqft: cfg.sqft, sqftPerPanel:0, randomLength: !cfg.slatL, totalLF };
   } else {
     if(!cfg.manualQty || !cfg.slatL) return null;
     const totalLF = cfg.manualQty * cfg.slatL / 12;
-    const effectiveSqft = totalLF * cfg.faceWidth / 12;
+    const effectiveSqft = totalLF * faceWidth / 12;
     return { panelQty:0, totalSlats:cfg.manualQty, effectiveSqft, sqftPerPanel:0, randomLength:false, totalLF };
   }
 }
 
 function resolveLumberQty(cfg){
-  if(cfg.lumberType === 'tg') return resolveTGQty(cfg);
+  if(isTGType(cfg)) return resolveTGQty(cfg);
   if(!cfg.panelW || !cfg.panelL || !cfg.slatW || !cfg.slatsPerPanel) return null;
   const sqftPerPanel = (cfg.panelW * cfg.panelL) / 144;
   if(cfg.calcMode === 'sqft'){
@@ -1547,7 +1557,7 @@ function calcContinuousBF(cfg, totalLF, width, isTG, randomLength){
 }
 
 function millLumberCalc(cfg, qty){
-  const isTG = cfg.lumberType === 'tg';
+  const isTG = isTGType(cfg);
   const width = isTG ? cfg.overallWidth : cfg.slatW;
 
   if(qty.randomLength) return calcContinuousBF(cfg, qty.totalLF, width, isTG, true);
@@ -1659,9 +1669,9 @@ function millLumberCalc(cfg, qty){
 function calcLumberPreview(cfg){
   const preview = document.getElementById('l-preview-'+cfg.id);
   if(!preview) return;
-  const isTG = cfg.lumberType === 'tg';
+  const isTG = isTGType(cfg);
   if(isTG){
-    if(!cfg.faceWidth || !cfg.overallWidth){ preview.innerHTML = ''; return; }
+    if(!effectiveFaceWidth(cfg) || !cfg.overallWidth){ preview.innerHTML = ''; return; }
   } else {
     if(!cfg.slatW || !cfg.panelW || !cfg.panelL){ preview.innerHTML = ''; return; }
   }
@@ -1738,8 +1748,8 @@ function calcLumberPreview(cfg){
 
 function calcLumberCost(cfg){
   if(!cfg.species) return null;
-  if(cfg.lumberType === 'tg'){
-    if(!cfg.faceWidth || !cfg.overallWidth) return null;
+  if(isTGType(cfg)){
+    if(!effectiveFaceWidth(cfg) || !cfg.overallWidth) return null;
   } else if(!cfg.slatW || !cfg.panelW || !cfg.panelL){
     return null;
   }
@@ -1761,7 +1771,7 @@ function calcLumberCost(cfg){
       : (sData[tier.key] || 0);
 
   const lumberCost = rawBFTotal * bfPrice;
-  const assemblyCost = (cfg.assembly && cfg.lumberType !== 'tg') ? effectiveSqft * pricing.services.assembly : 0;
+  const assemblyCost = (cfg.assembly && !isTGType(cfg)) ? effectiveSqft * pricing.services.assembly : 0;
   const bracketCost  = (panelQty * cfg.bracketsPerPanel) * pricing.services.bracketPrice;
 
   const lumberLine = withMarkup(lumberCost,   'lumber');
@@ -1802,7 +1812,7 @@ function calcJobServices(){
     const lf = qty.totalLF;
     totalLF += lf;
     const sDataJ = pricing.lumberSpecies[cfg.species] || {};
-    const isResawCfg = cfg.lumberType !== 'tg' && (sDataJ.resaw || !!(getStockInfo(cfg.thickness)?.resaw));
+    const isResawCfg = !isTGType(cfg) && (sDataJ.resaw || !!(getStockInfo(cfg.thickness)?.resaw));
     if(isResawCfg) resawLF += lf; else standardLF += lf;
     if(cfg.sanding)     sandingLF += lf;
     if(cfg.cutToLength) cutLF     += lf;
@@ -1823,10 +1833,10 @@ function calcJobServices(){
   const setupKeys = new Set(
     lumberConfigs
       .filter(c => {
-        const w = c.lumberType === 'tg' ? c.overallWidth : c.slatW;
+        const w = isTGType(c) ? c.overallWidth : c.slatW;
         return resolveLumberQty(c) && +c.thickness > 0 && +w > 0;
       })
-      .map(c => `${(+c.thickness).toFixed(4)}_${(+(c.lumberType==='tg'?c.overallWidth:c.slatW)).toFixed(4)}`)
+      .map(c => `${(+c.thickness).toFixed(4)}_${(+(isTGType(c)?c.overallWidth:c.slatW)).toFixed(4)}`)
   );
   const seriesChangeCost = Math.max(0, setupKeys.size - 1) * svc.seriesChange;
 
