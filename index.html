@@ -631,7 +631,7 @@ select option{background:#1e2226}
           <div class="calc-fields">
             <div class="calc-row">
               <label>Board Width</label>
-              <div class="calc-input-wrap"><input type="number" id="lf-width" placeholder="0" min="0" oninput="calcLF()"><span class="calc-unit">in</span></div>
+              <div class="calc-input-wrap"><input type="text" id="lf-width" placeholder="e.g. 3.5 or 3-1/2" autocorrect="off" autocapitalize="none" oninput="calcLF()"><span class="calc-unit">in</span></div>
             </div>
             <div class="calc-row">
               <label>Square Feet</label>
@@ -663,11 +663,11 @@ select option{background:#1e2226}
           <div class="calc-fields">
             <div class="calc-row">
               <label>Panel Width</label>
-              <div class="calc-input-wrap"><input type="number" id="pc-w" placeholder="0" min="0" oninput="calcPC()"><span class="calc-unit">in</span></div>
+              <div class="calc-input-wrap"><input type="text" id="pc-w" placeholder="e.g. 12 or 12-1/4" autocorrect="off" autocapitalize="none" oninput="calcPC()"><span class="calc-unit">in</span></div>
             </div>
             <div class="calc-row">
               <label>Panel Length</label>
-              <div class="calc-input-wrap"><input type="number" id="pc-l" placeholder="0" min="0" oninput="calcPC()"><span class="calc-unit">in</span></div>
+              <div class="calc-input-wrap"><input type="text" id="pc-l" placeholder="e.g. 96" autocorrect="off" autocapitalize="none" oninput="calcPC()"><span class="calc-unit">in</span></div>
             </div>
             <div class="calc-row">
               <label>Panel Count</label>
@@ -715,11 +715,11 @@ select option{background:#1e2226}
             </div>
             <div>
               <label class="field-label">Slat Width (in)</label>
-              <input type="number" id="sc-slatW" placeholder="e.g. 3.25" step="0.0625" min="0" oninput="calcSlat()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+              <input type="text" id="sc-slatW" placeholder="e.g. 3.25 or 3-1/4" autocorrect="off" autocapitalize="none" oninput="calcSlat()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
             </div>
             <div>
               <label class="field-label">Slat Length (in)</label>
-              <input type="number" id="sc-slatL" placeholder="e.g. 96" step="0.25" min="0" oninput="calcSlat()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+              <input type="text" id="sc-slatL" placeholder="e.g. 96" autocorrect="off" autocapitalize="none" oninput="calcSlat()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
             </div>
             <div>
               <label class="field-label">Slats / Panel</label>
@@ -727,11 +727,11 @@ select option{background:#1e2226}
             </div>
             <div>
               <label class="field-label">Panel Width (in)</label>
-              <input type="number" id="sc-panelW" placeholder="e.g. 12" step="0.25" min="0" oninput="calcSlat()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+              <input type="text" id="sc-panelW" placeholder="e.g. 12" autocorrect="off" autocapitalize="none" oninput="calcSlat()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
             </div>
             <div>
               <label class="field-label">Panel Length (in)</label>
-              <input type="number" id="sc-panelL" placeholder="e.g. 96" step="0.25" min="0" oninput="calcSlat()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+              <input type="text" id="sc-panelL" placeholder="e.g. 96" autocorrect="off" autocapitalize="none" oninput="calcSlat()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
             </div>
           </div>
           <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:12px">
@@ -771,11 +771,11 @@ select option{background:#1e2226}
             </div>
             <div>
               <label class="field-label">Tile Width (in)</label>
-              <input type="number" id="tc-tileW" placeholder="e.g. 23.75" step="0.0625" min="0" oninput="calcTile()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+              <input type="text" id="tc-tileW" placeholder="e.g. 23.75 or 23-3/4" autocorrect="off" autocapitalize="none" oninput="calcTile()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
             </div>
             <div>
               <label class="field-label">Tile Length (in)</label>
-              <input type="number" id="tc-tileL" placeholder="e.g. 23.75" step="0.0625" min="0" oninput="calcTile()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+              <input type="text" id="tc-tileL" placeholder="e.g. 23.75 or 23-3/4" autocorrect="off" autocapitalize="none" oninput="calcTile()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
             </div>
             <div>
               <label class="field-label">Nominal Sq Ft / Tile</label>
@@ -819,15 +819,15 @@ select option{background:#1e2226}
             </div>
             <div>
               <label class="field-label">Face Width (in)</label>
-              <input type="number" id="tg-faceW" placeholder="e.g. 4" step="0.0625" min="0" oninput="calcTG()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+              <input type="text" id="tg-faceW" placeholder="e.g. 4 or 4-1/4" autocorrect="off" autocapitalize="none" oninput="calcTG()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
             </div>
             <div>
               <label class="field-label">Overall Width (in)</label>
-              <input type="number" id="tg-overallW" placeholder="e.g. 4.25" step="0.0625" min="0" oninput="calcTG()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+              <input type="text" id="tg-overallW" placeholder="e.g. 4.25 or 4-1/4" autocorrect="off" autocapitalize="none" oninput="calcTG()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
             </div>
             <div id="tg-len-wrap">
               <label class="field-label" id="tg-len-label">Finished Length (in) (optional)</label>
-              <input type="number" id="tg-len" placeholder="e.g. 96 (blank = random)" step="0.25" min="0" oninput="calcTG()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+              <input type="text" id="tg-len" placeholder="e.g. 96 (blank = random)" autocorrect="off" autocapitalize="none" oninput="calcTG()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
             </div>
           </div>
           <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:12px">
@@ -1111,7 +1111,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260726g"></script>
+<script src="app.js?v=20260726h"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });

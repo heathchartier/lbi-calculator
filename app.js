@@ -3607,7 +3607,7 @@ function calcBF(){
 
 function calcLFfromSqft(){
   document.getElementById('lf-lf').value = '';
-  const w = parseFloat(document.getElementById('lf-width').value) || 0;
+  const w = parseFraction(document.getElementById('lf-width').value) || 0;
   const s = parseFloat(document.getElementById('lf-sqft').value) || 0;
   if(!w || !s){ calcLFTotal(); return; }
   document.getElementById('lf-lf').value = r2(s * 12 / w);
@@ -3616,7 +3616,7 @@ function calcLFfromSqft(){
 
 function calcSqftFromLF(){
   document.getElementById('lf-sqft').value = '';
-  const w = parseFloat(document.getElementById('lf-width').value) || 0;
+  const w = parseFraction(document.getElementById('lf-width').value) || 0;
   const l = parseFloat(document.getElementById('lf-lf').value) || 0;
   if(!w || !l){ calcLFTotal(); return; }
   document.getElementById('lf-sqft').value = r2(l * w / 12);
@@ -3644,8 +3644,8 @@ function calcLFTotal(){
 
 function calcPCfromCount(){
   document.getElementById('pc-sqft').value = '';
-  const w = parseFloat(document.getElementById('pc-w').value) || 0;
-  const l = parseFloat(document.getElementById('pc-l').value) || 0;
+  const w = parseFraction(document.getElementById('pc-w').value) || 0;
+  const l = parseFraction(document.getElementById('pc-l').value) || 0;
   const c = parseFloat(document.getElementById('pc-count').value) || 0;
   if(!w || !l || !c){ calcPCTotal(); return; }
   document.getElementById('pc-sqft').value = r2(c * w * l / 144);
@@ -3654,8 +3654,8 @@ function calcPCfromCount(){
 
 function calcCountFromSqft(){
   document.getElementById('pc-count').value = '';
-  const w = parseFloat(document.getElementById('pc-w').value) || 0;
-  const l = parseFloat(document.getElementById('pc-l').value) || 0;
+  const w = parseFraction(document.getElementById('pc-w').value) || 0;
+  const l = parseFraction(document.getElementById('pc-l').value) || 0;
   const s = parseFloat(document.getElementById('pc-sqft').value) || 0;
   if(!w || !l || !s){ calcPCTotal(); return; }
   document.getElementById('pc-count').value = r2(s * 144 / (w * l));
@@ -3684,11 +3684,11 @@ function calcSlat(){
   const mode          = document.getElementById('sc-mode')?.value || 'sqft';
   const qty           = parseFloat(document.getElementById('sc-qty')?.value) || 0;
   const thick         = parseFraction(document.getElementById('sc-thick')?.value || '') || 0;
-  const slatW         = parseFloat(document.getElementById('sc-slatW')?.value) || 0;
-  const slatL         = parseFloat(document.getElementById('sc-slatL')?.value) || 0;
+  const slatW         = parseFraction(document.getElementById('sc-slatW')?.value) || 0;
+  const slatL         = parseFraction(document.getElementById('sc-slatL')?.value) || 0;
   const slatsPerPanel = parseInt(document.getElementById('sc-slatsPerPanel')?.value) || 0;
-  const panelW        = parseFloat(document.getElementById('sc-panelW')?.value) || 0;
-  const panelL        = parseFloat(document.getElementById('sc-panelL')?.value) || 0;
+  const panelW        = parseFraction(document.getElementById('sc-panelW')?.value) || 0;
+  const panelL        = parseFraction(document.getElementById('sc-panelL')?.value) || 0;
   const wastePct      = readWastePct('sc-waste10', 'sc-waste15');
   const res           = document.getElementById('sc-result');
 
@@ -3818,8 +3818,8 @@ function calcSlat(){
 function calcTile(){
   const mode     = document.getElementById('tc-mode')?.value || 'sqft';
   const qty      = parseFloat(document.getElementById('tc-qty')?.value) || 0;
-  const tileW    = parseFloat(document.getElementById('tc-tileW')?.value) || 0;
-  const tileL    = parseFloat(document.getElementById('tc-tileL')?.value) || 0;
+  const tileW    = parseFraction(document.getElementById('tc-tileW')?.value) || 0;
+  const tileL    = parseFraction(document.getElementById('tc-tileL')?.value) || 0;
   const nominal  = parseFloat(document.getElementById('tc-nominal')?.value) || 0;
   const wastePct = readWastePct('tc-waste10', 'tc-waste15');
   const res      = document.getElementById('tc-result');
@@ -3902,9 +3902,9 @@ function calcTG(){
   const mode     = document.getElementById('tg-mode')?.value || 'sqft';
   const qty      = parseFloat(document.getElementById('tg-qty')?.value) || 0;
   const thick    = parseFraction(document.getElementById('tg-thick')?.value || '') || 0;
-  const faceW    = parseFloat(document.getElementById('tg-faceW')?.value) || 0;
-  const overallW = parseFloat(document.getElementById('tg-overallW')?.value) || 0;
-  const lenIn    = parseFloat(document.getElementById('tg-len')?.value) || 0;
+  const faceW    = parseFraction(document.getElementById('tg-faceW')?.value) || 0;
+  const overallW = parseFraction(document.getElementById('tg-overallW')?.value) || 0;
+  const lenIn    = parseFraction(document.getElementById('tg-len')?.value) || 0;
   const wastePct = readWastePct('tg-waste10', 'tg-waste15');
   const isVG     = document.getElementById('tg-vg')?.checked;
   const res      = document.getElementById('tg-result');
