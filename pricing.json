@@ -7551,7 +7551,10 @@
     "glueLine": 0.5775,
     "resawFlat": 745,
     "resawThreshold": 3000,
-    "resawPerLF": 0.24
+    "resawPerLF": 0.24,
+    "dadoServicePerSqft": 3.5,
+    "dadoFlatCharge": 500,
+    "dadoThreshold": 40
   },
   "markup": {
     "panels": 15,
@@ -7561,7 +7564,8 @@
     "assembly": 15,
     "ebService": 15,
     "cutService": 15,
-    "brackets": 15
+    "brackets": 15,
+    "dado": 15
   },
   "standardProducts": [
     {
