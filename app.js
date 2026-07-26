@@ -460,17 +460,18 @@ function unlockBodyScroll(){
 
 // iOS Safari (browser + home-screen PWA) positions position:fixed elements against the
 // LAYOUT viewport, not the VISUAL one. The moment the on-screen keyboard opens (tapping
-// any of the admin form's many text inputs), the visual viewport shrinks/shifts but a
-// plain `inset:0` fixed overlay doesn't — so it visually drifts/floats away from the
-// keyboard-adjusted screen. Pinning the overlay to window.visualViewport's live
-// height/offset on every resize/scroll event keeps it glued to what's actually visible.
+// any of the admin form's many text inputs), the visual viewport shrinks but a plain
+// `inset:0` fixed overlay doesn't — so it can extend past what's actually visible.
+// Height-only sync handles that. Deliberately NOT setting top/left from
+// visualViewport.offsetTop/offsetLeft: those can read non-zero the instant the modal
+// opens (status bar / safe-area quirks in standalone PWA mode), which shifted the whole
+// overlay off position from the very first frame — worse than the problem it was meant
+// to solve. inset:0 already anchors top:0/left:0 correctly on its own.
 function syncModalViewport(){
   const vv = window.visualViewport;
   if(!vv) return;
   document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(o => {
     o.style.height = vv.height + 'px';
-    o.style.top    = vv.offsetTop + 'px';
-    o.style.left   = vv.offsetLeft + 'px';
   });
 }
 if(window.visualViewport){
