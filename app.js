@@ -262,6 +262,7 @@ const DEFAULT_PRICING = {
   services: {
     ebServicePerFt: 0.50, cutServicePerSqft: 0.19,
     cutFlatVeneer: 0, cutVeneerThreshold: 20,
+    dadoServicePerSqft: 1.50, dadoFlatCharge: 0, dadoThreshold: 20,
     assembly: 1.50, bracketPrice: 2.50, glueLine: 0,
     millingFlat: 780, millingThreshold: 3000, millingPerLF: 0.21, seriesChange: 115,
     resawFlat: 780, resawThreshold: 3000, resawPerLF: 0.21,
@@ -932,7 +933,7 @@ function calcVeneerPreview(cfg){
   `;
 }
 
-function calcVeneerCost(cfg, cutCostOverride, poolInfo){
+function calcVeneerCost(cfg, cutCostOverride, poolInfo, dadoCostOverride){
   if(!cfg.species || !cfg.slatW || !cfg.panelW || !cfg.panelL) return null;
   const sData = pricing.veneerSpecies[cfg.species];
   if(!sData) return null;
@@ -994,8 +995,15 @@ function calcVeneerCost(cfg, cutCostOverride, poolInfo){
   const isTile = cfg.ceilingType === 'tile';
   const dadoSqft = isTile ? panelQty * (cfg.nominalSqFt || 0) : effectiveSqft;
 
-  const cutCost      = cutCostOverride !== undefined ? cutCostOverride : effectiveSqft * pricing.services.cutServicePerSqft;
-  const assemblyCost = cfg.assembly ? dadoSqft * pricing.services.assembly : 0;
+  const cutCost = cutCostOverride !== undefined ? cutCostOverride : effectiveSqft * pricing.services.cutServicePerSqft;
+  let assemblyCost = 0;
+  if(cfg.assembly){
+    if(isTile){
+      assemblyCost = dadoCostOverride !== undefined ? dadoCostOverride : dadoSqft * pricing.services.dadoServicePerSqft;
+    } else {
+      assemblyCost = dadoSqft * pricing.services.assembly;
+    }
+  }
   const bracketCount = panelQty * cfg.bracketsPerPanel;
   const bracketCost  = bracketCount * pricing.services.bracketPrice;
 
@@ -1017,7 +1025,7 @@ function calcVeneerCost(cfg, cutCostOverride, poolInfo){
       ['Edge Band Material ('+fmtN(ebRolls)+' rolls)']: ebMatLine,
       ['Edge Band Service ('+fmtN(ebFt,0)+' ft)']: ebSvcLine,
       [cutCostOverride !== undefined ? 'Cut Service (flat)' : 'Cut Service']: cutLine,
-      ...(cfg.assembly ? {[isTile ? 'Dado / Groove' : 'Assembly / Packing']: asmLine} : {}),
+      ...(cfg.assembly ? {[isTile ? (dadoCostOverride !== undefined ? 'Dado / Groove (flat)' : 'Dado / Groove') : 'Assembly / Packing']: asmLine} : {}),
       ...(isTile ? {} : {['Black Brackets ('+fmtN(bracketCount)+')']: bktLine}),
     },
     subtotal,
@@ -1774,12 +1782,32 @@ function renderResults(){
   const flatThresh   = pricing.services.cutVeneerThreshold || 20;
   const useVeneerFlat = flatCharge > 0 && totalVeneerSheets > 0 && totalVeneerSheets <= flatThresh;
 
+  // Total tile count across all Ceiling Tile configs with Dado/Groove enabled decides
+  // flat vs per-sqft dado charge, same flat/threshold pattern as the veneer cut service.
+  let totalDadoTiles = 0, totalDadoSqft = 0;
+  const dadoSqfts = veneerConfigs.map(cfg => {
+    if(cfg.ceilingType !== 'tile' || !cfg.assembly) return 0;
+    const qty = resolveVeneerQty(cfg);
+    if(!qty) return 0;
+    const sqft = qty.panelQty * (cfg.nominalSqFt || 0);
+    totalDadoTiles += qty.panelQty;
+    totalDadoSqft  += sqft;
+    return sqft;
+  });
+  const dadoFlatCharge = pricing.services.dadoFlatCharge || 0;
+  const dadoThresh     = pricing.services.dadoThreshold  || 20;
+  const useDadoFlat = dadoFlatCharge > 0 && totalDadoTiles > 0 && totalDadoTiles <= dadoThresh;
+
   veneerConfigs.forEach((cfg,i) => {
     let cutOverride;
     if(useVeneerFlat && totalVeneerSqft > 0){
       cutOverride = flatCharge * ((veneerSqfts[i] || 0) / totalVeneerSqft);
     }
-    const r = calcVeneerCost(cfg, cutOverride, poolByIdx[i]);
+    let dadoOverride;
+    if(useDadoFlat && totalDadoSqft > 0){
+      dadoOverride = dadoFlatCharge * ((dadoSqfts[i] || 0) / totalDadoSqft);
+    }
+    const r = calcVeneerCost(cfg, cutOverride, poolByIdx[i], dadoOverride);
     if(r) allResults.push({...r, label:`Panel Config ${i+1} — ${r.species} (${r.orientation})`});
   });
   lumberConfigs.forEach((cfg,i) => {
@@ -2239,6 +2267,11 @@ function renderAdminModal(){
     ${svcField('cutFlatVeneer',     'Cut Service Flat Charge ($) — ≤ threshold', '1')}
     ${svcField('cutVeneerThreshold','Flat Charge Threshold (sheets)', '1')}
 
+    ${svcHead('Dado / Groove (Ceiling Tile)', 'var(--gold)')}
+    ${svcField('dadoServicePerSqft', 'Dado Service ($/sqft) — over threshold', '0.01')}
+    ${svcField('dadoFlatCharge',     'Dado Flat Charge ($) — ≤ threshold', '1')}
+    ${svcField('dadoThreshold',      'Flat Charge Threshold (tiles)', '1')}
+
     ${svcHead('Lamination Services', '#c084fc')}
     ${svcField('glueLine', 'Glue Line ($/sqft)', '0.01')}
   `;
@@ -2295,6 +2328,7 @@ function collectAdminForm(){
     'sandingFlat','sandingThreshold','sandingPerLF',
     'cutFlat','cutThreshold','cutPerLF',
     'assembly','bracketPrice','ebServicePerFt','cutServicePerSqft','cutFlatVeneer','cutVeneerThreshold',
+    'dadoServicePerSqft','dadoFlatCharge','dadoThreshold',
     'glueLine',
   ];
   svcKeys.forEach(k => {
