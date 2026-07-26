@@ -478,6 +478,17 @@ if(window.visualViewport){
   window.visualViewport.addEventListener('scroll', syncModalViewport);
 }
 
+// iOS still lets a touch starting outside the modal's own scrollable area pan/rubber-band
+// the whole compositor layer (position:fixed + overscroll-behavior don't fully suppress
+// this) — the modal visibly drags off-position and elastic-snaps back. Block any touchmove
+// that didn't start inside .modal-box while a modal is open; scrolling inside the modal's
+// own content is untouched since that target is inside .modal-box.
+document.addEventListener('touchmove', function(e){
+  const openModal = document.querySelector('.modal-overlay:not(.hidden)');
+  if(!openModal) return;
+  if(!e.target.closest('.modal-box')) e.preventDefault();
+}, { passive: false });
+
 function openAdmin(){
   renderAdminModal();
   document.getElementById('adminModal').classList.remove('hidden');
