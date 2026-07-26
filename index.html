@@ -714,6 +714,90 @@ select option{background:#1e2226}
           </div>
         </div>
 
+        <!-- Tile Calculator -->
+        <div class="calc-card" style="grid-column:1/-1">
+          <div class="calc-title">Tile Calculator</div>
+          <div class="calc-subtitle">Sheet yield for ceiling tile jobs — net tile size drives cutting, nominal sq ft is separate (dado/groove reference only)</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:12px">
+            <div>
+              <label class="field-label">Calculate By</label>
+              <select id="tc-mode" onchange="calcTile()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+                <option value="sqft">By Sq Ft</option>
+                <option value="tiles">By Tile Count</option>
+              </select>
+            </div>
+            <div id="tc-qty-wrap">
+              <label class="field-label" id="tc-qty-label">Ceiling Sq Ft</label>
+              <input type="number" id="tc-qty" placeholder="0" min="0" step="1" oninput="calcTile()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+            </div>
+            <div>
+              <label class="field-label">Tile Width (in)</label>
+              <input type="number" id="tc-tileW" placeholder="e.g. 23.75" step="0.0625" min="0" oninput="calcTile()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+            </div>
+            <div>
+              <label class="field-label">Tile Length (in)</label>
+              <input type="number" id="tc-tileL" placeholder="e.g. 23.75" step="0.0625" min="0" oninput="calcTile()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+            </div>
+            <div>
+              <label class="field-label">Nominal Sq Ft / Tile</label>
+              <input type="number" id="tc-nominal" placeholder="e.g. 4" step="0.01" min="0" oninput="calcTile()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+            </div>
+            <div style="display:flex;align-items:flex-end;padding-bottom:2px">
+              <label class="toggle" style="margin-right:8px"><input type="checkbox" id="tc-waste" onchange="calcTile()"><span class="toggle-slider"></span></label>
+              <span style="font-size:13px;color:var(--ink)">+10% waste</span>
+            </div>
+          </div>
+          <div id="tc-result" style="margin-top:16px;background:var(--surf2);border-radius:var(--r);padding:14px;font-size:14px;color:var(--mid);min-height:48px">
+            Fill in the fields above to see results.
+          </div>
+        </div>
+
+        <!-- T&G Calculator -->
+        <div class="calc-card" style="grid-column:1/-1">
+          <div class="calc-title">T&amp;G Calculator</div>
+          <div class="calc-subtitle">Material estimate for T&amp;G ceiling jobs — mirrors the Lumber tab's T&amp;G mode (face width drives coverage, overall width drives BF)</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:12px">
+            <div>
+              <label class="field-label">Calculate By</label>
+              <select id="tg-mode" onchange="calcTG()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+                <option value="sqft">By Sq Ft</option>
+                <option value="pieces">By Piece Count</option>
+              </select>
+            </div>
+            <div id="tg-qty-wrap">
+              <label class="field-label" id="tg-qty-label">Ceiling Sq Ft</label>
+              <input type="number" id="tg-qty" placeholder="0" min="0" step="1" oninput="calcTG()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+            </div>
+            <div>
+              <label class="field-label">Thickness (in)</label>
+              <input type="text" id="tg-thick" placeholder="e.g. 3/4 or .75" autocorrect="off" autocapitalize="none" oninput="calcTG()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+            </div>
+            <div>
+              <label class="field-label">Face Width (in)</label>
+              <input type="number" id="tg-faceW" placeholder="e.g. 4" step="0.0625" min="0" oninput="calcTG()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+            </div>
+            <div>
+              <label class="field-label">Overall Width (in)</label>
+              <input type="number" id="tg-overallW" placeholder="e.g. 4.25" step="0.0625" min="0" oninput="calcTG()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+            </div>
+            <div id="tg-len-wrap">
+              <label class="field-label" id="tg-len-label">Finished Length (in) (optional)</label>
+              <input type="number" id="tg-len" placeholder="e.g. 96 (blank = random)" step="0.25" min="0" oninput="calcTG()" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+            </div>
+            <div style="display:flex;align-items:flex-end;padding-bottom:2px">
+              <label class="toggle" style="margin-right:8px"><input type="checkbox" id="tg-waste" onchange="calcTG()"><span class="toggle-slider"></span></label>
+              <span style="font-size:13px;color:var(--ink)">+10% waste</span>
+            </div>
+            <div style="display:flex;align-items:flex-end;padding-bottom:2px">
+              <label class="toggle" style="margin-right:8px"><input type="checkbox" id="tg-vg" onchange="calcTG()"><span class="toggle-slider"></span></label>
+              <span style="font-size:13px;color:var(--ink)">V.G. Fir / Hemlock (2×6/2×8)</span>
+            </div>
+          </div>
+          <div id="tg-result" style="margin-top:16px;background:var(--surf2);border-radius:var(--r);padding:14px;font-size:14px;color:var(--mid);min-height:48px">
+            Fill in the fields above to see results.
+          </div>
+        </div>
+
         <!-- Bracket Calculator -->
         <div class="calc-card" style="grid-column:1/-1">
           <div class="calc-title">Bracket Calculator</div>
@@ -966,7 +1050,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260726d"></script>
+<script src="app.js?v=20260726e"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });

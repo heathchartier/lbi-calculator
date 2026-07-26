@@ -3739,6 +3739,174 @@ function calcSlat(){
   `;
 }
 
+// --- TILE CALCULATOR ----------------------------------------------------
+// No species/pricing context here, so sheet size is picked by best yield
+// (fewest sheets) rather than cost, unlike chooseVeneerSheet() on the live tab.
+function calcTile(){
+  const mode     = document.getElementById('tc-mode')?.value || 'sqft';
+  const qty      = parseFloat(document.getElementById('tc-qty')?.value) || 0;
+  const tileW    = parseFloat(document.getElementById('tc-tileW')?.value) || 0;
+  const tileL    = parseFloat(document.getElementById('tc-tileL')?.value) || 0;
+  const nominal  = parseFloat(document.getElementById('tc-nominal')?.value) || 0;
+  const addWaste = document.getElementById('tc-waste')?.checked;
+  const res      = document.getElementById('tc-result');
+
+  const labelEl = document.getElementById('tc-qty-label');
+  if(labelEl) labelEl.textContent = mode==='sqft' ? 'Ceiling Sq Ft' : 'Total Tiles';
+
+  if(!tileW || !tileL){ res.innerHTML = '<span style="color:var(--mid)">Enter tile width and length to see results.</span>'; return; }
+
+  const sqftPerTile = (tileW * tileL) / 144;
+  let totalTiles = 0;
+  if(mode === 'tiles'){
+    totalTiles = qty;
+  } else {
+    totalTiles = Math.ceil(qty / sqftPerTile);
+  }
+  if(!totalTiles){ res.innerHTML = '<span style="color:var(--mid)">Enter a quantity to see results.</span>'; return; }
+
+  function yieldFor(sheetW, sheetL){
+    const cols = Math.floor((sheetW - SQUARING + KERF) / (tileW + KERF));
+    const rows = Math.floor((sheetL - SQUARING + KERF) / (tileL + KERF));
+    return Math.max(1, cols * rows);
+  }
+  const fits8  = tileW <= SHEET_WIDTHS['4x8']  && tileL <= SHEET_LENGTHS['4x8'];
+  const fits10 = tileW <= SHEET_WIDTHS['4x10'] && tileL <= SHEET_LENGTHS['4x10'];
+  const wasteMult = addWaste ? 1.10 : 1.0;
+
+  let chosen;
+  if(!fits8 && !fits10){
+    chosen = { size:'—', sheets:0, perSheet:0, warn:true };
+  } else if(!fits8){
+    const sps10 = yieldFor(SHEET_WIDTHS['4x10'], SHEET_LENGTHS['4x10']);
+    chosen = { size:'4x10', sheets: Math.ceil(totalTiles / sps10 * wasteMult), perSheet: sps10, warn:false };
+  } else {
+    const sps8  = yieldFor(SHEET_WIDTHS['4x8'],  SHEET_LENGTHS['4x8']);
+    const sps10 = yieldFor(SHEET_WIDTHS['4x10'], SHEET_LENGTHS['4x10']);
+    const sheets8  = Math.ceil(totalTiles / sps8  * wasteMult);
+    const sheets10 = Math.ceil(totalTiles / sps10 * wasteMult);
+    chosen = sheets10 < sheets8
+      ? { size:'4x10', sheets: sheets10, perSheet: sps10, warn:false }
+      : { size:'4x8',  sheets: sheets8,  perSheet: sps8,  warn:false };
+  }
+
+  const nominalTotal = totalTiles * nominal;
+
+  res.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px">
+      ${chosen.warn ? `<div style="grid-column:1/-1;background:var(--warn-bg,#7c3d0020);border:1px solid var(--warn,#f59e0b);border-radius:6px;padding:6px 10px;color:var(--warn,#f59e0b);font-size:12px;font-weight:600">⚠ Tile size exceeds max sheet dimensions — call for pricing</div>` : ''}
+      <div>
+        <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Total Tiles</div>
+        <div style="font-size:22px;font-weight:700;color:var(--ink)">${fmtN(totalTiles)}</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Sq Ft / Tile (net)</div>
+        <div style="font-size:22px;font-weight:700;color:var(--ink)">${fmtN(sqftPerTile,2)}</div>
+      </div>
+      ${nominal ? `<div>
+        <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Nominal Sq Ft Total</div>
+        <div style="font-size:22px;font-weight:700;color:var(--ink)">${fmtN(nominalTotal,0)}</div>
+        <div style="font-size:11px;color:var(--dim)">dado/groove reference only</div>
+      </div>` : ''}
+      <div>
+        <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Tiles / Sheet</div>
+        <div style="font-size:22px;font-weight:700;color:var(--ink)">${fmtN(chosen.perSheet)}</div>
+        <div style="font-size:11px;color:var(--dim)">${chosen.size} sheet</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Sheets Needed${addWaste?' (+10%)':''}</div>
+        <div style="font-size:22px;font-weight:700;color:var(--teal)">${fmtN(chosen.sheets)}</div>
+      </div>
+    </div>
+  `;
+}
+
+// --- T&G CALCULATOR ------------------------------------------------------
+// Mirrors the Lumber tab's T&G mode: face width drives coverage (LF), overall
+// width drives BF/waste — same split used because a T&G board's milled face
+// (the visible coverage) is narrower than its actual overall width.
+function calcTG(){
+  const mode     = document.getElementById('tg-mode')?.value || 'sqft';
+  const qty      = parseFloat(document.getElementById('tg-qty')?.value) || 0;
+  const thick    = parseFraction(document.getElementById('tg-thick')?.value || '') || 0;
+  const faceW    = parseFloat(document.getElementById('tg-faceW')?.value) || 0;
+  const overallW = parseFloat(document.getElementById('tg-overallW')?.value) || 0;
+  const lenIn    = parseFloat(document.getElementById('tg-len')?.value) || 0;
+  const addWaste = document.getElementById('tg-waste')?.checked;
+  const isVG     = document.getElementById('tg-vg')?.checked;
+  const res      = document.getElementById('tg-result');
+
+  const labelEl = document.getElementById('tg-qty-label');
+  if(labelEl) labelEl.textContent = mode==='sqft' ? 'Ceiling Sq Ft' : 'Total Pieces';
+  const lenLabelEl = document.getElementById('tg-len-label');
+  if(lenLabelEl) lenLabelEl.textContent = mode==='sqft' ? 'Finished Length (in) (optional)' : 'Finished Length (in)';
+
+  if(!thick || !faceW || !overallW){ res.innerHTML = '<span style="color:var(--mid)">Enter thickness, face width, and overall width to see results.</span>'; return; }
+
+  let totalLF = 0, randomLength = false;
+  if(mode === 'pieces'){
+    if(!qty || !lenIn){ res.innerHTML = '<span style="color:var(--mid)">Enter piece count and finished length.</span>'; return; }
+    totalLF = qty * lenIn / 12;
+  } else {
+    if(!qty){ res.innerHTML = '<span style="color:var(--mid)">Enter a quantity to see results.</span>'; return; }
+    randomLength = !lenIn;
+    totalLF = qty * 12 / faceW;
+  }
+  if(!totalLF){ res.innerHTML = '<span style="color:var(--mid)">Enter a quantity to see results.</span>'; return; }
+
+  const safetyMult = addWaste ? 1.10 : 1.0;
+  let rawBFTotal, roughLabel, warningHTML = '';
+
+  if(isVG){
+    const picked = chooseResawStock(overallW);
+    if(!picked){
+      rawBFTotal = 0;
+      roughLabel = '— (over 7.5" max)';
+      warningHTML = `<div style="grid-column:1/-1;background:var(--warn-bg,#7c3d0020);border:1px solid var(--warn,#f59e0b);border-radius:6px;padding:6px 10px;color:var(--warn,#f59e0b);font-size:12px;font-weight:600">
+        ⚠ Overall width exceeds 7.5" max for 2×6/2×8 resaw stock — call for pricing
+      </div>`;
+    } else {
+      const slabs   = Math.max(1, Math.floor(TWO_X_SIX_T / (thick + RESAW_KERF)));
+      const strips  = Math.max(1, Math.floor(picked.width / (overallW + RESAW_KERF)));
+      const bfPerLF = (2.0 / slabs) * (picked.nominalW / strips) / 12;
+      rawBFTotal    = Math.ceil(bfPerLF * totalLF * safetyMult);
+      roughLabel    = `${picked.stock} rough · ${slabs*strips} pcs/board`;
+      if(thick > 0.6875){
+        const altSlabs = Math.max(1, Math.floor(TWO_X_SIX_T / (0.6875 + RESAW_KERF)));
+        warningHTML = `<div style="grid-column:1/-1;background:#3a1a00;border:1px solid var(--gold);border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--gold);line-height:1.5">
+          ⚠ At this thickness you get <strong>${slabs*strips} pcs</strong> per ${picked.stock} board.
+          Consider <strong>11/16" (${altSlabs*strips} pcs/board)</strong> for better yield.
+        </div>`;
+      }
+    }
+  } else {
+    const roughT      = getSuggestedRoughThick(thick);
+    const widthWaste  = getWidthWasteFactor(overallW);
+    const rawBFExact  = roughT * (overallW + widthWaste) * totalLF / 12;
+    rawBFTotal        = Math.ceil(rawBFExact * safetyMult);
+    roughLabel        = getStockInfo(thick)?.label || `${roughT}" rough`;
+  }
+
+  res.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px">
+      ${warningHTML}
+      ${randomLength ? `<div style="grid-column:1/-1;background:var(--surf3);border-radius:6px;padding:6px 10px;font-size:12px;color:var(--mid)">No finished length entered — assuming random lengths (LF-based estimate).</div>` : ''}
+      <div>
+        <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Linear Feet Needed</div>
+        <div style="font-size:22px;font-weight:700;color:var(--ink)">${fmtN(totalLF,0)} LF</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Rough Stock</div>
+        <div style="font-size:15px;font-weight:700;color:var(--ink);line-height:1.3">${roughLabel}</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Raw BF to Order${addWaste?' (+10%)':''}</div>
+        <div style="font-size:22px;font-weight:700;color:var(--teal)">${fmtN(rawBFTotal,0)} BF</div>
+      </div>
+    </div>
+  `;
+}
+
 // --- BRACKET CALCULATOR -----------------------------------------------
 function calcBracket(){
   const bW      = parseFraction(document.getElementById('bc-w')?.value || '') || 0;
