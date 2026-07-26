@@ -15,6 +15,46 @@ const TWO_X_SIX_T = 1.5;    // 2x6/2x8 shared actual thickness for resaw slabs (
 const TWO_X_SIX_W = 6.0;    // 2x6 rough width (inches)
 const TWO_X_EIGHT_W = 8.0;  // 2x8 rough width (inches)
 const END_TRIM = 4.0;
+
+// --- WASTE % TOGGLE HELPERS --------------------------------------------
+// Every "+10% waste" toggle in the app is now a mutually-exclusive 10%/15% pair.
+// State is stored as a plain number (0, 10, or 15) on the config object. Old
+// saved jobs stored a boolean (true=10%, false=off) — normalizeWastePct migrates
+// that transparently the first time a config is rendered.
+function wasteMultFromPct(pct){ return pct > 0 ? 1 + pct / 100 : 1; }
+function normalizeWastePct(v, defaultPct){
+  if(v === true) return 10;
+  if(v === false) return 0;
+  if(v === 10 || v === 15 || v === 0) return v;
+  return defaultPct;
+}
+// Called from each checkbox's onchange, before the field is re-read, so only one
+// of the pair is ever checked at a time.
+function exclusiveWaste(id10, id15, justClicked){
+  const e10 = document.getElementById(id10), e15 = document.getElementById(id15);
+  if(!e10 || !e15) return;
+  if(justClicked === 10 && e10.checked) e15.checked = false;
+  if(justClicked === 15 && e15.checked) e10.checked = false;
+}
+function readWastePct(id10, id15){
+  const e10 = document.getElementById(id10), e15 = document.getElementById(id15);
+  if(e15?.checked) return 15;
+  if(e10?.checked) return 10;
+  return 0;
+}
+// Standard markup for a pair of waste toggles — pass the shared id prefix and
+// an onchange callback name (called with no extra args, reads DOM itself).
+function wasteToggleHTML(idPrefix, onchangeCall, pct){
+  return `
+    <div class="toggle-row">
+      <label class="toggle"><input type="checkbox" id="${idPrefix}10" ${pct===10?'checked':''} onchange="exclusiveWaste('${idPrefix}10','${idPrefix}15',10);${onchangeCall}"><span class="toggle-slider"></span></label>
+      <span class="toggle-label">+10% waste</span>
+    </div>
+    <div class="toggle-row">
+      <label class="toggle"><input type="checkbox" id="${idPrefix}15" ${pct===15?'checked':''} onchange="exclusiveWaste('${idPrefix}10','${idPrefix}15',15);${onchangeCall}"><span class="toggle-slider"></span></label>
+      <span class="toggle-label">+15% waste</span>
+    </div>`;
+}
 const STOCK_LENGTHS      = [96, 120, 144, 168, 192]; // all lengths (long-stock species)
 const STOCK_LENGTHS_STD  = [96, 120, 144];            // max 12' — most species
 // Species that come in longer stock (can use 14' or 16' for estimating)
@@ -475,7 +515,7 @@ function addVeneerConfig(){
     grade:        last?.grade        || 'talbert',
     satinFinish:  last?.satinFinish  || false,
     panelW:0, panelL:0, slatW:0, slatL:0, slatsPerPanel:0,
-    bracketsPerPanel:0, ebSides:4, assembly:false, wasteOn:true, notes:'',
+    bracketsPerPanel:0, ebSides:4, assembly:false, wasteOn:10, notes:'',
     calcMode:'sqft', manualQty:0, sqft:0, customPricePerPanel:0, nominalSqFt:0,
   };
   veneerConfigs.push(cfg);
@@ -501,6 +541,7 @@ function renderVeneerConfigs(){
   cont.innerHTML = '';
   veneerConfigs.forEach(cfg => {
     if(!cfg.grade) cfg.grade = 'talbert';
+    cfg.wasteOn = normalizeWastePct(cfg.wasteOn, 10);
     const isTile = cfg.ceilingType === 'tile';
     const species = visibleVeneerSpecies(cfg.orientation, cfg.grade, cfg.core, cfg.thickness);
     if(!cfg.species && species.length > 0) cfg.species = species[0];
@@ -644,10 +685,7 @@ function renderVeneerConfigs(){
             <label class="toggle"><input type="checkbox" id="v-assembly-${cfg.id}" ${cfg.assembly?'checked':''} onchange="vUpdate(${cfg.id})"><span class="toggle-slider"></span></label>
             <span class="toggle-label">${isTile ? 'Dado / Groove' : 'Assembly included'}</span>
           </div>
-          <div class="toggle-row">
-            <label class="toggle"><input type="checkbox" id="v-waste-${cfg.id}" ${cfg.wasteOn!==false?'checked':''} onchange="vUpdate(${cfg.id})"><span class="toggle-slider"></span></label>
-            <span class="toggle-label">+10% waste</span>
-          </div>
+          ${wasteToggleHTML(`v-waste-${cfg.id}-`, `vUpdate(${cfg.id})`, cfg.wasteOn)}
         </div>
         <div id="v-preview-${cfg.id}" class="calc-preview" style="margin-top:16px"></div>
       </div>
@@ -688,7 +726,7 @@ function vUpdate(id){
   const orientationChanged = cfg.orientation !== prevOrientation;
   cfg.assembly       = document.getElementById('v-assembly-'+id)?.checked ?? true;
   cfg.satinFinish    = document.getElementById('v-satin-'+id)?.value === 'satin';
-  cfg.wasteOn        = document.getElementById('v-waste-'+id)?.checked ?? true;
+  cfg.wasteOn        = readWastePct(`v-waste-${id}-10`, `v-waste-${id}-15`);
   const prevMode     = cfg.calcMode;
   cfg.calcMode       = document.getElementById('v-mode-'+id)?.value || cfg.calcMode;
   if(isTile && cfg.calcMode === 'panels') cfg.calcMode = 'sqft';
@@ -878,7 +916,7 @@ function computeVeneerPools(){
     if(!qty) return;
     const key = veneerPoolKey(cfg);
     if(!pools[key]) pools[key] = { members: [] };
-    const wasteMult = cfg.wasteOn !== false ? 1.10 : 1.0;
+    const wasteMult = wasteMultFromPct(cfg.wasteOn);
     const pieceQty = Math.ceil(qty.totalSlats * wasteMult);
     pools[key].members.push({ idx, cfg, totalSlats: qty.totalSlats, pieceQty });
   });
@@ -932,7 +970,7 @@ function calcVeneerPreview(cfg){
   const p10 = sData[`${sup}_${grade}_4x10_${coreK}_${thickK}${finSfx}`] || 0;
   const opt = chooseVeneerSheet(cfg.slatW, cfg.slatL, p8, p10);
   const { size, slatsPerSheet, sheetPrice: previewSheetPrice } = opt;
-  const wasteMult   = cfg.wasteOn !== false ? 1.10 : 1.0;
+  const wasteMult   = wasteMultFromPct(cfg.wasteOn);
   const sheetsNeeded = Math.ceil(totalSlats / slatsPerSheet * wasteMult);
   const longSides  = (cfg.ebSides===4||cfg.ebSides===2)?2:(cfg.ebSides===3||cfg.ebSides===1)?1:0;
   const shortSides = (cfg.ebSides===4||cfg.ebSides===3)?2:0;
@@ -948,7 +986,7 @@ function calcVeneerPreview(cfg){
     ${isTile ? '' : `<div class="calc-preview-item"><div class="calc-preview-label">Panels Needed</div><div class="calc-preview-val">${fmtN(panelQty)}</div></div>`}
     <div class="calc-preview-item"><div class="calc-preview-label">Total ${isTile?'Tiles':'Slats'}</div><div class="calc-preview-val">${fmtN(totalSlats)}</div></div>
     <div class="calc-preview-item"><div class="calc-preview-label">${isTile?'Tiles':'Slats'} / Sheet</div><div class="calc-preview-val">${fmtN(slatsPerSheet)}</div></div>
-    <div class="calc-preview-item"><div class="calc-preview-label">Sheets Needed${wasteMult>1?' (+10%)':''}</div><div class="calc-preview-val">${fmtN(sheetsNeeded)} <span style="font-size:11px;color:var(--mid)">(${grade} ${size})</span></div></div>
+    <div class="calc-preview-item"><div class="calc-preview-label">Sheets Needed${cfg.wasteOn?' (+'+cfg.wasteOn+'%)':''}</div><div class="calc-preview-val">${fmtN(sheetsNeeded)} <span style="font-size:11px;color:var(--mid)">(${grade} ${size})</span></div></div>
     <div class="calc-preview-item"><div class="calc-preview-label">EB Footage</div><div class="calc-preview-val">${fmtN(ebFt,0)} ft</div></div>
     <div class="calc-preview-item"><div class="calc-preview-label">EB Rolls</div><div class="calc-preview-val">${fmtN(ebRolls)}</div></div>
     ${isTile ? '' : `<div class="calc-preview-item"><div class="calc-preview-label">Brackets</div><div class="calc-preview-val">${fmtN(panelQty * cfg.bracketsPerPanel)}</div></div>`}
@@ -993,7 +1031,7 @@ function calcVeneerCost(cfg, cutCostOverride, poolInfo, dadoCostOverride){
     const p8  = sData[`${sup}_${grade}_4x8_${coreK}_${thickK}${finishSuffix}`]  || 0;
     const p10 = sData[`${sup}_${grade}_4x10_${coreK}_${thickK}${finishSuffix}`] || 0;
     const opt = chooseVeneerSheet(cfg.slatW, cfg.slatL, p8, p10);
-    const wasteMult = cfg.wasteOn !== false ? 1.10 : 1.0;
+    const wasteMult = wasteMultFromPct(cfg.wasteOn);
     sheetsNeeded = Math.ceil(totalSlats / opt.slatsPerSheet * wasteMult);
     sheetCost = cfg.species === 'Custom' && cfg.customPricePerPanel
       ? sheetsNeeded * cfg.customPricePerPanel
@@ -1069,7 +1107,7 @@ function addLumberConfig(){
     sanding:      last != null ? (last.sanding ?? true) : true,
     cutToLength:  last?.cutToLength  || false,
     calcMode:     last?.calcMode     || 'sqft',
-    safetyBuffer: last != null ? (last.safetyBuffer ?? true) : true,
+    safetyBuffer: last != null ? normalizeWastePct(last.safetyBuffer, 10) : 10,
     slatW:0, slatL:0, slatsPerPanel:0, panelW:0, panelL:0, bracketsPerPanel:0,
     faceWidth:0, overallWidth:0,
     assembly:false, notes:'', manualQty:0, sqft:0, customPricePerBF:0,
@@ -1167,6 +1205,7 @@ function renderLumberConfigs(){
   const cont = document.getElementById('lumberConfigs');
   cont.innerHTML = '';
   lumberConfigs.forEach(cfg => {
+    cfg.safetyBuffer = normalizeWastePct(cfg.safetyBuffer, 10);
     const isTG = cfg.lumberType === 'tg';
     const species  = visibleLumberSpecies();
     if(!cfg.species && species.length > 0) cfg.species = species[0];
@@ -1294,10 +1333,7 @@ function renderLumberConfigs(){
             <label class="toggle"><input type="checkbox" id="l-cut-${cfg.id}" ${cfg.cutToLength?'checked':''} onchange="lUpdate(${cfg.id})"><span class="toggle-slider"></span></label>
             <span class="toggle-label">Cut to length</span>
           </div>
-          <div class="toggle-row">
-            <label class="toggle"><input type="checkbox" id="l-safety-${cfg.id}" ${cfg.safetyBuffer!==false?'checked':''} onchange="lUpdate(${cfg.id})"><span class="toggle-slider"></span></label>
-            <span class="toggle-label">+10% waste</span>
-          </div>
+          ${wasteToggleHTML(`l-safety-${cfg.id}-`, `lUpdate(${cfg.id})`, cfg.safetyBuffer)}
         </div>
         <div id="l-preview-${cfg.id}" class="calc-preview" style="margin-top:16px"></div>
       </div>
@@ -1337,7 +1373,7 @@ function lUpdate(id){
   cfg.sqft         = parseFloat(document.getElementById('l-sqft-'+id)?.value) || 0;
   cfg.manualQty    = parseInt(document.getElementById('l-manualQty-'+id)?.value) || 0;
   cfg.roughThick      = getSuggestedRoughThick(cfg.thickness);
-  cfg.safetyBuffer    = document.getElementById('l-safety-'+id)?.checked ?? false;
+  cfg.safetyBuffer    = readWastePct(`l-safety-${id}-10`, `l-safety-${id}-15`);
   cfg.customPricePerBF = parseFloat(document.getElementById('l-custombf-'+id)?.value) || 0;
 
   const lCustWrap = document.getElementById('l-custombf-wrap-'+id);
@@ -1431,7 +1467,7 @@ function resolveLumberQty(cfg){
 function calcContinuousBF(cfg, totalLF, width, isTG, randomLength){
   const sData = pricing.lumberSpecies[cfg.species] || {};
   const isVGResaw = !!sData.resaw;
-  const safetyMult = cfg.safetyBuffer ? 1.10 : 1;
+  const safetyMult = wasteMultFromPct(cfg.safetyBuffer);
 
   if(isVGResaw){
     const picked = chooseResawStock(width);
@@ -1533,7 +1569,7 @@ function millLumberCalc(cfg, qty){
     bfPerSlat = bfPerBoard / pcsPerBoard; // per-slat rate (for display)
     const rawBFResaw = boardsNeeded * bfPerBoard;
     // Apply safety buffer if on
-    const safetyMult = cfg.safetyBuffer ? 1.10 : 1;
+    const safetyMult = wasteMultFromPct(cfg.safetyBuffer);
     return {
       isVGResaw, vgWarning, vgAltPcs, noStock:false, stockUsed:picked.stock, isTG,
       stockIn, stockFt, piecesPerLen,
@@ -1554,7 +1590,7 @@ function millLumberCalc(cfg, qty){
       const boardsNeeded = Math.ceil(totalSlats / (pcsWide * piecesPerLen));
       bfPerSlat = roughT * (width + widthWaste) * stockIn / (144 * pcsWide * piecesPerLen);
       const rawBFExact = bfPerSlat * totalSlats;
-      const safetyMult = cfg.safetyBuffer ? 1.10 : 1;
+      const safetyMult = wasteMultFromPct(cfg.safetyBuffer);
       const rawBFTotal = Math.ceil(rawBFExact * safetyMult);
       return {
         isVGResaw, vgWarning, isTG,
@@ -1572,7 +1608,7 @@ function millLumberCalc(cfg, qty){
     }
 
     const rawBFExact = bfPerSlat * totalSlats;
-    const safetyMult = cfg.safetyBuffer ? 1.10 : 1;
+    const safetyMult = wasteMultFromPct(cfg.safetyBuffer);
     const rawBFTotal = Math.ceil(rawBFExact * safetyMult);
     return {
       isVGResaw, vgWarning, isTG,
@@ -1628,7 +1664,7 @@ function calcLumberPreview(cfg){
       <div class="calc-preview-item"><div class="calc-preview-label">Linear Feet Needed</div><div class="calc-preview-val">${fmtN(m.totalLF,0)} LF</div></div>
       <div class="calc-preview-item"><div class="calc-preview-label">Rough Stock</div><div class="calc-preview-val">${m.stockLabel || (ROUGH_THICKNESSES.find(r=>Math.abs(r.val-m.roughT)<0.001)?.label || m.roughT+'"')}</div></div>
       <div class="calc-preview-item"><div class="calc-preview-label">Width Waste Factor</div><div class="calc-preview-val">${m.widthWaste}"</div></div>
-      <div class="calc-preview-item"><div class="calc-preview-label">Raw BF to Order${m.safetyBuffer?' (+10% waste)':''}</div><div class="calc-preview-val" style="color:var(--teal);font-weight:700;font-size:16px">${fmtN(m.rawBFTotal,0)} BF</div></div>
+      <div class="calc-preview-item"><div class="calc-preview-label">Raw BF to Order${m.safetyBuffer?' (+'+m.safetyBuffer+'% waste)':''}</div><div class="calc-preview-val" style="color:var(--teal);font-weight:700;font-size:16px">${fmtN(m.rawBFTotal,0)} BF</div></div>
     `;
     return;
   }
@@ -1661,7 +1697,7 @@ function calcLumberPreview(cfg){
     ${m.widthWaste !== null ? `<div class="calc-preview-item"><div class="calc-preview-label">Width Waste Factor</div><div class="calc-preview-val">${m.widthWaste}"</div></div>` : ''}
     ${m.boardsNeeded ? `<div class="calc-preview-item"><div class="calc-preview-label">Boards to Buy</div><div class="calc-preview-val">${m.boardsNeeded}${m.isVGResaw ? ' × '+m.stockUsed : ''} (${m.pcsPerBoard} slat${m.pcsPerBoard!==1?'s':''}/board)</div></div>` : ''}
     ${m.boardsNeeded && m.bfPerBoard ? `<div class="calc-preview-item"><div class="calc-preview-label">BF / Board</div><div class="calc-preview-val">${fmtN(m.bfPerBoard,0)} BF</div></div>` : `<div class="calc-preview-item"><div class="calc-preview-label">BF / Slat</div><div class="calc-preview-val">${fmtN(m.bfPerSlat,3)} BF</div></div>`}
-    <div class="calc-preview-item"><div class="calc-preview-label">Raw BF to Order${m.safetyBuffer?' (+10% waste)':''}</div><div class="calc-preview-val" style="color:var(--teal);font-weight:700;font-size:16px">${fmtN(m.rawBFTotal,0)} BF</div></div>
+    <div class="calc-preview-item"><div class="calc-preview-label">Raw BF to Order${m.safetyBuffer?' (+'+m.safetyBuffer+'% waste)':''}</div><div class="calc-preview-val" style="color:var(--teal);font-weight:700;font-size:16px">${fmtN(m.rawBFTotal,0)} BF</div></div>
     ${isTG ? '' : `<div class="calc-preview-item"><div class="calc-preview-label">Brackets</div><div class="calc-preview-val">${fmtN(panelQty * cfg.bracketsPerPanel)}</div></div>`}
   `;
 }
@@ -2450,7 +2486,7 @@ function addLaminationConfig(){
     calcMode:  last?.calcMode  || 'sqft',
     panelW:0, panelL:0, slatW:0, slatL:0,
     slatsPerPanel:0, bracketsPerPanel:0,
-    assembly:false, wasteOn:true, manualQty:0, sqft:0,
+    assembly:false, wasteOn:10, manualQty:0, sqft:0,
   });
   renderLaminationConfigs();
 }
@@ -2483,6 +2519,7 @@ function renderLaminationConfigs(){
   const lamFaceMaxArea = (item) => LAM_FACE_SIZES.reduce((max,s) => (item?.[`price${s}`]||0) > 0 ? Math.max(max, LAM_SIZE_AREA[s]) : max, 0);
 
   laminationConfigs.forEach(cfg => {
+    cfg.wasteOn = normalizeWastePct(cfg.wasteOn, 10);
     const modeLabels = {sqft:'By Sq Ft', slats:'By Slat Count', panels:'By Panel Count'};
     const qtyLabel   = cfg.calcMode === 'slats' ? 'Total Slats' : 'Number of Panels';
     const div = document.createElement('div');
@@ -2591,10 +2628,7 @@ function renderLaminationConfigs(){
             <label class="toggle"><input type="checkbox" id="l2-assembly-${cfg.id}" ${cfg.assembly?'checked':''} onchange="lamUpdate(${cfg.id})"><span class="toggle-slider"></span></label>
             <span class="toggle-label">Assembly included</span>
           </div>
-          <div class="toggle-row">
-            <label class="toggle"><input type="checkbox" id="l2-waste-${cfg.id}" ${cfg.wasteOn!==false?'checked':''} onchange="lamUpdate(${cfg.id})"><span class="toggle-slider"></span></label>
-            <span class="toggle-label">+10% waste</span>
-          </div>
+          ${wasteToggleHTML(`l2-waste-${cfg.id}-`, `lamUpdate(${cfg.id})`, cfg.wasteOn)}
         </div>
         <div id="l2-preview-${cfg.id}" class="calc-preview" style="margin-top:16px"></div>
       </div>
@@ -2619,7 +2653,7 @@ function lamUpdate(id){
   cfg.bracketsPerPanel= parseInt(document.getElementById('l2-brackets-'+id)?.value) || 0;
   cfg.ebSides  = parseInt(document.getElementById('l2-ebsides-'+id)?.value) || 0;
   cfg.assembly = document.getElementById('l2-assembly-'+id)?.checked ?? false;
-  cfg.wasteOn  = document.getElementById('l2-waste-'+id)?.checked ?? true;
+  cfg.wasteOn  = readWastePct(`l2-waste-${id}-10`, `l2-waste-${id}-15`);
   const prevMode = cfg.calcMode;
   cfg.calcMode = document.getElementById('l2-mode-'+id)?.value || cfg.calcMode;
   cfg.sqft     = parseFloat(document.getElementById('l2-sqft-'+id)?.value) || 0;
@@ -2663,7 +2697,7 @@ function calcLaminationCost(cfg, cutCostOverride){
   const faceData   = isCustomer ? null : (pricing.laminationFaces||{})[cfg.face];
   const backData   = isBackCustomer ? null : (pricing.laminationFaces||{})[cfg.back || cfg.face];
   const coreData   = (pricing.laminationCores||{})[cfg.core];
-  const wasteMult  = cfg.wasteOn !== false ? 1.10 : 1.0;
+  const wasteMult  = wasteMultFromPct(cfg.wasteOn);
 
   const thick = cfg.thickness || 0.75;
 
@@ -2752,7 +2786,7 @@ function calcLaminationPreview(cfg){
   const faceData  = isCustomer ? null : (pricing.laminationFaces||{})[cfg.face];
   const backData  = isBackCustomer ? null : (pricing.laminationFaces||{})[cfg.back || cfg.face];
   const coreData  = (pricing.laminationCores||{})[cfg.core];
-  const wasteMult = cfg.wasteOn !== false ? 1.10 : 1.0;
+  const wasteMult = wasteMultFromPct(cfg.wasteOn);
   const thick     = cfg.thickness || 0.75;
 
   const faceAvail = isCustomer ? {} : getLamFacePrices(faceData);
@@ -3541,9 +3575,11 @@ function calcBF(){
   const el       = document.getElementById('bf-result');
   const stockEl  = document.getElementById('bf-stock-label');
   const boardsEl = document.getElementById('bf-boards-label');
+  const totalEl  = document.getElementById('bf-total-label');
+  const wastePct = readWastePct('bf-waste10', 'bf-waste15');
 
   if(!w || !t || !l || isNaN(w) || isNaN(t) || isNaN(l)){
-    el.textContent = '—'; stockEl.textContent = ''; boardsEl.textContent = ''; return;
+    el.textContent = '—'; stockEl.textContent = ''; boardsEl.textContent = ''; totalEl.textContent = ''; return;
   }
 
   const info = getStockInfo(t);
@@ -3552,6 +3588,7 @@ function calcBF(){
   const bf = (w * stockThick * l * boardsNeeded) / 12;
 
   el.textContent = fmtN(bf, 2);
+  totalEl.textContent = wastePct ? `Total (+${wastePct}%): ${fmtN(bf * wasteMultFromPct(wastePct), 2)} BF` : '';
 
   if(info){
     stockEl.textContent = info.label;
@@ -3572,27 +3609,47 @@ function calcLFfromSqft(){
   document.getElementById('lf-lf').value = '';
   const w = parseFloat(document.getElementById('lf-width').value) || 0;
   const s = parseFloat(document.getElementById('lf-sqft').value) || 0;
-  if(!w || !s) return;
+  if(!w || !s){ calcLFTotal(); return; }
   document.getElementById('lf-lf').value = r2(s * 12 / w);
+  calcLFTotal();
 }
 
 function calcSqftFromLF(){
   document.getElementById('lf-sqft').value = '';
   const w = parseFloat(document.getElementById('lf-width').value) || 0;
   const l = parseFloat(document.getElementById('lf-lf').value) || 0;
-  if(!w || !l) return;
+  if(!w || !l){ calcLFTotal(); return; }
   document.getElementById('lf-sqft').value = r2(l * w / 12);
+  calcLFTotal();
 }
 
 function calcLF(){ calcLFfromSqft(); }
+
+// Shared "Total (with waste)" line for the Sqft <-> LF converter — reflects
+// whatever sqft/lf values are currently populated, regardless of which side
+// the user typed into.
+function calcLFTotal(){
+  const totalEl = document.getElementById('lf-total-label');
+  if(!totalEl) return;
+  const wastePct = readWastePct('lf-waste10', 'lf-waste15');
+  const sqft = parseFloat(document.getElementById('lf-sqft').value) || 0;
+  const lf   = parseFloat(document.getElementById('lf-lf').value) || 0;
+  if(!wastePct || (!sqft && !lf)){ totalEl.textContent = ''; return; }
+  const mult = wasteMultFromPct(wastePct);
+  const parts = [];
+  if(sqft) parts.push(`${fmtN(sqft*mult,2)} sqft`);
+  if(lf)   parts.push(`${fmtN(lf*mult,2)} LF`);
+  totalEl.textContent = `Total (+${wastePct}%): ${parts.join(' / ')}`;
+}
 
 function calcPCfromCount(){
   document.getElementById('pc-sqft').value = '';
   const w = parseFloat(document.getElementById('pc-w').value) || 0;
   const l = parseFloat(document.getElementById('pc-l').value) || 0;
   const c = parseFloat(document.getElementById('pc-count').value) || 0;
-  if(!w || !l || !c) return;
+  if(!w || !l || !c){ calcPCTotal(); return; }
   document.getElementById('pc-sqft').value = r2(c * w * l / 144);
+  calcPCTotal();
 }
 
 function calcCountFromSqft(){
@@ -3600,8 +3657,24 @@ function calcCountFromSqft(){
   const w = parseFloat(document.getElementById('pc-w').value) || 0;
   const l = parseFloat(document.getElementById('pc-l').value) || 0;
   const s = parseFloat(document.getElementById('pc-sqft').value) || 0;
-  if(!w || !l || !s) return;
+  if(!w || !l || !s){ calcPCTotal(); return; }
   document.getElementById('pc-count').value = r2(s * 144 / (w * l));
+  calcPCTotal();
+}
+
+// Shared "Total (with waste)" line for the Panel Count <-> Sqft converter.
+function calcPCTotal(){
+  const totalEl = document.getElementById('pc-total-label');
+  if(!totalEl) return;
+  const wastePct = readWastePct('pc-waste10', 'pc-waste15');
+  const count = parseFloat(document.getElementById('pc-count').value) || 0;
+  const sqft  = parseFloat(document.getElementById('pc-sqft').value) || 0;
+  if(!wastePct || (!count && !sqft)){ totalEl.textContent = ''; return; }
+  const mult = wasteMultFromPct(wastePct);
+  const parts = [];
+  if(count) parts.push(`${fmtN(Math.ceil(count*mult))} panels`);
+  if(sqft)  parts.push(`${fmtN(sqft*mult,2)} sqft`);
+  totalEl.textContent = `Total (+${wastePct}%): ${parts.join(' / ')}`;
 }
 
 function calcPC(){ calcPCfromCount(); }
@@ -3616,7 +3689,7 @@ function calcSlat(){
   const slatsPerPanel = parseInt(document.getElementById('sc-slatsPerPanel')?.value) || 0;
   const panelW        = parseFloat(document.getElementById('sc-panelW')?.value) || 0;
   const panelL        = parseFloat(document.getElementById('sc-panelL')?.value) || 0;
-  const addWaste      = document.getElementById('sc-waste')?.checked;
+  const wastePct      = readWastePct('sc-waste10', 'sc-waste15');
   const res           = document.getElementById('sc-result');
 
   const labelEl = document.getElementById('sc-qty-label');
@@ -3643,7 +3716,7 @@ function calcSlat(){
   const stockIn      = getMillStockLength(slatL, '');
   const stockFt      = stockIn / 12;
   const piecesPerLen = slatL >= 72 ? 1 : Math.max(1, Math.floor((stockIn - END_TRIM) / slatL));
-  const safetyMult   = addWaste ? 1.10 : 1.0;
+  const safetyMult   = wasteMultFromPct(wastePct);
   const lengthNote   = piecesPerLen > 1 ? ` · ${piecesPerLen} slats/board` : '';
   const isVG         = document.getElementById('sc-vg')?.checked;
 
@@ -3732,7 +3805,7 @@ function calcSlat(){
         <div style="font-size:22px;font-weight:700;color:var(--ink)">${fmtN(bfPerSlat,3)}</div>
       </div>
       <div>
-        <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Raw BF to Order${addWaste?' (+10%)':''}</div>
+        <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Raw BF to Order${wastePct?' (+'+wastePct+'%)':''}</div>
         <div style="font-size:22px;font-weight:700;color:var(--teal)">${fmtN(rawBFTotal,0)} BF</div>
       </div>
     </div>
@@ -3748,7 +3821,7 @@ function calcTile(){
   const tileW    = parseFloat(document.getElementById('tc-tileW')?.value) || 0;
   const tileL    = parseFloat(document.getElementById('tc-tileL')?.value) || 0;
   const nominal  = parseFloat(document.getElementById('tc-nominal')?.value) || 0;
-  const addWaste = document.getElementById('tc-waste')?.checked;
+  const wastePct = readWastePct('tc-waste10', 'tc-waste15');
   const res      = document.getElementById('tc-result');
 
   const labelEl = document.getElementById('tc-qty-label');
@@ -3772,7 +3845,7 @@ function calcTile(){
   }
   const fits8  = tileW <= SHEET_WIDTHS['4x8']  && tileL <= SHEET_LENGTHS['4x8'];
   const fits10 = tileW <= SHEET_WIDTHS['4x10'] && tileL <= SHEET_LENGTHS['4x10'];
-  const wasteMult = addWaste ? 1.10 : 1.0;
+  const wasteMult = wasteMultFromPct(wastePct);
 
   let chosen;
   if(!fits8 && !fits10){
@@ -3814,7 +3887,7 @@ function calcTile(){
         <div style="font-size:11px;color:var(--dim)">${chosen.size} sheet</div>
       </div>
       <div>
-        <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Sheets Needed${addWaste?' (+10%)':''}</div>
+        <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Sheets Needed${wastePct?' (+'+wastePct+'%)':''}</div>
         <div style="font-size:22px;font-weight:700;color:var(--teal)">${fmtN(chosen.sheets)}</div>
       </div>
     </div>
@@ -3832,7 +3905,7 @@ function calcTG(){
   const faceW    = parseFloat(document.getElementById('tg-faceW')?.value) || 0;
   const overallW = parseFloat(document.getElementById('tg-overallW')?.value) || 0;
   const lenIn    = parseFloat(document.getElementById('tg-len')?.value) || 0;
-  const addWaste = document.getElementById('tg-waste')?.checked;
+  const wastePct = readWastePct('tg-waste10', 'tg-waste15');
   const isVG     = document.getElementById('tg-vg')?.checked;
   const res      = document.getElementById('tg-result');
 
@@ -3854,7 +3927,7 @@ function calcTG(){
   }
   if(!totalLF){ res.innerHTML = '<span style="color:var(--mid)">Enter a quantity to see results.</span>'; return; }
 
-  const safetyMult = addWaste ? 1.10 : 1.0;
+  const safetyMult = wasteMultFromPct(wastePct);
   let rawBFTotal, roughLabel, warningHTML = '';
 
   if(isVG){
@@ -3900,7 +3973,7 @@ function calcTG(){
         <div style="font-size:15px;font-weight:700;color:var(--ink);line-height:1.3">${roughLabel}</div>
       </div>
       <div>
-        <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Raw BF to Order${addWaste?' (+10%)':''}</div>
+        <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Raw BF to Order${wastePct?' (+'+wastePct+'%)':''}</div>
         <div style="font-size:22px;font-weight:700;color:var(--teal)">${fmtN(rawBFTotal,0)} BF</div>
       </div>
     </div>
@@ -3938,8 +4011,11 @@ function calcBracket(){
     return;
   }
 
+  const wastePct = readWastePct('bc-waste10', 'bc-waste15');
   const totalBrackets = panels * perPanel;
   const sheetsNeeded = bracketsPerSheet > 0 ? Math.ceil(totalBrackets / bracketsPerSheet) : 0;
+  const totalBracketsWaste = Math.ceil(totalBrackets * wasteMultFromPct(wastePct));
+  const sheetsNeededWaste = bracketsPerSheet > 0 ? Math.ceil(totalBracketsWaste / bracketsPerSheet) : 0;
 
   res.innerHTML = `
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px">
@@ -3947,6 +4023,7 @@ function calcBracket(){
       <div><div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Brackets / Sheet</div><div style="font-size:22px;font-weight:700;color:var(--ink)">${fmtN(bracketsPerSheet)}</div><div style="font-size:11px;color:var(--dim)">${cols} across × ${rows} down</div></div>
       <div><div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Sheets Needed</div><div style="font-size:22px;font-weight:700;color:var(--teal)">${fmtN(sheetsNeeded)}</div><div style="font-size:11px;color:var(--dim)">3/4" × 48" × 96" Baltic Birch</div></div>
     </div>
+    ${wastePct ? `<div style="margin-top:10px;font-size:14px;font-weight:700;color:var(--teal);text-align:center">Total (+${wastePct}%): ${fmtN(totalBracketsWaste)} brackets — ${fmtN(sheetsNeededWaste)} sheets</div>` : ''}
     <div style="margin-top:8px;font-size:12px;color:var(--dim)">Width (${bW}") across 47.5" · Length (${bL}") down 95.5"</div>
   `;
 }
