@@ -1185,11 +1185,15 @@ function getBestStock(slatL, species){
 function getMillStockLength(slatL, species){
   const isLong = LONG_STOCK_SPECIES.has(species);
   if(slatL >= 72){
-    if(slatL <= 95)  return 96;   // 8'
-    if(slatL <= 119) return 120;  // 10'
-    if(slatL <= 143) return 144;  // 12'
-    if(!isLong)      return 144;  // cap at 12' for standard species
-    if(slatL <= 167) return 168;  // 14'
+    // Breakpoints sit a half inch under each stock length (e.g. 119.5" -> 10' stock) since
+    // that's the standard way lengths are submitted here: entering exactly a stock length
+    // (120") means zero trim margin, so it bumps to the next size up, while X.5" under is
+    // the deliberate "reserve a hair for end splits" convention and fits the shorter stock.
+    if(slatL <= 95.5)  return 96;   // 8'
+    if(slatL <= 119.5) return 120;  // 10'
+    if(slatL <= 143.5) return 144;  // 12'
+    if(!isLong)         return 144;  // cap at 12' for standard species
+    if(slatL <= 167.5) return 168;  // 14'
     return 192;                   // 16'
   }
   return getBestStock(slatL, species).stockIn;
