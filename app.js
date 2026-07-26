@@ -458,13 +458,36 @@ function unlockBodyScroll(){
   window.scrollTo(0, _scrollLockY);
 }
 
+// iOS Safari (browser + home-screen PWA) positions position:fixed elements against the
+// LAYOUT viewport, not the VISUAL one. The moment the on-screen keyboard opens (tapping
+// any of the admin form's many text inputs), the visual viewport shrinks/shifts but a
+// plain `inset:0` fixed overlay doesn't — so it visually drifts/floats away from the
+// keyboard-adjusted screen. Pinning the overlay to window.visualViewport's live
+// height/offset on every resize/scroll event keeps it glued to what's actually visible.
+function syncModalViewport(){
+  const vv = window.visualViewport;
+  if(!vv) return;
+  document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(o => {
+    o.style.height = vv.height + 'px';
+    o.style.top    = vv.offsetTop + 'px';
+    o.style.left   = vv.offsetLeft + 'px';
+  });
+}
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', syncModalViewport);
+  window.visualViewport.addEventListener('scroll', syncModalViewport);
+}
+
 function openAdmin(){
   renderAdminModal();
   document.getElementById('adminModal').classList.remove('hidden');
   lockBodyScroll();
+  syncModalViewport();
 }
 function closeAdmin(){
-  document.getElementById('adminModal').classList.add('hidden');
+  const m = document.getElementById('adminModal');
+  m.classList.add('hidden');
+  m.style.height = ''; m.style.top = ''; m.style.left = '';
   unlockBodyScroll();
 }
 
@@ -2109,6 +2132,7 @@ function loadJob(job){
 async function openSavedJobs(){
   document.getElementById('savedModal').classList.remove('hidden');
   lockBodyScroll();
+  syncModalViewport();
   const list = document.getElementById('savedJobsList');
   list.innerHTML = '<p style="color:var(--mid);font-size:14px">Loading…</p>';
   // Always fetch from GitHub — reading jobs.json is public, no token required
@@ -2138,7 +2162,12 @@ function renderSavedJobsList(){
   }
 }
 
-function closeSavedJobs(){ document.getElementById('savedModal').classList.add('hidden'); unlockBodyScroll(); }
+function closeSavedJobs(){
+  const m = document.getElementById('savedModal');
+  m.classList.add('hidden');
+  m.style.height = ''; m.style.top = ''; m.style.left = '';
+  unlockBodyScroll();
+}
 
 function toggleCloudConnect(){
   const panel = document.getElementById('cloudConnectPanel');
