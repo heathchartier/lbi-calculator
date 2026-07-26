@@ -597,11 +597,11 @@ function renderVeneerConfigs(){
         <span class="section-label">${isTile ? 'Tile Dimensions (inches)' : 'Panel & Slat Dimensions (inches)'}</span>
         <div class="config-grid">
           <div>
-            <label class="field-label">${isTile ? 'Tile Width' : 'Panel Width'}</label>
+            <label class="field-label">${isTile ? 'Tile Width (in)' : 'Panel Width (in)'}</label>
             <input type="text" id="v-panelW-${cfg.id}" value="${cfg.panelW||''}" placeholder="e.g. 12" oninput="vUpdate(${cfg.id})">
           </div>
           <div>
-            <label class="field-label">${isTile ? 'Tile Length' : 'Panel Length'}</label>
+            <label class="field-label">${isTile ? 'Tile Length (in)' : 'Panel Length (in)'}</label>
             <input type="text" id="v-panelL-${cfg.id}" value="${cfg.panelL||''}" placeholder="e.g. 96" oninput="vUpdate(${cfg.id})">
           </div>
           ${isTile ? `
@@ -611,11 +611,11 @@ function renderVeneerConfigs(){
           </div>
           ` : `
           <div>
-            <label class="field-label">Slat Width</label>
+            <label class="field-label">Slat Width (in)</label>
             <input type="text" id="v-slatW-${cfg.id}" value="${cfg.slatW||''}" placeholder="e.g. 3.25 or 3-1/4" oninput="vUpdate(${cfg.id})">
           </div>
           <div>
-            <label class="field-label">Slat Length</label>
+            <label class="field-label">Slat Length (in)</label>
             <input type="text" id="v-slatL-${cfg.id}" value="${cfg.slatL||''}" placeholder="e.g. 96" oninput="vUpdate(${cfg.id})">
           </div>
           <div>
@@ -1129,6 +1129,16 @@ function chooseResawStock(slatW){
   return null;
 }
 
+// Label for the small "Milled from ..." badge next to Finished Thickness — must reflect the
+// actual width-based 2x6-vs-2x8 pick (chooseResawStock), not a hardcoded guess, since the
+// two rough stocks price differently and the badge previously always said "2×6" even when
+// the real calculation picked 2×8.
+function resawStockLabel(cfg){
+  const width = cfg.lumberType === 'tg' ? cfg.overallWidth : cfg.slatW;
+  const picked = width ? chooseResawStock(width) : null;
+  return picked ? `Milled from ${picked.stock.replace('x','×')}` : 'Milled from 2×6 or 2×8';
+}
+
 // VG Fir/Hemlock: pieces per board — width rips × thickness slabs
 // 2x6/2x8 stock: 1.5" actual thickness; thin-kerf resaw/rip (RESAW_KERF = 1/16")
 // Slabs from thickness:  floor(1.5 / (slatT + RESAW_KERF))
@@ -1178,7 +1188,7 @@ function renderLumberConfigs(){
         <button class="btn-danger print-hide" onclick="event.stopPropagation();removeLumberConfig(${cfg.id})" style="margin-left:8px">Remove</button>
       </div>
       <div class="config-body">
-        ${isResaw ? `<div class="note-banner" id="lresaw-note-${cfg.id}">⚠ Hemlock/Fir: Milled from 2×6 rough stock — pcs per board depends on slat dimensions (see Lumber Calculation below).</div>` : ''}
+        ${isResaw ? `<div class="note-banner" id="lresaw-note-${cfg.id}">⚠ Hemlock/Fir: ${resawStockLabel(cfg)} rough stock — pcs per board depends on slat dimensions (see Lumber Calculation below).</div>` : ''}
         <div class="config-grid" style="margin-top:${isResaw?'16px':'0'}">
           <div>
             <label class="field-label">Ceiling Type</label>
@@ -1224,31 +1234,31 @@ function renderLumberConfigs(){
         <span class="section-label">${isTG ? 'T&G Finished Dimensions (inches)' : 'Finished Slat Dimensions (inches)'}</span>
         <div class="config-grid">
           <div>
-            <label class="field-label">Finished Thickness</label>
+            <label class="field-label">Finished Thickness (in)</label>
             <input type="text" id="l-thick-${cfg.id}" value="${cfg.thickness}" autocorrect="off" autocapitalize="none" placeholder="e.g. 3/4 or .75" oninput="lUpdate(${cfg.id})">
-            <span class="stock-tag" id="l-thick-tag-${cfg.id}" style="${isResaw||getStockInfo(cfg.thickness)?'':'display:none'}">${isResaw?'Milled from 2×6':(getStockInfo(cfg.thickness)?.label||'')}</span>
+            <span class="stock-tag" id="l-thick-tag-${cfg.id}" style="${isResaw||getStockInfo(cfg.thickness)?'':'display:none'}">${isResaw?resawStockLabel(cfg):(getStockInfo(cfg.thickness)?.label||'')}</span>
           </div>
           ${isTG ? `
           <div>
-            <label class="field-label">Face Width</label>
+            <label class="field-label">Face Width (in)</label>
             <input type="text" id="l-faceW-${cfg.id}" value="${cfg.faceWidth||''}" placeholder="e.g. 4" oninput="lUpdate(${cfg.id})">
           </div>
           <div>
-            <label class="field-label">Overall Width</label>
+            <label class="field-label">Overall Width (in)</label>
             <input type="text" id="l-overallW-${cfg.id}" value="${cfg.overallWidth||''}" placeholder="e.g. 4.25" oninput="lUpdate(${cfg.id})">
           </div>
           <div>
-            <label class="field-label">Finished Length ${cfg.calcMode==='sqft'?'(optional)':''}</label>
+            <label class="field-label">Finished Length (in) ${cfg.calcMode==='sqft'?'(optional)':''}</label>
             <input type="text" id="l-slatL-${cfg.id}" value="${cfg.slatL||''}" placeholder="${cfg.calcMode==='sqft'?'e.g. 96 (blank = random)':'e.g. 96'}" oninput="lUpdate(${cfg.id})">
             ${cfg.slatL ? `<span class="stock-tag" id="l-stock-${cfg.id}">📏 ${stockFt}' stock · ${pcsPerLen} pc/length</span>` : `<span class="stock-tag" id="l-stock-${cfg.id}" style="display:none"></span>`}
           </div>
           ` : `
           <div>
-            <label class="field-label">Finished Width</label>
+            <label class="field-label">Finished Width (in)</label>
             <input type="text" id="l-slatW-${cfg.id}" value="${cfg.slatW||''}" placeholder="e.g. 3.25 or 3-1/4" oninput="lUpdate(${cfg.id})">
           </div>
           <div>
-            <label class="field-label">Finished Length ${cfg.calcMode==='sqft'?'(optional)':''}</label>
+            <label class="field-label">Finished Length (in) ${cfg.calcMode==='sqft'?'(optional)':''}</label>
             <input type="text" id="l-slatL-${cfg.id}" value="${cfg.slatL||''}" placeholder="${cfg.calcMode==='sqft'?'e.g. 96 (blank = random)':'e.g. 96'}" oninput="lUpdate(${cfg.id})">
             ${cfg.slatL ? `<span class="stock-tag" id="l-stock-${cfg.id}">📏 ${stockFt}' stock · ${pcsPerLen} pc/length</span>` : `<span class="stock-tag" id="l-stock-${cfg.id}" style="display:none"></span>`}
           </div>
@@ -1257,11 +1267,11 @@ function renderLumberConfigs(){
             <input type="number" id="l-slats-${cfg.id}" value="${cfg.slatsPerPanel||''}" step="1" min="1" placeholder="e.g. 4" oninput="lUpdate(${cfg.id})">
           </div>
           <div>
-            <label class="field-label">Panel Width</label>
+            <label class="field-label">Panel Width (in)</label>
             <input type="text" id="l-panelW-${cfg.id}" value="${cfg.panelW||''}" placeholder="e.g. 12" oninput="lUpdate(${cfg.id})">
           </div>
           <div>
-            <label class="field-label">Panel Length</label>
+            <label class="field-label">Panel Length (in)</label>
             <input type="text" id="l-panelL-${cfg.id}" value="${cfg.panelL||''}" placeholder="e.g. 96" oninput="lUpdate(${cfg.id})">
           </div>
           <div>
@@ -1352,7 +1362,7 @@ function lUpdate(id){
   if(thickTag){
     const sDataU = pricing.lumberSpecies[cfg.species] || {};
     if(sDataU.resaw){
-      thickTag.textContent = 'Milled from 2×6';
+      thickTag.textContent = resawStockLabel(cfg);
       thickTag.style.display = '';
     } else {
       const si = getStockInfo(cfg.thickness);
@@ -2541,19 +2551,19 @@ function renderLaminationConfigs(){
         <span class="section-label">Panel & Slat Dimensions (inches)</span>
         <div class="config-grid">
           <div>
-            <label class="field-label">Panel Width</label>
+            <label class="field-label">Panel Width (in)</label>
             <input type="text" id="l2-panelW-${cfg.id}" value="${cfg.panelW||''}" placeholder="e.g. 12" oninput="lamUpdate(${cfg.id})">
           </div>
           <div>
-            <label class="field-label">Panel Length</label>
+            <label class="field-label">Panel Length (in)</label>
             <input type="text" id="l2-panelL-${cfg.id}" value="${cfg.panelL||''}" placeholder="e.g. 96" oninput="lamUpdate(${cfg.id})">
           </div>
           <div>
-            <label class="field-label">Slat Width</label>
+            <label class="field-label">Slat Width (in)</label>
             <input type="text" id="l2-slatW-${cfg.id}" value="${cfg.slatW||''}" placeholder="e.g. 3.25 or 3-1/4" oninput="lamUpdate(${cfg.id})">
           </div>
           <div>
-            <label class="field-label">Slat Length</label>
+            <label class="field-label">Slat Length (in)</label>
             <input type="text" id="l2-slatL-${cfg.id}" value="${cfg.slatL||''}" placeholder="e.g. 96" oninput="lamUpdate(${cfg.id})">
           </div>
           <div>
