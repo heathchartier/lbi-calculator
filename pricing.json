@@ -7538,7 +7538,7 @@
     "millingFlat": 665,
     "sandingFlat": 240,
     "cutFlat": 630,
-    "assembly": 1.5,
+    "assembly": 1.7,
     "millingThreshold": 3000,
     "millingPerLF": 0.17,
     "seriesChange": 115,
