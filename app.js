@@ -271,7 +271,7 @@ const DEFAULT_PRICING = {
   },
   markup: {
     panels:0, edgeBand:0, lumber:0, milling:0,
-    assembly:0, ebService:0, cutService:0, brackets:0,
+    assembly:0, ebService:0, cutService:0, brackets:0, dado:0,
   },
   standardProducts: [],
   productCategories: [],
@@ -396,14 +396,36 @@ function checkSession(){
   }
 }
 
+// iOS Safari (browser + home-screen PWA) ignores body{overflow:hidden} and keeps
+// rubber-band-scrolling the page behind a fixed-position modal, which makes the
+// modal appear to drift/float as the background scrolls under it. Pinning the
+// body itself with position:fixed blocks that background scroll.
+let _scrollLockY = 0;
+function lockBodyScroll(){
+  _scrollLockY = window.scrollY;
+  document.body.style.position = 'fixed';
+  document.body.style.top   = `-${_scrollLockY}px`;
+  document.body.style.left  = '0';
+  document.body.style.right = '0';
+  document.body.style.width = '100%';
+}
+function unlockBodyScroll(){
+  document.body.style.position = '';
+  document.body.style.top   = '';
+  document.body.style.left  = '';
+  document.body.style.right = '';
+  document.body.style.width = '';
+  window.scrollTo(0, _scrollLockY);
+}
+
 function openAdmin(){
   renderAdminModal();
   document.getElementById('adminModal').classList.remove('hidden');
-  document.body.style.overflow = 'hidden';
+  lockBodyScroll();
 }
 function closeAdmin(){
   document.getElementById('adminModal').classList.add('hidden');
-  document.body.style.overflow = '';
+  unlockBodyScroll();
 }
 
 // --- TABS -------------------------------------------------------------
@@ -1012,7 +1034,7 @@ function calcVeneerCost(cfg, cutCostOverride, poolInfo, dadoCostOverride){
   const ebMatLine = isCustom ? ebMaterialCost : withMarkup(ebMaterialCost, 'edgeBand');
   const ebSvcLine = withMarkup(ebServiceCost,  'ebService');
   const cutLine   = withMarkup(cutCost,        'cutService');
-  const asmLine   = withMarkup(assemblyCost,   'assembly');
+  const asmLine   = withMarkup(assemblyCost,   isTile ? 'dado' : 'assembly');
   const bktLine   = withMarkup(bracketCost,    'brackets');
 
   const subtotal = panelLine+ebMatLine+ebSvcLine+cutLine+asmLine+bktLine;
@@ -2040,6 +2062,7 @@ function loadJob(job){
 
 async function openSavedJobs(){
   document.getElementById('savedModal').classList.remove('hidden');
+  lockBodyScroll();
   const list = document.getElementById('savedJobsList');
   list.innerHTML = '<p style="color:var(--mid);font-size:14px">Loading…</p>';
   // Always fetch from GitHub — reading jobs.json is public, no token required
@@ -2069,7 +2092,7 @@ function renderSavedJobsList(){
   }
 }
 
-function closeSavedJobs(){ document.getElementById('savedModal').classList.add('hidden'); }
+function closeSavedJobs(){ document.getElementById('savedModal').classList.add('hidden'); unlockBodyScroll(); }
 
 function toggleCloudConnect(){
   const panel = document.getElementById('cloudConnectPanel');
@@ -2185,6 +2208,7 @@ function renderAdminModal(){
     panels:'Panel & Lam Sheets (Veneer + Lam Face/Back/Core)', edgeBand:'Edge Band Material', lumber:'Lumber Material',
     milling:'Milling / Sanding', assembly:'Assembly', ebService:'EB Service',
     cutService:'Cut Service (Veneer Cut + Lam Glue Line)', brackets:'Brackets',
+    dado:'Dado / Groove (Ceiling Tile)',
   };
   mg.innerHTML = Object.entries(markupLabels).map(([k,lbl]) => `
     <div>
@@ -2286,7 +2310,7 @@ function renderAdminModal(){
 // Call this before any re-render of the admin modal to preserve unsaved edits.
 function collectAdminForm(){
   // Markup
-  ['panels','edgeBand','lumber','milling','assembly','ebService','cutService','brackets'].forEach(k => {
+  ['panels','edgeBand','lumber','milling','assembly','ebService','cutService','brackets','dado'].forEach(k => {
     const el = document.getElementById('mkp-'+k);
     if(el) pricing.markup[k] = parseFloat(el.value) || 0;
   });

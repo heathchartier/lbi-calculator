@@ -272,13 +272,15 @@ select option{background:#1e2226}
 
 /* ─── MODAL ─────────────────────────────────────────────────────── */
 .modal-overlay{
-  position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;
+  position:fixed;inset:0;height:100vh;height:100dvh;background:rgba(0,0,0,.7);z-index:500;
   display:flex;align-items:center;justify-content:center;padding:20px;
+  overscroll-behavior:contain;
 }
 .modal-overlay.hidden{display:none}
 .modal-box{
   background:var(--surf);border:1px solid var(--bdr2);border-radius:var(--r3);
-  padding:28px;width:100%;max-width:680px;max-height:90vh;overflow-y:auto;
+  padding:28px;width:100%;max-width:680px;max-height:90vh;max-height:90dvh;overflow-y:auto;
+  -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
   box-shadow:var(--sh);
 }
 .modal-box h2{
@@ -964,7 +966,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260726b"></script>
+<script src="app.js?v=20260726c"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });
