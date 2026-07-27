@@ -1618,7 +1618,7 @@ function millLumberCalc(cfg, qty){
         isVGResaw, vgWarning:false, noStock:true, stockUsed:null, isTG,
         stockIn, stockFt, piecesPerLen,
         roughT:2.0, widthWaste:null, pcsWide:0,
-        boardsNeeded:0, bfPerBoard:0, pcsPerBoard:0,
+        boardsNeeded:0, bfPerBoard:0, pcsPerBoard:0, actualPieces:0, actualLF:0,
         bfPerSlat:0, rawBFTotal:0, defectPct:0, totalSlatsUsed: totalSlats,
       };
     }
@@ -1638,11 +1638,18 @@ function millLumberCalc(cfg, qty){
     const rawBFResaw = boardsNeeded * bfPerBoard;
     // Apply safety buffer if on
     const safetyMult = wasteMultFromPct(cfg.safetyBuffer);
+    // Resawing only rips width/thickness — it doesn't trim to the ordered finished length,
+    // so every piece a board yields is a full STOCK-length piece, not a slatL-length piece.
+    // Rounding boardsNeeded up also means you actually receive more pieces than were asked
+    // for (whole boards only). actualPieces/actualLF reflect what's really being milled and
+    // delivered — e.g. 10 pcs asked -> 3 boards -> 12 pcs @ full stock length, not 10 @ slatL.
+    const actualPieces = boardsNeeded * pcsPerBoard;
+    const actualLF = actualPieces * stockFt;
     return {
       isVGResaw, vgWarning, vgAltPcs, noStock:false, stockUsed:picked.stock, isTG,
       stockIn, stockFt, piecesPerLen,
       roughT, widthWaste, pcsWide,
-      boardsNeeded, bfPerBoard, pcsPerBoard,
+      boardsNeeded, bfPerBoard, pcsPerBoard, actualPieces, actualLF,
       bfPerSlat, rawBFTotal: Math.ceil(rawBFResaw * safetyMult), defectPct:0, totalSlatsUsed: totalSlats,
     };
 
@@ -1652,19 +1659,27 @@ function millLumberCalc(cfg, qty){
     widthWaste = getWidthWasteFactor(width);
 
     if(stockInfo?.resaw){
-      // Resaw: multiple finished slats from one board's thickness
+      // Resaw: multiple finished slats from one board's thickness. Same overproduction/
+      // full-length issue as the VG branch above: a thickness-slab is still a full
+      // stock-length layer before any length-wise cut, so rounding boardsNeeded up hands
+      // out more, full-stock-length pieces than were actually asked for.
       const pcsFromThick = Math.floor((roughT + RESAW_KERF) / (cfg.thickness + RESAW_KERF));
       pcsWide  = Math.max(1, pcsFromThick);
-      const boardsNeeded = Math.ceil(totalSlats / (pcsWide * piecesPerLen));
-      bfPerSlat = roughT * (width + widthWaste) * stockIn / (144 * pcsWide * piecesPerLen);
+      const pcsPerBoard = pcsWide * piecesPerLen;
+      const boardsNeeded = Math.ceil(totalSlats / pcsPerBoard);
+      bfPerSlat = roughT * (width + widthWaste) * stockIn / (144 * pcsPerBoard);
       const rawBFExact = bfPerSlat * totalSlats;
       const safetyMult = wasteMultFromPct(cfg.safetyBuffer);
       const rawBFTotal = Math.ceil(rawBFExact * safetyMult);
+      // Total footage is conserved regardless of piecesPerLen (cutting a layer into shorter
+      // pieces divides length but multiplies count, so the product boardsNeeded*pcsWide*stockFt
+      // holds either way) — same actualLF formula as the VG branch above.
+      const actualLF = boardsNeeded * pcsWide * stockFt;
       return {
         isVGResaw, vgWarning, isTG,
         stockIn, stockFt, piecesPerLen,
         roughT, widthWaste, pcsWide,
-        boardsNeeded, pcsPerBoard: pcsWide * piecesPerLen,
+        boardsNeeded, pcsPerBoard, actualPieces: boardsNeeded * pcsPerBoard, actualLF,
         bfPerSlat, rawBFTotal, defectPct,
         safetyBuffer: cfg.safetyBuffer,
         stockLabel: stockInfo?.label || null,
@@ -1714,7 +1729,10 @@ function calcLumberPreview(cfg){
     if(m.isVGResaw && !m.noStock){
       const tLabel = fractionLabel(cfg.thickness.toString());
       const wLabel = fractionLabel(calcWidth.toString());
-      resawNote.textContent = `⚠ Hemlock/Fir: Milled from ${m.stockUsed} rough stock — ${m.pcsWide} pcs @ ${tLabel} × ${wLabel} per board. BF calculated on nominal ${m.stockUsed}.`;
+      const lenNote = (m.actualPieces && m.actualPieces !== totalSlats)
+        ? ` Resawing only rips width/thickness — it doesn't trim to length — so you'll actually receive ${fmtN(m.actualPieces)} pcs @ ${m.stockFt}' each (not ${fmtN(totalSlats)} @ the ordered length).`
+        : '';
+      resawNote.textContent = `⚠ Hemlock/Fir: Milled from ${m.stockUsed} rough stock — ${m.pcsWide} pcs @ ${tLabel} × ${wLabel} per board.${lenNote}`;
       resawNote.style.display = '';
     } else {
       resawNote.style.display = 'none';
@@ -1764,6 +1782,7 @@ function calcLumberPreview(cfg){
     <div class="calc-preview-item"><div class="calc-preview-label">Rough Stock</div><div class="calc-preview-val">${roughLabel}</div></div>
     ${m.widthWaste !== null ? `<div class="calc-preview-item"><div class="calc-preview-label">Width Waste Factor</div><div class="calc-preview-val">${m.widthWaste}"</div></div>` : ''}
     ${m.boardsNeeded ? `<div class="calc-preview-item"><div class="calc-preview-label">Boards to Buy</div><div class="calc-preview-val">${m.boardsNeeded}${m.isVGResaw ? ' × '+m.stockUsed : ''} (${m.pcsPerBoard} slat${m.pcsPerBoard!==1?'s':''}/board)</div></div>` : ''}
+    ${m.actualPieces && m.actualPieces !== totalSlats ? `<div class="calc-preview-item"><div class="calc-preview-label">Actual Delivery</div><div class="calc-preview-val" style="color:var(--gold)">${fmtN(m.actualPieces)} pcs @ ${m.stockFt}' ea</div></div>` : ''}
     ${m.boardsNeeded && m.bfPerBoard ? `<div class="calc-preview-item"><div class="calc-preview-label">BF / Board</div><div class="calc-preview-val">${fmtN(m.bfPerBoard,0)} BF</div></div>` : `<div class="calc-preview-item"><div class="calc-preview-label">BF / Slat</div><div class="calc-preview-val">${fmtN(m.bfPerSlat,3)} BF</div></div>`}
     <div class="calc-preview-item"><div class="calc-preview-label">Raw BF to Order${m.safetyBuffer?' (+'+m.safetyBuffer+'% waste)':''}</div><div class="calc-preview-val" style="color:var(--teal);font-weight:700;font-size:16px">${fmtN(m.rawBFTotal,0)} BF</div></div>
     ${isTG ? '' : `<div class="calc-preview-item"><div class="calc-preview-label">Brackets</div><div class="calc-preview-val">${fmtN(panelQty * cfg.bracketsPerPanel)}</div></div>`}
@@ -1803,7 +1822,9 @@ function calcLumberCost(cfg){
   const bktLine    = withMarkup(bracketCost,   'brackets');
 
   const subtotal = lumberLine + asmLine + bktLine;
-  const lf = qty.totalLF;
+  // Resaw configs deliver more, full-stock-length pieces than the nominal ask (see
+  // millLumberCalc) — actualLF reflects what's really being milled, not the nominal request.
+  const lf = m.actualLF || qty.totalLF;
 
   const missingPrice = !isCustom && !m.noStock && !bfPrice;
   const tierTag = m.isVGResaw ? m.stockUsed : (tier ? tier.label : null);
@@ -1833,7 +1854,12 @@ function calcJobServices(){
   lumberConfigs.forEach(cfg => {
     const qty = resolveLumberQty(cfg);
     if(!qty) return;
-    const lf = qty.totalLF;
+    // Resaw configs deliver more, full-stock-length pieces than the nominal ask (rounding
+    // up to whole boards, then not trimming the resulting strips to the ordered length) —
+    // actualLF from millLumberCalc reflects what's really being milled/sanded/cut, not the
+    // nominal request. Falls back to the nominal totalLF for every non-resaw/continuous case.
+    const m = millLumberCalc(cfg, qty);
+    const lf = m.actualLF || qty.totalLF;
     totalLF += lf;
     const sDataJ = pricing.lumberSpecies[cfg.species] || {};
     const isResawCfg = !isTGType(cfg) && (sDataJ.resaw || !!(getStockInfo(cfg.thickness)?.resaw));
@@ -3801,6 +3827,8 @@ function calcSlat(){
 
   let pcsWide, boardsNeeded, bfPerSlat, bfPerBoard, rawBFTotal;
   let roughLabel, widthWasteLabel, warningHTML = '';
+  let actualPieces = 0; // set for resaw paths — pieces are full stock-length, not slatL
+  let vgStockUsed = '2×6';
 
   if(isVG){
     // V.G. Fir / Hemlock: milled from 2×6 or 2×8 rough stock, chosen by slat width
@@ -3820,6 +3848,8 @@ function calcSlat(){
       bfPerSlat    = bfPerBoard / pcsPerBoard;
       rawBFTotal   = Math.ceil(boardsNeeded * bfPerBoard * safetyMult);
       roughLabel   = `${picked.stock} rough · ${pcsWide} pcs/board`;
+      actualPieces = boardsNeeded * pcsPerBoard;
+      vgStockUsed  = picked.stock.replace('x','×');
       widthWasteLabel = `— (${picked.stock} board)`;
       if(thick > 0.6875){
         const altPcs = getVGPcsPerBoard(0.6875, slatW, picked.width);
@@ -3840,10 +3870,12 @@ function calcSlat(){
     if(isResaw){
       const pcsFromThick = Math.floor((roughT + RESAW_KERF) / (thick + RESAW_KERF));
       pcsWide       = Math.max(1, pcsFromThick);
-      boardsNeeded  = Math.ceil(totalSlats / (pcsWide * piecesPerLen));
-      bfPerSlat     = roughT * (slatW + widthWaste) * stockIn / (144 * pcsWide * piecesPerLen);
+      const pcsPerBoard = pcsWide * piecesPerLen;
+      boardsNeeded  = Math.ceil(totalSlats / pcsPerBoard);
+      bfPerSlat     = roughT * (slatW + widthWaste) * stockIn / (144 * pcsPerBoard);
       rawBFTotal    = Math.ceil(bfPerSlat * totalSlats * safetyMult);
       roughLabel    = `${stockLabel} · ${pcsWide} pcs/board`;
+      actualPieces  = boardsNeeded * pcsWide * piecesPerLen;
     } else {
       pcsWide      = null;
       boardsNeeded = Math.ceil(totalSlats / piecesPerLen);
@@ -3873,12 +3905,17 @@ function calcSlat(){
       <div>
         <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Boards to Buy</div>
         <div style="font-size:22px;font-weight:700;color:var(--ink)">${fmtN(boardsNeeded)}</div>
-        ${isVG ? `<div style="font-size:11px;color:var(--dim)">2×6 boards</div>` : pcsWide ? `<div style="font-size:11px;color:var(--dim)">${pcsWide} slat${pcsWide!==1?'s':''}/board (resaw)</div>` : ''}
+        ${isVG ? `<div style="font-size:11px;color:var(--dim)">${vgStockUsed} boards</div>` : pcsWide ? `<div style="font-size:11px;color:var(--dim)">${pcsWide} slat${pcsWide!==1?'s':''}/board (resaw)</div>` : ''}
       </div>
       <div>
         <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Width Waste</div>
         <div style="font-size:22px;font-weight:700;color:var(--ink)">${widthWasteLabel}</div>
       </div>
+      ${actualPieces && actualPieces !== totalSlats ? `<div>
+        <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Actual Delivery</div>
+        <div style="font-size:22px;font-weight:700;color:var(--gold)">${fmtN(actualPieces)}</div>
+        <div style="font-size:11px;color:var(--dim)">pcs @ ${stockFt}' each (resaw doesn't trim to length)</div>
+      </div>` : ''}
       <div>
         <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">BF / Slat</div>
         <div style="font-size:22px;font-weight:700;color:var(--ink)">${fmtN(bfPerSlat,3)}</div>
