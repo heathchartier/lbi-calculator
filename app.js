@@ -1693,10 +1693,17 @@ function millLumberCalc(cfg, qty){
     const rawBFExact = bfPerSlat * totalSlats;
     const safetyMult = wasteMultFromPct(cfg.safetyBuffer);
     const rawBFTotal = Math.ceil(rawBFExact * safetyMult);
+    // Same principle as the resaw branches, just without the whole-board rounding: whatever
+    // stock length was actually picked (e.g. 96" -> 120" stock) is what gets milled, not the
+    // nominal finished length that was typed in. No board-count rounding happens here (this
+    // path bills continuously per exact piece, not whole boards), so piece count is unchanged
+    // — only the length-per-piece basis moves from the nominal slatL to the real stockFt,
+    // diluted across piecesPerLen when multiple finished pieces share one board's length.
+    const actualLF = totalSlats * stockFt / piecesPerLen;
     return {
       isVGResaw, vgWarning, isTG,
       stockIn, stockFt, piecesPerLen,
-      roughT, widthWaste, pcsWide,
+      roughT, widthWaste, pcsWide, actualLF,
       bfPerSlat, rawBFTotal, defectPct,
       safetyBuffer: cfg.safetyBuffer,
       stockLabel: stockInfo?.label || null,
