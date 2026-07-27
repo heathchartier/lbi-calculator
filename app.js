@@ -2226,8 +2226,12 @@ function saveCloudToken(){
 
 function updateJobEditStatus(){
   const btn    = document.getElementById('saveJobBtn');
+  const newBtn = document.getElementById('newJobBtn');
   const status = document.getElementById('jobEditStatus');
   if(btn)    btn.textContent = currentJobId ? '💾 Update Job' : '💾 Save Job';
+  // Relabel when a saved job is loaded — "+ New Job" alone reads like "add to a list", not
+  // "clear this and start a blank estimate", which is exactly what it does either way.
+  if(newBtn) newBtn.textContent = currentJobId ? '✕ Clear & Start New' : '＋ New Job';
   if(status){
     status.textContent = currentJobId ? '✎ Editing saved job' : '';
     status.style.color = 'var(--teal)';
@@ -2279,6 +2283,7 @@ function newJob(){
   addVeneerConfig();
   updateJobEditStatus();
   recalcAll(); isDirty = false;
+  showToast('Started a new blank estimate');
 }
 
 // --- ADMIN MODAL -------------------------------------------------------
