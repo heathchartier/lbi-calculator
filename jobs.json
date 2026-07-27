@@ -43,7 +43,7 @@
         "sanding": true,
         "cutToLength": false,
         "calcMode": "slats",
-        "safetyBuffer": 10,
+        "safetyBuffer": 0,
         "slatW": 3.25,
         "slatL": 96,
         "slatsPerPanel": 3,
@@ -82,6 +82,6 @@
       }
     ],
     "productCart": {},
-    "savedAt": "2026-07-27T16:26:55.780Z"
+    "savedAt": "2026-07-27T18:16:56.525Z"
   }
 ]
