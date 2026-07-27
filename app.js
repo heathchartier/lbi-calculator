@@ -368,7 +368,9 @@ function getValidSession(){
   return localStorage.getItem('lbiq_session_role') || null;
 }
 
+let sessionIsAdmin = false;
 function activateApp(isAdmin){
+  sessionIsAdmin = !!isAdmin;
   document.getElementById('lockScreen').style.display = 'none';
   const app = document.getElementById('app');
   app.classList.add('visible');
@@ -492,6 +494,20 @@ document.addEventListener('touchmove', function(e){
   if(!openModal) return;
   if(!e.target.closest('.modal-overlay')) e.preventDefault();
 }, { passive: false });
+
+function openHelp(){
+  const adminSection = document.getElementById('helpAdminSection');
+  if(adminSection) adminSection.style.display = sessionIsAdmin ? '' : 'none';
+  document.getElementById('helpModal').classList.remove('hidden');
+  lockBodyScroll();
+  syncModalViewport();
+}
+function closeHelp(){
+  const m = document.getElementById('helpModal');
+  m.classList.add('hidden');
+  m.style.height = '';
+  unlockBodyScroll();
+}
 
 function openAdmin(){
   renderAdminModal();

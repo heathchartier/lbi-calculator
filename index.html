@@ -479,6 +479,9 @@ select option{background:#1e2226}
       <button class="icon-btn print-hide" onclick="window.print()" title="Print">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
       </button>
+      <button class="icon-btn print-hide" onclick="openHelp()" title="How to Use">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </button>
       <button class="icon-btn print-hide" id="adminBtn" onclick="openAdmin()" title="Admin Settings">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M12 2v2M12 20v2M20 12h2M2 12h2M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41"/></svg>
       </button>
@@ -1110,7 +1113,269 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260727a"></script>
+<!-- ═══════════════════════════════════════════════════
+     HELP MODAL — customer guide always shown; admin guide
+     appended (helpAdminSection) only when logged in as admin.
+═══════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="helpModal">
+  <div class="modal-box" style="max-width:760px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <h2 style="margin-bottom:0">❓ How to Use LBI IQ</h2>
+      <button class="icon-btn" onclick="closeHelp()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <div class="modal-section">
+      <h3>Getting Started</h3>
+      <p style="font-size:13px;color:var(--mid);line-height:1.6">
+        Every quote starts on the <strong>Job Information</strong> card at the top: fill in the Job Name / Project,
+        Customer, PO / Quote #, Date, and any Notes. None of this affects pricing — it's just what prints on the quote
+        and what you'll search for later in Saved Jobs.
+      </p>
+      <p style="font-size:13px;color:var(--mid);line-height:1.6">
+        Below that are five tabs — <strong>Veneer Panels, Solid Lumber, Stock Items, Lamination, Calculators</strong> —
+        and a running <strong>Quote Summary</strong> at the bottom of the page that totals everything you've added
+        across all four material tabs (Calculators never adds to the quote — see below).
+      </p>
+    </div>
+
+    <div class="modal-section">
+      <h3>Saving, Loading &amp; Starting Over</h3>
+      <p style="font-size:13px;color:var(--mid);line-height:1.6">
+        <strong>💾 Save Job</strong> stores the current quote. Once it's saved, the button becomes
+        <strong>💾 Update Job</strong> and a green "✎ Editing saved job" note appears — any further changes update
+        that same saved job instead of creating a new one.
+      </p>
+      <p style="font-size:13px;color:var(--mid);line-height:1.6">
+        <strong>Saved Jobs</strong> (top-right icon) lists everything you've saved — tap <strong>Load</strong> to bring
+        one back up.
+      </p>
+      <p style="font-size:13px;color:var(--mid);line-height:1.6">
+        Once a saved job is loaded, the "+ New Job" button becomes <strong>✕ Clear &amp; Start New</strong> — use it to
+        wipe the screen and start a fresh, blank estimate without closing and reopening the app. If you have unsaved
+        changes it'll ask you to confirm first.
+      </p>
+    </div>
+
+    <div class="modal-section">
+      <h3>Veneer Panels Tab</h3>
+      <p style="font-size:13px;color:var(--mid);line-height:1.6">
+        <strong>Ceiling Type</strong> picks the calculation mode:
+      </p>
+      <ul style="font-size:13px;color:var(--mid);line-height:1.8;padding-left:20px">
+        <li><strong>Ceiling Grille</strong> — the classic slat-and-panel layout. Set Orientation (Horizontal/Vertical),
+          Finish, Grade, Panel Core, Thickness, and Species (only species with a price on file show up). Enter Panel
+          Width/Length and Slat Width/Length, how many Slats per Panel, and Brackets per Panel.</li>
+        <li><strong>Ceiling Tile</strong> — no orientation or slats. Enter the tile's real <strong>Tile Width/Length</strong>
+          (this drives sheet cutting and material cost) and a separate <strong>Nominal Sq Ft / Tile</strong> — this is
+          only used to size the Dado/Groove service (e.g. a 23.75"×23.75" tile is billed nominally as 4 sq ft for
+          dado work, from a 24"×24" grid). The "Assembly" toggle is relabeled <strong>Dado / Groove</strong> for tiles.</li>
+      </ul>
+      <p style="font-size:13px;color:var(--mid);line-height:1.6">
+        <strong>Calculate By</strong> lets you enter a total Ceiling Sq Ft and let the tool work out panel/tile count,
+        or enter an exact slat/tile/panel count yourself. <strong>Edge Band Sides</strong> controls how many edges get
+        edge banding (4 sides down to none). Every config has its own <strong>+10% / +15% waste</strong> toggle
+        (mutually exclusive — pick one or neither) added on top of the raw material need.
+      </p>
+      <p style="font-size:13px;color:var(--mid);line-height:1.6">
+        Click <strong>+ Add Panel Configuration</strong> to add more panel types to the same job — sheet material is
+        automatically pooled/nested across every config of the same species/grade/core/thickness to minimize sheets
+        needed.
+      </p>
+    </div>
+
+    <div class="modal-section">
+      <h3>Solid Lumber Tab</h3>
+      <p style="font-size:13px;color:var(--mid);line-height:1.6">
+        <strong>Ceiling Type</strong> here has three modes:
+      </p>
+      <ul style="font-size:13px;color:var(--mid);line-height:1.8;padding-left:20px">
+        <li><strong>Ceiling Grille</strong> — same slat/panel/bracket layout as Veneer Grille, but priced by the
+          board foot. Enter Finished Width and Length, Slats/Panel, Panel Width/Length, Brackets/Panel.</li>
+        <li><strong>T&amp;G Ceiling</strong> — no panels/slats/brackets. Enter Face Width (the visible coverage
+          width), Overall Width (the actual board width, wider than the face because of the tongue &amp; groove),
+          and Finished Length. Leave Finished Length blank in Sq Ft mode and the tool assumes random lengths.</li>
+        <li><strong>Trim</strong> — same as T&amp;G but for solid trim boards where the face and overall width are
+          the same piece — there's no separate Face Width field, just Overall Width.</li>
+      </ul>
+      <p style="font-size:13px;color:var(--mid);line-height:1.6">
+        Every dimension field on this tab accepts <strong>decimals or fractions</strong> — type <code>3.25</code> or
+        <code>3-1/4</code>, whichever's easier. Toggles: Sanding, Cut to Length, and the waste pair, plus Assembly
+        (Grille only — T&amp;G and Trim never show it, since they're not assembled panels).
+      </p>
+      <p style="font-size:13px;color:var(--mid);line-height:1.6">
+        For V.G. Hemlock/Fir/Therm VG Hemlock, the tool automatically picks 2×6 or 2×8 rough stock based on the
+        piece's width — you'll see a "Milled from 2×X" badge next to Finished Thickness reflecting that pick.
+      </p>
+    </div>
+
+    <div class="modal-section">
+      <h3>Stock Items Tab</h3>
+      <p style="font-size:13px;color:var(--mid);line-height:1.6">
+        A catalog of standard products (sheet goods, hardware, etc.) organized into collapsible categories — tap a
+        category to expand it, or use the search box to jump straight to an item (search auto-expands matches).
+        Enter a quantity next to any item to add it to the quote; the unit shown (EA or BF) tells you whether you're
+        entering each pieces or board feet.
+      </p>
+    </div>
+
+    <div class="modal-section">
+      <h3>Lamination Tab</h3>
+      <p style="font-size:13px;color:var(--mid);line-height:1.6">
+        Pick a <strong>Laminated Face</strong> and (optionally) a different <strong>Laminated Back</strong>, a
+        <strong>Core</strong> and <strong>Core Thickness</strong>, then Calculate By and dimensions just like the
+        Veneer tab. The tool automatically finds the cheapest combination of sheet sizes across face, back, and core
+        — including handling cores that only come in smaller "net size" sheets (like Baltic Birch) without you having
+        to work that out by hand.
+      </p>
+    </div>
+
+    <div class="modal-section">
+      <h3>Calculators Tab</h3>
+      <p style="font-size:13px;color:var(--mid);line-height:1.6">
+        Quick standalone math tools — <strong>none of these add anything to your quote</strong>, they're just for
+        checking numbers on the fly:
+      </p>
+      <ul style="font-size:13px;color:var(--mid);line-height:1.8;padding-left:20px">
+        <li><strong>Board Feet</strong> — width × thickness × length × pieces, with a "Total (with waste)" line.</li>
+        <li><strong>Sqft ↔ Linear Feet</strong> and <strong>Panel Count ↔ Sqft</strong> — bidirectional converters;
+          fill in either side and the other fills itself in.</li>
+        <li><strong>Slat Calculator</strong> — mirrors the Lumber tab's material/yield math (stock length, rough
+          stock, raw BF) without needing a full panel config.</li>
+        <li><strong>Tile Calculator</strong> — same idea for Ceiling Tile: sheet yield from net tile size, separate
+          nominal sq ft reference.</li>
+        <li><strong>T&amp;G Calculator</strong> — mirrors the Lumber tab's T&amp;G mode, including a V.G. Fir/Hemlock
+          toggle since there's no species dropdown here.</li>
+        <li><strong>Bracket Calculator</strong> — how many Baltic Birch sheets a given bracket size and count needs.</li>
+      </ul>
+    </div>
+
+    <div class="modal-section">
+      <h3>Reading Your Quote &amp; Printing</h3>
+      <p style="font-size:13px;color:var(--mid);line-height:1.6">
+        The <strong>Quote Summary</strong> at the bottom breaks every config down into its own line items (material,
+        edge banding, cut service, assembly/dado, brackets, etc.), then totals everything into one
+        <strong>TOTAL ESTIMATE</strong>. Use the <strong>Print</strong> icon (top right) to get a clean, printable
+        version of the quote.
+      </p>
+    </div>
+
+    <div id="helpAdminSection" style="display:none">
+      <hr class="config-divider" style="margin:28px 0">
+      <h2 style="color:var(--gold);margin-bottom:16px">⚙ Admin Guide</h2>
+      <p style="font-size:13px;color:var(--mid);line-height:1.6;margin-bottom:20px">
+        Everything above still applies to you — this section covers what only the Admin Pricing panel (gear icon)
+        controls. Nothing here is visible when logged in with the LBI (customer) password.
+      </p>
+
+      <div class="modal-section">
+        <h3>Opening Admin Settings</h3>
+        <p style="font-size:13px;color:var(--mid);line-height:1.6">
+          Tap the gear icon (top right, only visible when logged in as admin) to open Admin Pricing. Everything you
+          change there is saved to <code>pricing.json</code> and, if Cloud Sync is connected, pushed out to every
+          device automatically the next time it loads.
+        </p>
+      </div>
+
+      <div class="modal-section">
+        <h3>Cloud Sync</h3>
+        <p style="font-size:13px;color:var(--mid);line-height:1.6">
+          <strong>Cloudflare Worker URL</strong> and <strong>Worker Key</strong> distribute pricing to every device
+          automatically — set these once and every phone/tablet running the app picks up new pricing on next load.
+          The <strong>GitHub Token</strong> is different: it stays local to this device only and is what actually
+          lets you <em>push</em> pricing changes out (Save in Admin writes to GitHub, which every device then pulls
+          from). Without a token on a device, that device can view but not publish pricing changes.
+        </p>
+      </div>
+
+      <div class="modal-section">
+        <h3>Passwords</h3>
+        <p style="font-size:13px;color:var(--mid);line-height:1.6">
+          Set your own Admin password and the shared LBI (customer) password here. Leave a field blank to keep it
+          unchanged — you don't have to re-enter both every time you save.
+        </p>
+      </div>
+
+      <div class="modal-section">
+        <h3>Markup / Margin</h3>
+        <p style="font-size:13px;color:var(--mid);line-height:1.6">
+          Every category (Panels, Edge Band, Lumber, Milling, Assembly, EB Service, Cut Service, Brackets, and Dado/
+          Groove) has its own margin % field. These are true <strong>gross margin</strong> percentages, not markup —
+          entering 15 means the sell price is <code>cost ÷ (1 − 0.15)</code>, i.e. cost is 85% of the sell price, not
+          cost + 15%.
+        </p>
+      </div>
+
+      <div class="modal-section">
+        <h3>Veneer Panel Pricing</h3>
+        <p style="font-size:13px;color:var(--mid);line-height:1.6">
+          The species table is organized by Finish (Standard/Satin) → Thickness → Core tabs. Each species has 8
+          price fields: Talbert/Timber (grade) × A3/AA (orientation) × 4×8/4×10 (sheet size). Leave a cell at $0 to
+          hide that combination from the customer view entirely — species only show up on the Veneer tab if at least
+          one price is set for the current Finish/Thickness/Core selection. Edge Banding Roll Costs are set per
+          species further down the same panel.
+        </p>
+      </div>
+
+      <div class="modal-section">
+        <h3>Lumber Pricing</h3>
+        <p style="font-size:13px;color:var(--mid);line-height:1.6">
+          Standard species price by rough-stock tier: 4/4, 5/4, 6/4, 8/4 ($/BF each) — the tool auto-detects which
+          tier a job needs from the finished thickness. V.G. Hemlock/Fir species check the <strong>Resaw</strong> box
+          instead and use the separate <strong>2×6 / 2×8</strong> price columns, since those always mill from 2"
+          rough stock regardless of finished thickness.
+        </p>
+      </div>
+
+      <div class="modal-section">
+        <h3>Service Rates</h3>
+        <p style="font-size:13px;color:var(--mid);line-height:1.6">
+          Grouped by service: Standard Milling, Resaw Milling, Sanding, and Cut to Length each have a flat fee under
+          a threshold (measured in linear feet) and a per-LF rate above it. Labor/Assembly holds the shared Assembly
+          $/sqft and Bracket $/ea rates. Veneer Services holds EB Service $/ft, Cut Service $/sqft (with its own
+          flat-charge/threshold pair, measured in sheets), and the Dado/Groove pair for Ceiling Tile (same
+          flat/threshold pattern, measured in tiles instead of sheets). Lamination Services holds the Glue Line
+          $/sqft rate.
+        </p>
+      </div>
+
+      <div class="modal-section">
+        <h3>Lamination Admin</h3>
+        <p style="font-size:13px;color:var(--mid);line-height:1.6">
+          Faces price across 4×8, 4×10, and 5×12; Cores price across 4×8, 4×10, 5×10, and 5×12 at every thickness.
+          Check <strong>Net Size</strong> for any core that comes in true 48×96/60×120 sheets rather than oversized
+          sheet goods (Baltic Birch, for example) — the tool trims 1/4" per edge for those automatically before
+          cutting.
+        </p>
+      </div>
+
+      <div class="modal-section">
+        <h3>Stock Items / Product Management</h3>
+        <p style="font-size:13px;color:var(--mid);line-height:1.6">
+          Add, edit, delete, and reorder (drag &amp; drop) products and categories from the admin product manager.
+          Each product has a cost and its own margin %, independent of the category-wide margins above.
+        </p>
+      </div>
+
+      <div class="modal-section">
+        <h3>A Few Things Worth Knowing</h3>
+        <ul style="font-size:13px;color:var(--mid);line-height:1.8;padding-left:20px">
+          <li>Stock length rounds up to the nearest 8'/10'/12'/14' tier, but treats a length exactly a half inch
+            under a tier (e.g. 119.5") as fitting that tier — that's the standard trim-allowance convention. A
+            length that exactly matches a tier (120" flush) bumps to the next size up, since zero margin isn't
+            enough to safely cut from.</li>
+          <li>Pricing syncs to GitHub — when pulling changes on this device, always check for a real pricing update
+            from another device before overwriting anything.</li>
+          <li>The GitHub repo backing this app is public. Don't paste anything sensitive beyond what's already
+            here into pricing fields or job notes.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="app.js?v=20260727b"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });
