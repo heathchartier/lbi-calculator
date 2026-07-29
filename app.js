@@ -386,6 +386,7 @@ function activateApp(isAdmin){
   app.classList.add('visible');
   document.getElementById('adminBtn').style.display   = isAdmin ? '' : 'none';
   document.getElementById('logoutBtn').style.display  = '';
+  document.getElementById('changePwBtn').style.display = '';
   document.getElementById('jobDate').value = new Date().toISOString().split('T')[0];
   addVeneerConfig();
   addLumberConfig();
@@ -436,6 +437,7 @@ function logout(){
   document.getElementById('app').classList.remove('visible');
   document.getElementById('lockScreen').style.display = '';
   document.getElementById('logoutBtn').style.display  = 'none';
+  document.getElementById('changePwBtn').style.display = 'none';
   document.getElementById('lockPw').value = '';
 }
 
@@ -517,6 +519,35 @@ function closeHelp(){
   m.classList.add('hidden');
   m.style.height = '';
   unlockBodyScroll();
+}
+
+function openChangePw(){
+  const label = document.getElementById('changePwRoleLabel');
+  if(label) label.textContent = sessionIsAdmin ? 'the Admin account' : 'the LBI account';
+  document.getElementById('changePwNew').value = '';
+  document.getElementById('changePwConfirm').value = '';
+  document.getElementById('changePwError').textContent = '';
+  document.getElementById('changePwModal').classList.remove('hidden');
+  lockBodyScroll();
+  syncModalViewport();
+}
+function closeChangePw(){
+  const m = document.getElementById('changePwModal');
+  m.classList.add('hidden');
+  m.style.height = '';
+  unlockBodyScroll();
+}
+function saveChangePw(){
+  const pw = document.getElementById('changePwNew').value;
+  const confirm = document.getElementById('changePwConfirm').value;
+  const errEl = document.getElementById('changePwError');
+  if(!pw || pw.length < 4){ errEl.textContent = 'Password must be at least 4 characters.'; return; }
+  if(pw !== confirm){ errEl.textContent = "Passwords don't match."; return; }
+  // Each device stores its own password locally — there's no server, so this can only ever
+  // change what THIS device/browser requires, never push a password onto any other device.
+  localStorage.setItem(sessionIsAdmin ? 'lbiq_admin_password' : 'lbiq_lbi_password', pw);
+  closeChangePw();
+  showToast('Password updated on this device');
 }
 
 function openAdmin(){
