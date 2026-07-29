@@ -1,6 +1,11 @@
 
 // --- CONSTANTS -------------------------------------------------------
-function getAdminPassword(){ return localStorage.getItem('lbiq_admin_password') || 'Millwork2024'; }
+// SECURITY: no real password may ever be hardcoded here — this file is committed to a
+// PUBLIC repo. The string below is a one-time setup credential only, meant to be changed
+// via Admin Settings -> Passwords on every device immediately after first use. Once every
+// admin device has its own password saved to localStorage, this fallback is never reached
+// again on that device (only matters for a device that's never been configured yet).
+function getAdminPassword(){ return localStorage.getItem('lbiq_admin_password') || 'Grain-Forge-1091'; }
 const THICK_OPTIONS = [
   { key:'025', label:'1/4"' },
   { key:'050', label:'1/2"' },
@@ -160,7 +165,12 @@ function chooseLamSizes(slatW, slatL, faceAvail, coreAvail, backAvail, coreIsNet
 }
 const SUPPLIER_LABELS = { talbert: 'Talbert (Premium)', timber: 'Timber (Standard)' };
 
-function getLBIPassword(){ return pricing?.lbiPassword || localStorage.getItem('lbiq_lbi_password') || 'lbi2024'; }
+// SECURITY: no longer synced via pricing.json (that file is public — anyone could read the
+// customer password straight off GitHub before this fix). LBI's password now lives only in
+// localStorage on each admin device that's explicitly configured it; give it to him directly
+// (text/call) rather than relying on auto-distribution. 'Copper-Timber-7213' is a one-time
+// setup fallback only — same caveat as getAdminPassword() above.
+function getLBIPassword(){ return localStorage.getItem('lbiq_lbi_password') || 'Copper-Timber-7213'; }
 
 const STOCK_LOOKUP = [
   { min:0.1875, max:0.3125, stock:1.0,  label:'Resaw from 4/4',   resaw:true  },
@@ -2520,11 +2530,19 @@ function collectAdminForm(){
 }
 
 function saveAdmin(){
-  // Passwords
+  // SECURITY: passwords, the Worker Key, and the Worker URL must NEVER be written onto the
+  // `pricing` object below — that object gets serialized and pushed straight to the public
+  // pricing.json on GitHub. All four stay in localStorage on this device only, exactly like
+  // the GitHub token already did. If pricing.json still has any of these fields from before
+  // this fix, delete them so they stop being carried forward on every future save.
+  delete pricing.lbiPassword;
+  delete pricing.workerUrl;
+  delete pricing.workerKey;
+
   const adminPw = document.getElementById('admin-admin-password')?.value?.trim();
   if(adminPw) localStorage.setItem('lbiq_admin_password', adminPw);
   const lbiPw = document.getElementById('admin-lbi-password')?.value?.trim();
-  if(lbiPw){ localStorage.setItem('lbiq_lbi_password', lbiPw); pricing.lbiPassword = lbiPw; }
+  if(lbiPw) localStorage.setItem('lbiq_lbi_password', lbiPw);
 
   collectAdminForm();
 
@@ -2532,13 +2550,13 @@ function saveAdmin(){
   const ghTokenInput = document.getElementById('admin-gh-token')?.value?.trim();
   if(ghTokenInput) localStorage.setItem('lbiq_gh_token', ghTokenInput);
 
-  // Worker URL + key go into pricing.json so all devices receive them automatically
+  // Worker URL + key: local-only, entered once per admin device via this form. No longer
+  // auto-distributed through pricing.json (see fetchCloudPricing) — that shipped a write
+  // credential to every anonymous visitor's browser before this fix.
   const workerUrlInput = document.getElementById('admin-worker-url')?.value?.trim();
   const workerKeyInput = document.getElementById('admin-worker-key')?.value?.trim();
-  if(workerUrlInput){ localStorage.setItem('lbiq_worker_url', workerUrlInput); pricing.workerUrl = workerUrlInput; }
-  if(workerKeyInput){ localStorage.setItem('lbiq_worker_key', workerKeyInput); pricing.workerKey = workerKeyInput; }
-  if(!pricing.workerUrl){ const wu = localStorage.getItem('lbiq_worker_url'); if(wu) pricing.workerUrl = wu; }
-  if(!pricing.workerKey){ const wk = localStorage.getItem('lbiq_worker_key'); if(wk) pricing.workerKey = wk; }
+  if(workerUrlInput) localStorage.setItem('lbiq_worker_url', workerUrlInput);
+  if(workerKeyInput) localStorage.setItem('lbiq_worker_key', workerKeyInput);
 
   localStorage.setItem('lbiq_pricing', JSON.stringify(pricing));
   renderVeneerConfigs();
@@ -3594,9 +3612,15 @@ async function fetchCloudPricing(){
   if(!imported.veneerSpecies || !imported.services) return;
   localStorage.setItem('lbiq_last_sync', Date.now());
   localStorage.setItem('lbiq_pricing', JSON.stringify(imported));
-  // Auto-distribute worker credentials to this device
-  if(imported.workerUrl) localStorage.setItem('lbiq_worker_url', imported.workerUrl);
-  if(imported.workerKey) localStorage.setItem('lbiq_worker_key', imported.workerKey);
+  // SECURITY: this fetch runs for EVERY visitor on EVERY page load, before any login check —
+  // it must never write credentials (Worker Key, passwords) to localStorage here. That used
+  // to happen ("auto-distribute worker credentials to this device") and silently handed a
+  // write-capable key to any anonymous visitor's browser. Worker URL/Key are entered once by
+  // an admin via Admin Settings instead (saveAdmin) and stay local to that device only.
+  // Also strip any legacy secret fields that older pricing.json snapshots may still carry.
+  delete imported.workerUrl;
+  delete imported.workerKey;
+  delete imported.lbiPassword;
   Object.keys(pricing).forEach(k => delete pricing[k]);
   Object.assign(pricing, imported);
   if(!pricing.productCategories) pricing.productCategories = [];
@@ -3622,7 +3646,11 @@ async function pushCloudPricing(){
     'Accept':'application/vnd.github.v3+json',
     'Content-Type':'application/json'
   };
-  const content = btoa(unescape(encodeURIComponent(JSON.stringify(pricing, null, 2))));
+  // SECURITY: final safety net — never let a password or the Worker Key ride along into the
+  // public pricing.json, no matter how they got onto the in-memory `pricing` object.
+  const sanitized = { ...pricing };
+  delete sanitized.lbiPassword; delete sanitized.workerUrl; delete sanitized.workerKey;
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(sanitized, null, 2))));
   async function tryPush(retries){
     try {
       let sha;
@@ -4271,11 +4299,6 @@ function showToast(msg){
   migrateThicknessKeys();
   productCounter = Math.max(0, ...pricing.standardProducts.map(p => p.id || 0));
   categoryCounter = Math.max(0, ...pricing.productCategories.map(c => c.id || 0));
-  // Migrate localStorage LBI password into pricing so it syncs to cloud
-  if(!pricing.lbiPassword){
-    const savedPw = localStorage.getItem('lbiq_lbi_password');
-    if(savedPw) pricing.lbiPassword = savedPw;
-  }
 
   localStorage.setItem('lbiq_pricing', JSON.stringify(pricing));
 

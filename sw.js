@@ -1,4 +1,4 @@
-const CACHE = 'lbiiq-v75';
+const CACHE = 'lbiiq-v76';
 const STATIC = [
   '/lbi-calculator/icon-192.png',
   '/lbi-calculator/icon-512.png',
