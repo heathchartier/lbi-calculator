@@ -488,9 +488,16 @@ function syncModalViewport(){
     o.style.height = vv.height + 'px';
   });
 }
+// Only listen for 'resize', not 'scroll'. In portrait, iOS Safari's address bar collapses
+// and reappears continuously AS you scroll — that alone fires visualViewport 'scroll' (and
+// sometimes 'resize') events constantly. Reacting to every one of those mid-scroll meant the
+// modal's height was being live-resized while the user's finger was still moving, which reads
+// as the modal "floating"/jittering. Landscape mode's browser chrome is mostly static (no
+// collapse/expand cycle), so the same code never got a chance to jitter there — that's the
+// "rotating the phone fixes it" symptom. 'resize' alone still catches the case that actually
+// matters (the on-screen keyboard opening/closing), without firing on every scroll tick.
 if(window.visualViewport){
   window.visualViewport.addEventListener('resize', syncModalViewport);
-  window.visualViewport.addEventListener('scroll', syncModalViewport);
 }
 
 // Belt-and-suspenders: .modal-overlay (position:fixed, inset:0) is the ONLY scroll
