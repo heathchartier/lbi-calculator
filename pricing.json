@@ -7529,6 +7529,15 @@
       "price6_4": 0,
       "price8_4": 0,
       "price2x6": 5.28
+    },
+    "VG Western Red Cedar": {
+      "price": 0,
+      "resaw": true,
+      "price5_4": 0,
+      "price6_4": 0,
+      "price8_4": 0,
+      "price2x6": 14.09,
+      "price2x8": 14.09
     }
   },
   "services": {
@@ -9671,6 +9680,22 @@
       "cost": 152.4,
       "markup": 15,
       "category": 3
+    },
+    {
+      "id": 264,
+      "type": "lumber",
+      "name": "2x6 VG Western Red Cedar",
+      "cost": 14.09,
+      "markup": 15,
+      "category": 20
+    },
+    {
+      "id": 265,
+      "type": "lumber",
+      "name": "2x8 VG Western Red Cedar",
+      "cost": 14.09,
+      "markup": 15,
+      "category": 20
     }
   ],
   "productCategories": [
@@ -10410,7 +10435,8 @@
   "renameMap": {
     "veneerSpecies": {},
     "lumberSpecies": {
-      "Therm Pine": "Therm Clear Pine"
+      "Therm Pine": "Therm Clear Pine",
+      "Western Red Cedar": "VG Western Red Cedar"
     },
     "laminationFaces": {
       "Formica 909 black or 949 white (58 finish) post": "Formica 909 or 949 post (58 finish)",
