@@ -9769,7 +9769,6 @@
       "label": "Black MDF"
     }
   ],
-  "lbiPassword": "lbi2026",
   "laminationFaces": {
     "Formica 909 or 949 post (58 finish)": {
       "ebRoll": 50,
@@ -10405,8 +10404,6 @@
       "t1_0_5x12": 0
     }
   },
-  "workerUrl": "https://lbi-jobs.heathchartier.workers.dev",
-  "workerKey": "pcBBxTaEx099nyTMwb8BQNJfnhoJJvM1",
   "renameMap": {
     "veneerSpecies": {},
     "lumberSpecies": {
