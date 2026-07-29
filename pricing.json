@@ -883,8 +883,8 @@
       "talbert_A3_4x8_frmdf_025_satin": 0,
       "talbert_A3_4x8_frmdf_050": 0,
       "talbert_A3_4x8_frmdf_050_satin": 0,
-      "talbert_A3_4x8_frmdf_075": 349.44,
-      "talbert_A3_4x8_frmdf_075_satin": 399.84,
+      "talbert_A3_4x8_frmdf_075": 263.76,
+      "talbert_A3_4x8_frmdf_075_satin": 311.76,
       "talbert_A3_4x8_frmdf_100": 0,
       "talbert_A3_4x8_frmdf_100_satin": 0,
       "talbert_A3_4x8_mdf_025": 0,
@@ -915,8 +915,8 @@
       "talbert_A3_4x10_frmdf_025_satin": 0,
       "talbert_A3_4x10_frmdf_050": 0,
       "talbert_A3_4x10_frmdf_050_satin": 0,
-      "talbert_A3_4x10_frmdf_075": 441,
-      "talbert_A3_4x10_frmdf_075_satin": 504,
+      "talbert_A3_4x10_frmdf_075": 0,
+      "talbert_A3_4x10_frmdf_075_satin": 0,
       "talbert_A3_4x10_frmdf_100": 0,
       "talbert_A3_4x10_frmdf_100_satin": 0,
       "talbert_A3_4x10_mdf_025": 0,
@@ -7452,7 +7452,7 @@
     "V.G. Hemlock": {
       "price": 7.39,
       "resaw": true,
-      "price2x8": 9,
+      "price2x8": 8,
       "price5_4": 0,
       "price6_4": 0,
       "price8_4": 0,
@@ -7529,15 +7529,6 @@
       "price6_4": 0,
       "price8_4": 0,
       "price2x6": 5.28
-    },
-    "VG Western Red Cedar": {
-      "price": 0,
-      "resaw": true,
-      "price5_4": 0,
-      "price6_4": 0,
-      "price8_4": 0,
-      "price2x6": 14.09,
-      "price2x8": 14.09
     }
   },
   "services": {
@@ -9680,22 +9671,6 @@
       "cost": 152.4,
       "markup": 15,
       "category": 3
-    },
-    {
-      "id": 264,
-      "type": "lumber",
-      "name": "2x6 VG Western Red Cedar",
-      "cost": 14.09,
-      "markup": 15,
-      "category": 20
-    },
-    {
-      "id": 265,
-      "type": "lumber",
-      "name": "2x8 VG Western Red Cedar",
-      "cost": 14.09,
-      "markup": 15,
-      "category": 20
     }
   ],
   "productCategories": [
@@ -9794,6 +9769,7 @@
       "label": "Black MDF"
     }
   ],
+  "lbiPassword": "lbi2026",
   "laminationFaces": {
     "Formica 909 or 949 post (58 finish)": {
       "ebRoll": 50,
@@ -10429,11 +10405,12 @@
       "t1_0_5x12": 0
     }
   },
+  "workerUrl": "https://lbi-jobs.heathchartier.workers.dev",
+  "workerKey": "pcBBxTaEx099nyTMwb8BQNJfnhoJJvM1",
   "renameMap": {
     "veneerSpecies": {},
     "lumberSpecies": {
-      "Therm Pine": "Therm Clear Pine",
-      "Western Red Cedar": "VG Western Red Cedar"
+      "Therm Pine": "Therm Clear Pine"
     },
     "laminationFaces": {
       "Formica 909 black or 949 white (58 finish) post": "Formica 909 or 949 post (58 finish)",
