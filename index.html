@@ -1281,11 +1281,15 @@ select option{background:#1e2226}
       <div class="modal-section">
         <h3>Cloud Sync</h3>
         <p style="font-size:13px;color:var(--mid);line-height:1.6">
-          <strong>Cloudflare Worker URL</strong> and <strong>Worker Key</strong> distribute pricing to every device
-          automatically — set these once and every phone/tablet running the app picks up new pricing on next load.
-          The <strong>GitHub Token</strong> is different: it stays local to this device only and is what actually
-          lets you <em>push</em> pricing changes out (Save in Admin writes to GitHub, which every device then pulls
-          from). Without a token on a device, that device can view but not publish pricing changes.
+          <strong>Pricing data</strong> (species prices, margins, etc.) syncs automatically to every device — no
+          setup needed, every phone/tablet running the app just picks up the latest pricing on next load. The
+          <strong>Cloudflare Worker URL</strong>, <strong>Worker Key</strong>, and both <strong>passwords</strong>
+          are different: for security, none of those distribute automatically anymore — each is entered once, per
+          admin device, right here in Admin Settings, and stays local to that device only (same treatment the
+          <strong>GitHub Token</strong> always got). If job saving/loading isn't working on a device, re-enter the
+          Worker URL/Key here on that device. The GitHub Token is what actually lets you <em>push</em> pricing
+          changes out (Save in Admin writes to GitHub, which every device then pulls pricing data — not
+          credentials — from).
         </p>
       </div>
 
@@ -1375,7 +1379,7 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260727e"></script>
+<script src="app.js?v=20260727f"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });
