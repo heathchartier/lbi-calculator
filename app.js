@@ -1246,13 +1246,52 @@ function recalcAll(){
   renderResults();
 }
 
+// Admin computes locally (full pricing already in memory, needed to edit it). Company
+// role never runs pricing math client-side — it sends job configuration to the Worker's
+// /pricing/calculate endpoint and renders whatever totals come back, via the exact same
+// renderResultsHTML() so the two roles are guaranteed pixel-identical for the same job.
 function renderResults(){
-  const cont = document.getElementById('resultsContent');
-
-  // All calc/pooling/flat-charge logic lives in Calc.computeJobTotals — identical function
-  // the Worker will run for the company role, so this is now pure HTML templating over
-  // whatever numbers that function returns.
+  if(!sessionIsAdmin){ renderResultsCompanyDebounced(); return; }
   const data = Calc.computeJobTotals({ veneerConfigs, lumberConfigs, laminationConfigs, productCart });
+  renderResultsHTML(data);
+}
+
+let _companyCalcTimer = null;
+function renderResultsCompanyDebounced(){
+  clearTimeout(_companyCalcTimer);
+  const cont = document.getElementById('resultsContent');
+  if(cont) cont.innerHTML = '<div class="results-empty">Calculating…</div>';
+  _companyCalcTimer = setTimeout(renderResultsCompany, 400);
+}
+
+async function renderResultsCompany(){
+  const cont = document.getElementById('resultsContent');
+  if(!veneerConfigs.length && !lumberConfigs.length && !laminationConfigs.length && !Object.keys(productCart).length){
+    cont.innerHTML = '<div class="results-empty">Fill in job details and add a configuration above to see results.</div>';
+    return;
+  }
+  try {
+    const resp = await fetch(`${WORKER_AUTH_BASE}/pricing/calculate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token: getSessionToken(),
+        veneerConfigs, lumberConfigs, laminationConfigs, productCart,
+      }),
+    });
+    const result = await resp.json();
+    if(!result.ok){
+      cont.innerHTML = `<div class="results-empty">⚠ ${result.msg || 'Could not calculate pricing.'}</div>`;
+      return;
+    }
+    renderResultsHTML(result.data);
+  } catch(e){
+    cont.innerHTML = '<div class="results-empty">⚠ Could not reach pricing server — check your connection.</div>';
+  }
+}
+
+function renderResultsHTML(data){
+  const cont = document.getElementById('resultsContent');
   if(data.empty){
     cont.innerHTML = '<div class="results-empty">Fill in job details and add a configuration above to see results.</div>';
     return;
