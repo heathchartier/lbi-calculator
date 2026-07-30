@@ -7,11 +7,16 @@
 // createCalcEngine(pricing) closes over one pricing object and returns bound
 // functions. In the browser, `pricing` is the same object app.js mutates in place
 // (Object.assign, never reassigned) so this stays in sync automatically. On the
-// Worker side, each request will create its own engine from its own fetched
+// Worker side, each request creates its own engine from its own freshly-fetched
 // pricing snapshot.
 //
-// This is currently the VENEER engine only — lumber and lamination are still
-// defined directly in app.js and will move here in later passes.
+// Covers the full veneer, lumber, and lamination costing engines, plus
+// computeJobTotals() — the same job-level aggregation (pooling, flat-charge
+// thresholds, grand total) that both app.js's renderResults() and the Worker's
+// /pricing/calculate endpoint call, so admin and company always see the same total.
+//
+// This file is also concatenated verbatim into the generated worker.js by
+// build-worker.py — see that file for the deploy workflow.
 
 function createCalcEngine(pricing){
 
