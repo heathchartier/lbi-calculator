@@ -925,6 +925,147 @@ function createCalcEngine(pricing){
     };
   }
 
+  // --- JOB-LEVEL TOTALS -----------------------------------------------------
+  // Everything renderResults() in app.js needs to turn into HTML — pooling, flat-charge
+  // threshold overrides, and the grand total — with zero DOM/formatting mixed in, so this
+  // exact function can run identically in the browser (admin) and in the Worker (company
+  // role), guaranteeing the two never disagree on a dollar amount.
+  function computeJobTotals({ veneerConfigs, lumberConfigs, laminationConfigs, productCart }){
+    veneerConfigs = veneerConfigs || [];
+    lumberConfigs = lumberConfigs || [];
+    laminationConfigs = laminationConfigs || [];
+    productCart = productCart || {};
+
+    const allResults = [];
+
+    // Pool veneer configs that share species/grade/core/thickness/finish/orientation so their
+    // slats get nested onto a shared cut list instead of each config rounding up its own sheets.
+    const veneerPools = computeVeneerPools(veneerConfigs);
+    const poolByIdx = {};
+    Object.values(veneerPools).forEach(pool => {
+      pool.members.forEach(m => {
+        poolByIdx[m.idx] = {
+          isRep: m.idx === pool.repIdx,
+          pack: pool.pack,
+          memberCount: pool.members.length,
+          noPricing: pool.noPricing,
+          repLabel: pool.repIdx + 1,
+        };
+      });
+    });
+
+    // Total sheets across all pools decides flat vs per-sqft cut charge
+    let totalVeneerSheets = 0, totalVeneerSqft = 0;
+    Object.values(veneerPools).forEach(pool => { totalVeneerSheets += pool.pack.totalSheets; });
+    const veneerSqfts = veneerConfigs.map(cfg => {
+      const qty = resolveVeneerQty(cfg);
+      if(!qty || !cfg.slatW || !cfg.slatL) return 0;
+      totalVeneerSqft += qty.effectiveSqft;
+      return qty.effectiveSqft;
+    });
+    const flatCharge   = pricing.services.cutFlatVeneer     || 0;
+    const flatThresh   = pricing.services.cutVeneerThreshold || 20;
+    const useVeneerFlat = flatCharge > 0 && totalVeneerSheets > 0 && totalVeneerSheets <= flatThresh;
+
+    // Total tile count across all Ceiling Tile configs with Dado/Groove enabled decides
+    // flat vs per-sqft dado charge, same flat/threshold pattern as the veneer cut service.
+    let totalDadoTiles = 0, totalDadoSqft = 0;
+    const dadoSqfts = veneerConfigs.map(cfg => {
+      if(cfg.ceilingType !== 'tile' || !cfg.assembly) return 0;
+      const qty = resolveVeneerQty(cfg);
+      if(!qty) return 0;
+      const sqft = qty.panelQty * (cfg.nominalSqFt || 0);
+      totalDadoTiles += qty.panelQty;
+      totalDadoSqft  += sqft;
+      return sqft;
+    });
+    const dadoFlatCharge = pricing.services.dadoFlatCharge || 0;
+    const dadoThresh     = pricing.services.dadoThreshold  || 20;
+    const useDadoFlat = dadoFlatCharge > 0 && totalDadoTiles > 0 && totalDadoTiles <= dadoThresh;
+
+    veneerConfigs.forEach((cfg,i) => {
+      let cutOverride;
+      if(useVeneerFlat && totalVeneerSqft > 0){
+        cutOverride = flatCharge * ((veneerSqfts[i] || 0) / totalVeneerSqft);
+      }
+      let dadoOverride;
+      if(useDadoFlat && totalDadoSqft > 0){
+        dadoOverride = dadoFlatCharge * ((dadoSqfts[i] || 0) / totalDadoSqft);
+      }
+      const r = calcVeneerCost(cfg, cutOverride, poolByIdx[i], dadoOverride);
+      if(r) allResults.push({...r, label:`Panel Config ${i+1} — ${r.species} (${r.orientation})`});
+    });
+    lumberConfigs.forEach((cfg,i) => {
+      const r = calcLumberCost(cfg);
+      if(r) allResults.push({...r, label:`Lumber Config ${i+1} — ${r.species}`});
+    });
+
+    // Lamination Cut Service shares the same flat-charge/threshold settings as veneer
+    // (Cut Service Flat Charge / Flat Charge Threshold), decided independently of veneer's own count.
+    let totalLamSheets = 0, totalLamSqft = 0;
+    const lamSqfts = laminationConfigs.map(cfg => {
+      const qty = resolveLaminationQty(cfg);
+      if(!qty) return 0;
+      const preview = calcLaminationCost(cfg);
+      if(preview) totalLamSheets += preview.sheetsNeeded;
+      totalLamSqft += qty.effectiveSqft;
+      return qty.effectiveSqft;
+    });
+    const useLamFlat = flatCharge > 0 && totalLamSheets > 0 && totalLamSheets <= flatThresh;
+
+    laminationConfigs.forEach((cfg,i) => {
+      let cutOverride;
+      if(useLamFlat && totalLamSqft > 0){
+        cutOverride = flatCharge * ((lamSqfts[i] || 0) / totalLamSqft);
+      }
+      const r = calcLaminationCost(cfg, cutOverride);
+      if(r) allResults.push({...r, label:`Lam Config ${i+1} — ${cfg.face||'New Config'}`, isLam:true});
+    });
+
+    // Stock items lines
+    const stockLines = [];
+    let stockTotal = 0;
+    (pricing.standardProducts || []).forEach(p => {
+      const qty = productCart[p.name];
+      if(!qty) return;
+      const sell = (p.markup||0)>=100 ? (p.cost||0) : (p.cost||0)/(1-(p.markup||0)/100);
+      const lineVal = qty * sell;
+      if(lineVal > 0){ stockLines.push({ label:`${p.name} × ${fmtN(qty,2)}`, val:lineVal }); stockTotal += lineVal; }
+    });
+
+    const hasStock = stockLines.length > 0;
+    if(!allResults.length && !hasStock){
+      return { empty: true, allResults, stockLines, stockTotal, hasStock, hasLumber:false, millSvc:null, grandTotal:0, totalEffSqft:0 };
+    }
+
+    // Mill services (all lumber configs combined)
+    const hasLumber = allResults.some(r => 'isVGResaw' in r);
+    let millSvc = null, millingBaseMarked = 0, resawMillingMarked = 0, seriesChangeMarked = 0, sandingMarked = 0, cutMarked = 0, svcTotal = 0;
+    if(hasLumber){
+      millSvc              = calcJobServices(lumberConfigs);
+      millingBaseMarked    = withMarkup(millSvc.millingBase,       'milling');
+      resawMillingMarked   = withMarkup(millSvc.resawMillingCost,  'milling');
+      seriesChangeMarked   = withMarkup(millSvc.seriesChangeCost,  'milling');
+      sandingMarked        = withMarkup(millSvc.sandingCost,       'milling');
+      cutMarked            = withMarkup(millSvc.cutCost,           'milling');
+      svcTotal             = millingBaseMarked + resawMillingMarked + seriesChangeMarked + sandingMarked + cutMarked;
+    }
+
+    let grandTotal = 0;
+    allResults.forEach(r => { grandTotal += r.subtotal; });
+    if(hasStock) grandTotal += stockTotal;
+    if(hasLumber && millSvc) grandTotal += svcTotal;
+
+    const totalEffSqft = allResults.reduce((s,r) => s + (r.effectiveSqft||0), 0);
+
+    return {
+      empty: false, allResults, stockLines, stockTotal, hasStock,
+      hasLumber, millSvc,
+      millingBaseMarked, resawMillingMarked, seriesChangeMarked, sandingMarked, cutMarked, svcTotal,
+      grandTotal, totalEffSqft,
+    };
+  }
+
   return {
     withMarkup, coreToKey, thickToKey,
     resolveVeneerQty, chooseVeneerSheet, packVeneerSheets,
@@ -935,6 +1076,7 @@ function createCalcEngine(pricing){
     calcContinuousBF, millLumberCalc, calcLumberCost, calcJobServices,
     getLamSheetPrices, getLamFacePrices, getLamCoreAvailSizes, lamUsableDims,
     chooseLamSizes, resolveLaminationQty, calcLaminationCost,
+    computeJobTotals,
   };
 }
 
