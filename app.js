@@ -176,14 +176,7 @@ const STOCK_LOOKUP = [
   { min:2.875,  max:3.8125, stock:4.0,  label:'Milled from 16/4', resaw:false },
 ];
 
-// Maps a STOCK_LOOKUP stock value to its admin price field + short label.
-// 10/4, 12/4, 16/4 (stock 2.5/3.0/4.0) fall back to the 8/4 price — not stocked separately.
-function tierPriceInfo(stockVal){
-  if(stockVal <= 1.0)  return { key:'price',    label:'4/4' };
-  if(stockVal <= 1.25) return { key:'price5_4', label:'5/4' };
-  if(stockVal <= 1.5)  return { key:'price6_4', label:'6/4' };
-  return { key:'price8_4', label:'8/4' };
-}
+// tierPriceInfo now lives in calc-engine.js as Calc.tierPriceInfo.
 
 function parseFraction(str){
   str = (str||'').trim();
@@ -198,25 +191,8 @@ function parseFraction(str){
   return NaN;
 }
 
-function getStockInfo(t){ return STOCK_LOOKUP.find(s => t >= s.min && t <= s.max) || null; }
-
-// --- MILL LOOKUP TABLES ----------------------------------------------
-// Width waste factor: additional inches lost per rip (includes saw kerf + edge prep)
-// Source: mill production guide
-function getWidthWasteFactor(finishedW){
-  if(finishedW <= 1.000) return 1.000;   // 1/4" – 1"
-  if(finishedW <= 1.500) return 1.125;   // 1-1/8" – 1-1/2"
-  if(finishedW <= 2.375) return 1.375;   // 1-5/8" – 2-3/8"
-  if(finishedW <= 3.375) return 1.625;   // 2-1/2" – 3-3/8"
-  if(finishedW <= 4.375) return 1.750;   // 3-1/2" – 4-3/8"
-  if(finishedW <= 6.375) return 2.000;   // 4-1/2" – 6-3/8"
-  return 2.500;                          // 6-1/2" – 8-3/4"+
-}
-
-function getSuggestedRoughThick(finishedT){
-  const info = getStockInfo(finishedT);
-  return info ? info.stock : 1.0;
-}
+// getStockInfo, getWidthWasteFactor, getSuggestedRoughThick now live in calc-engine.js
+// as Calc.getStockInfo / Calc.getWidthWasteFactor / Calc.getSuggestedRoughThick.
 
 // --- DEFAULT PRICING -------------------------------------------------
 // veneerSpecies keys: {sup}_{grade}_{size}_{core}  e.g. talbert_A3_4x8_frmdf
@@ -973,7 +949,7 @@ function addLumberConfig(){
     slatW:0, slatL:0, slatsPerPanel:0, panelW:0, panelL:0, bracketsPerPanel:0,
     faceWidth:0, overallWidth:0,
     assembly:false, notes:'', manualQty:0, sqft:0, customPricePerBF:0,
-    roughThick: getSuggestedRoughThick(thick),
+    roughThick: Calc.getSuggestedRoughThick(thick),
   };
   lumberConfigs.push(cfg);
   renderLumberConfigs();
@@ -993,75 +969,18 @@ function removeLumberConfig(id){
   recalcAll();
 }
 
-function getBestStock(slatL, species){
-  const lengths = LONG_STOCK_SPECIES.has(species) ? STOCK_LENGTHS : STOCK_LENGTHS_STD;
-  let best = null, bestPieces = 0;
-  for(const stockIn of lengths){
-    const usable = stockIn - END_TRIM;
-    const pieces = Math.floor(usable / slatL);
-    if(pieces > bestPieces){ bestPieces=pieces; best=stockIn; }
-    else if(pieces===bestPieces && pieces>0 && stockIn<best){ best=stockIn; }
-  }
-  return { stockIn: best||96, piecesPerBoard: Math.max(1,bestPieces) };
-}
-
-// Stock length for a given slat length.
-// Most species: max 12' stock. Long-stock species can use 14'/16'.
-function getMillStockLength(slatL, species){
-  const isLong = LONG_STOCK_SPECIES.has(species);
-  if(slatL >= 72){
-    // Breakpoints sit a half inch under each stock length (e.g. 119.5" -> 10' stock) since
-    // that's the standard way lengths are submitted here: entering exactly a stock length
-    // (120") means zero trim margin, so it bumps to the next size up, while X.5" under is
-    // the deliberate "reserve a hair for end splits" convention and fits the shorter stock.
-    if(slatL <= 95.5)  return 96;   // 8'
-    if(slatL <= 119.5) return 120;  // 10'
-    if(slatL <= 143.5) return 144;  // 12'
-    if(!isLong)         return 144;  // cap at 12' for standard species
-    if(slatL <= 167.5) return 168;  // 14'
-    return 192;                   // 16'
-  }
-  return getBestStock(slatL, species).stockIn;
-}
-
-// Picks 2x6 vs 2x8 rough stock by slat width. Widths above 7.5" have no valid resaw stock.
-function chooseResawStock(slatW){
-  if(slatW <= 2.5)  return { stock:'2x6', width:TWO_X_SIX_W,   nominalW:6 };
-  if(slatW <= 3.25) return { stock:'2x8', width:TWO_X_EIGHT_W, nominalW:8 };
-  if(slatW <= 5.5)  return { stock:'2x6', width:TWO_X_SIX_W,   nominalW:6 };
-  if(slatW <= 7.5)  return { stock:'2x8', width:TWO_X_EIGHT_W, nominalW:8 };
-  return null;
-}
+// getBestStock, getMillStockLength, chooseResawStock, isTGType, effectiveFaceWidth,
+// getVGPcsPerBoard now live in calc-engine.js as Calc.getBestStock / Calc.getMillStockLength /
+// Calc.chooseResawStock / Calc.isTGType / Calc.effectiveFaceWidth / Calc.getVGPcsPerBoard.
 
 // Label for the small "Milled from ..." badge next to Finished Thickness — must reflect the
-// actual width-based 2x6-vs-2x8 pick (chooseResawStock), not a hardcoded guess, since the
+// actual width-based 2x6-vs-2x8 pick (Calc.chooseResawStock), not a hardcoded guess, since the
 // two rough stocks price differently and the badge previously always said "2×6" even when
 // the real calculation picked 2×8.
 function resawStockLabel(cfg){
-  const width = isTGType(cfg) ? cfg.overallWidth : cfg.slatW;
-  const picked = width ? chooseResawStock(width) : null;
+  const width = Calc.isTGType(cfg) ? cfg.overallWidth : cfg.slatW;
+  const picked = width ? Calc.chooseResawStock(width) : null;
   return picked ? `Milled from ${picked.stock.replace('x','×')}` : 'Milled from 2×6 or 2×8';
-}
-
-// Trim shares T&G's continuous-LF math (no panel/slat breakdown, no assembly/brackets) but
-// has no separate Face Width — face and overall width are the same board, so Trim only asks
-// for Overall Width and effectiveFaceWidth() below feeds that in wherever T&G would use
-// cfg.faceWidth for coverage math.
-function isTGType(cfg){ return cfg.lumberType === 'tg' || cfg.lumberType === 'trim'; }
-function effectiveFaceWidth(cfg){ return cfg.lumberType === 'trim' ? cfg.overallWidth : cfg.faceWidth; }
-
-// VG Fir/Hemlock: pieces per board — width rips × thickness slabs
-// 2x6/2x8 stock: 1.5" actual thickness; thin-kerf resaw/rip (RESAW_KERF = 1/16")
-// Slabs from thickness:  floor(1.5 / (slatT + RESAW_KERF))
-//   11/16" (0.6875): 1.5/0.75 = 2 slabs  |  3/4" (0.75): 1.5/0.8125 = 1 slab
-// Strips from width:     floor(stockWidth / (slatW + RESAW_KERF))
-//   1.75" from 2x6:  6/1.8125 = 3 strips  |  2.75" from 2x6:  6/2.8125 = 2 strips
-// Examples: 11/16"×1.75" → 2×3=6 ✓  3/4"×1.75" → 1×3=3 ✓
-//           11/16"×2.75" → 2×2=4 ✓  3/4"×2.75" → 1×2=2 ✓
-function getVGPcsPerBoard(slatT, slatW, stockWidth = TWO_X_SIX_W){
-  const slabs  = Math.floor(TWO_X_SIX_T / (slatT + RESAW_KERF));
-  const strips = Math.floor(stockWidth / (slatW + RESAW_KERF));
-  return Math.max(1, slabs * strips);
 }
 
 const ROUGH_THICKNESSES = [
@@ -1079,13 +998,13 @@ function renderLumberConfigs(){
   cont.innerHTML = '';
   lumberConfigs.forEach(cfg => {
     cfg.safetyBuffer = normalizeWastePct(cfg.safetyBuffer, 10);
-    const isTG = isTGType(cfg);
+    const isTG = Calc.isTGType(cfg);
     const isTrim = cfg.lumberType === 'trim';
     const species  = visibleLumberSpecies();
     if(!cfg.species && species.length > 0) cfg.species = species[0];
     const sData    = pricing.lumberSpecies[cfg.species] || {};
     const isResaw  = sData.resaw || false;
-    const millStockIn = cfg.slatL ? getMillStockLength(cfg.slatL, cfg.species) : 0;
+    const millStockIn = cfg.slatL ? Calc.getMillStockLength(cfg.slatL, cfg.species) : 0;
     const stockFt     = millStockIn / 12;
     const pcsPerLen   = cfg.slatL >= 72 ? 1 : Math.max(1, Math.floor((millStockIn - END_TRIM) / cfg.slatL));
     const qtyLabel = isTG ? 'Total Pieces' : (cfg.calcMode === 'slats' ? 'Total Slats' : 'Number of Panels');
@@ -1150,7 +1069,7 @@ function renderLumberConfigs(){
           <div>
             <label class="field-label">Finished Thickness (in)</label>
             <input type="text" id="l-thick-${cfg.id}" value="${cfg.thickness}" autocorrect="off" autocapitalize="none" placeholder="e.g. 3/4 or .75" oninput="lUpdate(${cfg.id})">
-            <span class="stock-tag" id="l-thick-tag-${cfg.id}" style="${isResaw||getStockInfo(cfg.thickness)?'':'display:none'}">${isResaw?resawStockLabel(cfg):(getStockInfo(cfg.thickness)?.label||'')}</span>
+            <span class="stock-tag" id="l-thick-tag-${cfg.id}" style="${isResaw||Calc.getStockInfo(cfg.thickness)?'':'display:none'}">${isResaw?resawStockLabel(cfg):(Calc.getStockInfo(cfg.thickness)?.label||'')}</span>
           </div>
           ${isTG ? `
           ${isTrim ? '' : `<div>
@@ -1239,15 +1158,15 @@ function lUpdate(id){
   cfg.panelW       = parseFraction(document.getElementById('l-panelW-'+id)?.value) || cfg.panelW;
   cfg.panelL       = parseFraction(document.getElementById('l-panelL-'+id)?.value) || cfg.panelL;
   cfg.bracketsPerPanel = parseInt(document.getElementById('l-brackets-'+id)?.value) || 0;
-  cfg.assembly     = isTGType(cfg) ? false : (document.getElementById('l-assembly-'+id)?.checked ?? true);
+  cfg.assembly     = Calc.isTGType(cfg) ? false : (document.getElementById('l-assembly-'+id)?.checked ?? true);
   cfg.sanding      = document.getElementById('l-sanding-'+id)?.checked ?? true;
   cfg.cutToLength  = document.getElementById('l-cut-'+id)?.checked ?? true;
   const prevMode   = cfg.calcMode;
   cfg.calcMode     = document.getElementById('l-mode-'+id)?.value || cfg.calcMode;
-  if(isTGType(cfg) && cfg.calcMode === 'panels') cfg.calcMode = 'sqft';
+  if(Calc.isTGType(cfg) && cfg.calcMode === 'panels') cfg.calcMode = 'sqft';
   cfg.sqft         = parseFloat(document.getElementById('l-sqft-'+id)?.value) || 0;
   cfg.manualQty    = parseInt(document.getElementById('l-manualQty-'+id)?.value) || 0;
-  cfg.roughThick      = getSuggestedRoughThick(cfg.thickness);
+  cfg.roughThick      = Calc.getSuggestedRoughThick(cfg.thickness);
   cfg.safetyBuffer    = readWastePct(`l-safety-${id}-10`, `l-safety-${id}-15`);
   cfg.customPricePerBF = parseFloat(document.getElementById('l-custombf-'+id)?.value) || 0;
 
@@ -1260,7 +1179,7 @@ function lUpdate(id){
   const stockTag = document.getElementById('l-stock-'+id);
   if(stockTag){
     if(cfg.slatL > 0){
-      const millStockIn   = getMillStockLength(cfg.slatL, cfg.species);
+      const millStockIn   = Calc.getMillStockLength(cfg.slatL, cfg.species);
       const millPcsPerLen = cfg.slatL >= 72 ? 1 : Math.max(1, Math.floor((millStockIn - END_TRIM) / cfg.slatL));
       stockTag.textContent = `📏 ${millStockIn/12}' stock · ${millPcsPerLen} pc/length`;
       stockTag.style.display = '';
@@ -1276,7 +1195,7 @@ function lUpdate(id){
       thickTag.textContent = resawStockLabel(cfg);
       thickTag.style.display = '';
     } else {
-      const si = getStockInfo(cfg.thickness);
+      const si = Calc.getStockInfo(cfg.thickness);
       thickTag.textContent = si ? si.label : '';
       thickTag.style.display = si ? '' : 'none';
     }
@@ -1293,249 +1212,26 @@ function lUpdate(id){
 // (BF/waste), not panel/slat breakdown. Finished length is optional in sqft mode (random
 // lengths assumed) but required in piece-count mode, since totalLF can't be derived from a
 // piece count without a real length.
-function resolveTGQty(cfg){
-  const faceWidth = effectiveFaceWidth(cfg);
-  if(!faceWidth || !cfg.overallWidth) return null;
-  if(cfg.calcMode === 'sqft'){
-    if(!cfg.sqft) return null;
-    const totalLF = cfg.sqft * 12 / faceWidth;
-    return { panelQty:0, totalSlats:0, effectiveSqft: cfg.sqft, sqftPerPanel:0, randomLength: !cfg.slatL, totalLF };
-  } else {
-    if(!cfg.manualQty || !cfg.slatL) return null;
-    const totalLF = cfg.manualQty * cfg.slatL / 12;
-    const effectiveSqft = totalLF * faceWidth / 12;
-    return { panelQty:0, totalSlats:cfg.manualQty, effectiveSqft, sqftPerPanel:0, randomLength:false, totalLF };
-  }
-}
-
-function resolveLumberQty(cfg){
-  if(isTGType(cfg)) return resolveTGQty(cfg);
-  if(!cfg.panelW || !cfg.panelL || !cfg.slatW || !cfg.slatsPerPanel) return null;
-  const sqftPerPanel = (cfg.panelW * cfg.panelL) / 144;
-  if(cfg.calcMode === 'sqft'){
-    if(!cfg.sqft) return null;
-    const panelQty   = Math.ceil(cfg.sqft / sqftPerPanel);
-    const totalSlats = panelQty * cfg.slatsPerPanel;
-    const randomLength = !cfg.slatL;
-    const totalLF = randomLength ? (cfg.sqft * 12 / cfg.slatW) : (totalSlats * cfg.slatL / 12);
-    return { panelQty, totalSlats, effectiveSqft: cfg.sqft, sqftPerPanel, randomLength, totalLF };
-  } else if(cfg.calcMode === 'slats'){
-    if(!cfg.manualQty || !cfg.slatL) return null;
-    const totalSlats = cfg.manualQty;
-    const panelQty   = Math.ceil(totalSlats / cfg.slatsPerPanel);
-    const totalLF = totalSlats * cfg.slatL / 12;
-    return { panelQty, totalSlats, effectiveSqft: panelQty * sqftPerPanel, sqftPerPanel, randomLength:false, totalLF };
-  } else {
-    if(!cfg.manualQty || !cfg.slatL) return null;
-    const panelQty   = cfg.manualQty;
-    const totalSlats = panelQty * cfg.slatsPerPanel;
-    const totalLF = totalSlats * cfg.slatL / 12;
-    return { panelQty, totalSlats, effectiveSqft: panelQty * sqftPerPanel, sqftPerPanel, randomLength:false, totalLF };
-  }
-}
-
-// Used only when no finished length is given at all (sqft mode, "random length" assumption —
-// works for both Grille and T&G). Computes BF straight from linear footage instead of the
-// discrete board-count model, since there's no real piece length to count boards against.
-// Still respects VG resaw species correctly: a resaw species consumes a full nominal 2" board
-// per (slabs) finished-thickness layers and (strips) finished-width pieces, same yield concept
-// as the discrete VG path below, just expressed per linear foot instead of per discrete board.
-function calcContinuousBF(cfg, totalLF, width, isTG, randomLength){
-  const sData = pricing.lumberSpecies[cfg.species] || {};
-  const isVGResaw = !!sData.resaw;
-  const safetyMult = wasteMultFromPct(cfg.safetyBuffer);
-
-  if(isVGResaw){
-    const picked = chooseResawStock(width);
-    if(!picked){
-      return {
-        isVGResaw, vgWarning:false, noStock:true, stockUsed:null, isTG:!!isTG, isContinuous:true,
-        stockIn:null, stockFt:null, piecesPerLen:null,
-        roughT:2.0, widthWaste:null, pcsWide:0,
-        bfPerSlat:null, rawBFTotal:0, defectPct:0,
-        safetyBuffer: cfg.safetyBuffer, stockLabel:null, isThickResaw:false,
-        totalLF, randomLength: !!randomLength,
-      };
-    }
-    const slabs   = Math.max(1, Math.floor(TWO_X_SIX_T / (cfg.thickness + RESAW_KERF)));
-    const strips  = Math.max(1, Math.floor(picked.width / (width + RESAW_KERF)));
-    const vgAltPcs = Math.max(1, Math.floor(TWO_X_SIX_T / (0.6875 + RESAW_KERF))) * strips;
-    const vgWarning = cfg.thickness > 0.6875;
-    const bfPerLF = (2.0 / slabs) * (picked.nominalW / strips) / 12;
-    const rawBFTotal = Math.ceil(bfPerLF * totalLF * safetyMult);
-    return {
-      isVGResaw, vgWarning, vgAltPcs, noStock:false, stockUsed:picked.stock, isTG:!!isTG, isContinuous:true,
-      stockIn:null, stockFt:null, piecesPerLen:null,
-      roughT: 2.0/slabs, widthWaste:null, pcsWide: slabs*strips,
-      bfPerSlat:null, rawBFTotal, defectPct:0,
-      safetyBuffer: cfg.safetyBuffer, stockLabel:null, isThickResaw:false,
-      totalLF, randomLength: !!randomLength,
-    };
-  }
-
-  const roughT = getSuggestedRoughThick(cfg.thickness);
-  const widthWaste = getWidthWasteFactor(width);
-  const rawBFExact = roughT * (width + widthWaste) * totalLF / 12;
-  const rawBFTotal = Math.ceil(rawBFExact * safetyMult);
-  return {
-    isVGResaw:false, vgWarning:false, isTG:!!isTG, isContinuous:true, noStock:false,
-    stockIn:null, stockFt:null, piecesPerLen:null,
-    roughT, widthWaste, pcsWide:null,
-    bfPerSlat:null, rawBFTotal, defectPct: pricing.services.lumberDefectPct || 0,
-    safetyBuffer: cfg.safetyBuffer,
-    stockLabel: getStockInfo(cfg.thickness)?.label || null,
-    isThickResaw:false, totalLF, randomLength: !!randomLength,
-  };
-}
-
-function millLumberCalc(cfg, qty){
-  const isTG = isTGType(cfg);
-  const width = isTG ? cfg.overallWidth : cfg.slatW;
-
-  if(qty.randomLength) return calcContinuousBF(cfg, qty.totalLF, width, isTG, true);
-
-  // Discrete/board-count path — same model for Grille and T&G-with-a-real-length, just using
-  // whichever width variable applies and (for T&G) a piece count derived from LF/length
-  // instead of the panel breakdown, since T&G has no panels.
-  const totalSlats = isTG ? Math.ceil(qty.totalLF * 12 / cfg.slatL) : qty.totalSlats;
-  const sData    = pricing.lumberSpecies[cfg.species] || {};
-  const isVGResaw = !!(sData.resaw);
-  const defectPct = pricing.services.lumberDefectPct || 0;
-
-  // --- Stock length ---
-  const stockIn = getMillStockLength(cfg.slatL, cfg.species);
-  const stockFt = stockIn / 12;
-
-  // --- Pieces per board in the LENGTH direction (for <72" slats only) ---
-  let piecesPerLen;
-  if(cfg.slatL >= 72){
-    piecesPerLen = 1;
-  } else {
-    const usable = stockIn - END_TRIM;
-    piecesPerLen = Math.max(1, Math.floor(usable / cfg.slatL));
-  }
-
-  // --- BF per slat ---
-  let roughT, widthWaste, pcsWide, bfPerSlat, vgWarning = false;
-
-  if(isVGResaw){
-    const picked = chooseResawStock(width);
-    if(!picked){
-      // Wider than 7.5" — no 2x6 or 2x8 rough stock fits. Flag for manual pricing.
-      return {
-        isVGResaw, vgWarning:false, noStock:true, stockUsed:null, isTG,
-        stockIn, stockFt, piecesPerLen,
-        roughT:2.0, widthWaste:null, pcsWide:0,
-        boardsNeeded:0, bfPerBoard:0, pcsPerBoard:0, actualPieces:0, actualLF:0,
-        bfPerSlat:0, rawBFTotal:0, defectPct:0, totalSlatsUsed: totalSlats,
-      };
-    }
-    roughT     = 2.0;
-    widthWaste = null;
-    pcsWide    = getVGPcsPerBoard(cfg.thickness, width, picked.width);
-    const vgAltPcs = getVGPcsPerBoard(0.6875, width, picked.width); // 11/16" yield for comparison, same stock
-    if(cfg.thickness > 0.6875) vgWarning = true; // suggest 11/16" for better yield
-
-    // Board-based: buy whole boards, each yields pcsWide × piecesPerLen slats
-    // You can't buy a fraction of a board so ceil first, then multiply by BF/board
-    const pcsPerBoard  = pcsWide * piecesPerLen;
-    const boardsNeeded = Math.ceil(totalSlats / pcsPerBoard);
-    const bfPerBoard   = (2 * picked.nominalW * stockIn) / 144;
-    // Store for return, then override rawBFTotal calculation below
-    bfPerSlat = bfPerBoard / pcsPerBoard; // per-slat rate (for display)
-    const rawBFResaw = boardsNeeded * bfPerBoard;
-    // Apply safety buffer if on
-    const safetyMult = wasteMultFromPct(cfg.safetyBuffer);
-    // Resawing only rips width/thickness — it doesn't trim to the ordered finished length,
-    // so every piece a board yields is a full STOCK-length piece, not a slatL-length piece.
-    // Rounding boardsNeeded up also means you actually receive more pieces than were asked
-    // for (whole boards only). actualPieces/actualLF reflect what's really being milled and
-    // delivered — e.g. 10 pcs asked -> 3 boards -> 12 pcs @ full stock length, not 10 @ slatL.
-    const actualPieces = boardsNeeded * pcsPerBoard;
-    const actualLF = actualPieces * stockFt;
-    return {
-      isVGResaw, vgWarning, vgAltPcs, noStock:false, stockUsed:picked.stock, isTG,
-      stockIn, stockFt, piecesPerLen,
-      roughT, widthWaste, pcsWide,
-      boardsNeeded, bfPerBoard, pcsPerBoard, actualPieces, actualLF,
-      bfPerSlat, rawBFTotal: Math.ceil(rawBFResaw * safetyMult), defectPct:0, totalSlatsUsed: totalSlats,
-    };
-
-  } else {
-    const stockInfo = getStockInfo(cfg.thickness);
-    roughT     = stockInfo ? stockInfo.stock : getSuggestedRoughThick(cfg.thickness);
-    widthWaste = getWidthWasteFactor(width);
-
-    if(stockInfo?.resaw){
-      // Resaw: multiple finished slats from one board's thickness. Same overproduction/
-      // full-length issue as the VG branch above: a thickness-slab is still a full
-      // stock-length layer before any length-wise cut, so rounding boardsNeeded up hands
-      // out more, full-stock-length pieces than were actually asked for.
-      const pcsFromThick = Math.floor((roughT + RESAW_KERF) / (cfg.thickness + RESAW_KERF));
-      pcsWide  = Math.max(1, pcsFromThick);
-      const pcsPerBoard = pcsWide * piecesPerLen;
-      const boardsNeeded = Math.ceil(totalSlats / pcsPerBoard);
-      bfPerSlat = roughT * (width + widthWaste) * stockIn / (144 * pcsPerBoard);
-      const rawBFExact = bfPerSlat * totalSlats;
-      const safetyMult = wasteMultFromPct(cfg.safetyBuffer);
-      const rawBFTotal = Math.ceil(rawBFExact * safetyMult);
-      // Total footage is conserved regardless of piecesPerLen (cutting a layer into shorter
-      // pieces divides length but multiplies count, so the product boardsNeeded*pcsWide*stockFt
-      // holds either way) — same actualLF formula as the VG branch above.
-      const actualLF = boardsNeeded * pcsWide * stockFt;
-      return {
-        isVGResaw, vgWarning, isTG,
-        stockIn, stockFt, piecesPerLen,
-        roughT, widthWaste, pcsWide,
-        boardsNeeded, pcsPerBoard, actualPieces: boardsNeeded * pcsPerBoard, actualLF,
-        bfPerSlat, rawBFTotal, defectPct,
-        safetyBuffer: cfg.safetyBuffer,
-        stockLabel: stockInfo?.label || null,
-        isThickResaw: true, totalSlatsUsed: totalSlats,
-      };
-    } else {
-      pcsWide    = null;
-      bfPerSlat = roughT * (width + widthWaste) * stockIn / (144 * piecesPerLen);
-    }
-
-    const rawBFExact = bfPerSlat * totalSlats;
-    const safetyMult = wasteMultFromPct(cfg.safetyBuffer);
-    const rawBFTotal = Math.ceil(rawBFExact * safetyMult);
-    // Same principle as the resaw branches, just without the whole-board rounding: whatever
-    // stock length was actually picked (e.g. 96" -> 120" stock) is what gets milled, not the
-    // nominal finished length that was typed in. No board-count rounding happens here (this
-    // path bills continuously per exact piece, not whole boards), so piece count is unchanged
-    // — only the length-per-piece basis moves from the nominal slatL to the real stockFt,
-    // diluted across piecesPerLen when multiple finished pieces share one board's length.
-    const actualLF = totalSlats * stockFt / piecesPerLen;
-    return {
-      isVGResaw, vgWarning, isTG,
-      stockIn, stockFt, piecesPerLen,
-      roughT, widthWaste, pcsWide, actualLF,
-      bfPerSlat, rawBFTotal, defectPct,
-      safetyBuffer: cfg.safetyBuffer,
-      stockLabel: stockInfo?.label || null,
-      isThickResaw: false, totalSlatsUsed: totalSlats,
-    };
-  }
-}
+// resolveTGQty, resolveLumberQty, calcContinuousBF, millLumberCalc now live in
+// calc-engine.js as Calc.resolveTGQty / Calc.resolveLumberQty / Calc.calcContinuousBF /
+// Calc.millLumberCalc.
 
 function calcLumberPreview(cfg){
   const preview = document.getElementById('l-preview-'+cfg.id);
   if(!preview) return;
-  const isTG = isTGType(cfg);
+  const isTG = Calc.isTGType(cfg);
   if(isTG){
-    if(!effectiveFaceWidth(cfg) || !cfg.overallWidth){ preview.innerHTML = ''; return; }
+    if(!Calc.effectiveFaceWidth(cfg) || !cfg.overallWidth){ preview.innerHTML = ''; return; }
   } else {
     if(!cfg.slatW || !cfg.panelW || !cfg.panelL){ preview.innerHTML = ''; return; }
   }
 
-  const qty = resolveLumberQty(cfg);
+  const qty = Calc.resolveLumberQty(cfg);
   if(!qty){ preview.innerHTML = ''; return; }
   const { panelQty, totalSlats } = qty;
   const calcWidth = isTG ? cfg.overallWidth : cfg.slatW;
 
-  const m = millLumberCalc(cfg, qty);
+  const m = Calc.millLumberCalc(cfg, qty);
   const displaySlats = m.totalSlatsUsed ?? totalSlats;
 
   // Update VG resaw note banner — show/hide and update text based on current species
@@ -1604,119 +1300,8 @@ function calcLumberPreview(cfg){
   `;
 }
 
-function calcLumberCost(cfg){
-  if(!cfg.species) return null;
-  if(isTGType(cfg)){
-    if(!effectiveFaceWidth(cfg) || !cfg.overallWidth) return null;
-  } else if(!cfg.slatW || !cfg.panelW || !cfg.panelL){
-    return null;
-  }
-  const sData = pricing.lumberSpecies[cfg.species] || {};
-  const isCustom = cfg.species === 'Custom';
-
-  const qty = resolveLumberQty(cfg);
-  if(!qty) return null;
-  const { panelQty, totalSlats, effectiveSqft } = qty;
-
-  const m = millLumberCalc(cfg, qty);
-  const { rawBFTotal } = m;
-
-  const tier = m.isVGResaw ? null : tierPriceInfo(m.roughT);
-  const bfPrice = isCustom
-    ? (cfg.customPricePerBF || 0)
-    : m.isVGResaw
-      ? (m.stockUsed === '2x8' ? (sData.price2x8 || 0) : (sData.price2x6 || 0))
-      : (sData[tier.key] || 0);
-
-  const lumberCost = rawBFTotal * bfPrice;
-  const assemblyCost = (cfg.assembly && !isTGType(cfg)) ? effectiveSqft * pricing.services.assembly : 0;
-  const bracketCost  = (panelQty * cfg.bracketsPerPanel) * pricing.services.bracketPrice;
-
-  const lumberLine = Calc.withMarkup(lumberCost,   'lumber');
-  const asmLine    = Calc.withMarkup(assemblyCost,  'assembly');
-  const bktLine    = Calc.withMarkup(bracketCost,   'brackets');
-
-  const subtotal = lumberLine + asmLine + bktLine;
-  // Resaw configs deliver more, full-stock-length pieces than the nominal ask (see
-  // millLumberCalc) — actualLF reflects what's really being milled, not the nominal request.
-  const lf = m.actualLF || qty.totalLF;
-
-  const missingPrice = !isCustom && !m.noStock && !bfPrice;
-  const tierTag = m.isVGResaw ? m.stockUsed : (tier ? tier.label : null);
-  const lumberLabel = m.noStock
-    ? `Raw Lumber — width exceeds 7.5" max ⚠ Call for pricing`
-    : `Raw Lumber (${fmtN(rawBFTotal,0)} BF${tierTag ? ' · '+tierTag : ''})` + (missingPrice ? ' ⚠ Call for pricing' : '');
-
-  return {
-    species:cfg.species, isVGResaw:m.isVGResaw, rawBFTotal,
-    panelQty, totalSlats, effectiveSqft, lf,
-    lines:{
-      [lumberLabel]: lumberLine,
-      ...(cfg.assembly ? {'Assembly / Packing': asmLine} : {}),
-      [`Black Brackets (${fmtN(panelQty*cfg.bracketsPerPanel)})`]: bktLine,
-    },
-    subtotal,
-    sqftCost: effectiveSqft > 0 ? subtotal / effectiveSqft : null,
-  };
-}
-
-// --- JOB-LEVEL MILL SERVICES -----------------------------------------
-// Called once per renderResults — totals all lumber configs together
-function calcJobServices(){
-  const svc = pricing.services;
-  let totalLF = 0, standardLF = 0, resawLF = 0, sandingLF = 0, cutLF = 0;
-
-  lumberConfigs.forEach(cfg => {
-    const qty = resolveLumberQty(cfg);
-    if(!qty) return;
-    // Resaw configs deliver more, full-stock-length pieces than the nominal ask (rounding
-    // up to whole boards, then not trimming the resulting strips to the ordered length) —
-    // actualLF from millLumberCalc reflects what's really being milled/sanded/cut, not the
-    // nominal request. Falls back to the nominal totalLF for every non-resaw/continuous case.
-    const m = millLumberCalc(cfg, qty);
-    const lf = m.actualLF || qty.totalLF;
-    totalLF += lf;
-    const sDataJ = pricing.lumberSpecies[cfg.species] || {};
-    const isResawCfg = !isTGType(cfg) && (sDataJ.resaw || !!(getStockInfo(cfg.thickness)?.resaw));
-    if(isResawCfg) resawLF += lf; else standardLF += lf;
-    if(cfg.sanding)     sandingLF += lf;
-    if(cfg.cutToLength) cutLF     += lf;
-  });
-
-  // Standard milling: flat fee up to threshold, then $/LF
-  const millingBase = standardLF > 0
-    ? (standardLF <= svc.millingThreshold ? svc.millingFlat : standardLF * svc.millingPerLF)
-    : 0;
-
-  // Resaw milling: separate flat fee and $/LF
-  const resawMillingCost = resawLF > 0
-    ? (resawLF <= svc.resawThreshold ? svc.resawFlat : resawLF * svc.resawPerLF)
-    : 0;
-
-  // Series change: one charge per additional unique (thickness × width) mill setup
-  // Only count configs with actual quantities and valid numeric dimensions
-  const setupKeys = new Set(
-    lumberConfigs
-      .filter(c => {
-        const w = isTGType(c) ? c.overallWidth : c.slatW;
-        return resolveLumberQty(c) && +c.thickness > 0 && +w > 0;
-      })
-      .map(c => `${(+c.thickness).toFixed(4)}_${(+(isTGType(c)?c.overallWidth:c.slatW)).toFixed(4)}`)
-  );
-  const seriesChangeCost = Math.max(0, setupKeys.size - 1) * svc.seriesChange;
-
-  const millingTotal = millingBase + resawMillingCost + seriesChangeCost;
-
-  // Sanding: flat fee up to threshold, then $/LF
-  const sandingCost = sandingLF <= 0 ? 0
-    : (sandingLF <= svc.sandingThreshold ? svc.sandingFlat : sandingLF * svc.sandingPerLF);
-
-  // Cut to length: flat fee up to threshold, then $/LF
-  const cutCost = cutLF <= 0 ? 0
-    : (cutLF <= svc.cutThreshold ? svc.cutFlat : cutLF * svc.cutPerLF);
-
-  return { totalLF, standardLF, resawLF, sandingLF, cutLF, millingBase, resawMillingCost, seriesChangeCost, millingTotal, sandingCost, cutCost };
-}
+// calcLumberCost, calcJobServices now live in calc-engine.js as Calc.calcLumberCost /
+// Calc.calcJobServices(lumberConfigs).
 
 // --- RECALC -----------------------------------------------------------
 function recalcAll(){
@@ -1788,7 +1373,7 @@ function renderResults(){
     if(r) allResults.push({...r, label:`Panel Config ${i+1} — ${r.species} (${r.orientation})`});
   });
   lumberConfigs.forEach((cfg,i) => {
-    const r = calcLumberCost(cfg);
+    const r = Calc.calcLumberCost(cfg);
     if(r) allResults.push({...r, label:`Lumber Config ${i+1} — ${r.species}`});
   });
 
@@ -1835,7 +1420,7 @@ function renderResults(){
   const hasLumber = allResults.some(r => 'isVGResaw' in r);
   let millSvc = null, millingBaseMarked = 0, resawMillingMarked = 0, seriesChangeMarked = 0, sandingMarked = 0, cutMarked = 0, svcTotal = 0;
   if(hasLumber){
-    millSvc              = calcJobServices();
+    millSvc              = Calc.calcJobServices(lumberConfigs);
     millingBaseMarked    = Calc.withMarkup(millSvc.millingBase,       'milling');
     resawMillingMarked   = Calc.withMarkup(millSvc.resawMillingCost,  'milling');
     seriesChangeMarked   = Calc.withMarkup(millSvc.seriesChangeCost,  'milling');
@@ -2937,11 +2522,11 @@ function calcLumberProduct(p){
   if(!sData) return null;
   if(!p.thickness || !p.slatW || !p.slatL) return null;
   const cfg = { species: p.lSpecies, thickness: p.thickness, slatW: p.slatW, slatL: p.slatL, safetyBuffer: false };
-  const m = millLumberCalc(cfg, { totalSlats: 1, randomLength: false });
+  const m = Calc.millLumberCalc(cfg, { totalSlats: 1, randomLength: false });
   if(m.noStock) return null;
   const bfPrice = m.isVGResaw
     ? (m.stockUsed === '2x8' ? (sData.price2x8 || 0) : (sData.price2x6 || 0))
-    : (sData[tierPriceInfo(m.roughT).key] || 0);
+    : (sData[Calc.tierPriceInfo(m.roughT).key] || 0);
   if(!bfPrice) return null;
   const finishedSqft = (p.slatW * p.slatL) / 144;
   const rawBFPerSqft = m.bfPerSlat / finishedSqft;
@@ -3540,7 +3125,7 @@ function calcBF(){
     el.textContent = '—'; stockEl.textContent = ''; boardsEl.textContent = ''; totalEl.textContent = ''; return;
   }
 
-  const info = getStockInfo(t);
+  const info = Calc.getStockInfo(t);
   const stockThick = info ? info.stock : t;
   const boardsNeeded = (info && info.resaw) ? Math.ceil(q / 2) : q;
   const bf = (w * stockThick * l * boardsNeeded) / 12;
@@ -3671,7 +3256,7 @@ function calcSlat(){
   if(!totalSlats){ res.innerHTML = '<span style="color:var(--mid)">Enter a quantity to see results.</span>'; return; }
 
   // Mill calculation — mirrors lumber tab
-  const stockIn      = getMillStockLength(slatL, '');
+  const stockIn      = Calc.getMillStockLength(slatL, '');
   const stockFt      = stockIn / 12;
   const piecesPerLen = slatL >= 72 ? 1 : Math.max(1, Math.floor((stockIn - END_TRIM) / slatL));
   const safetyMult   = wasteMultFromPct(wastePct);
@@ -3685,7 +3270,7 @@ function calcSlat(){
 
   if(isVG){
     // V.G. Fir / Hemlock: milled from 2×6 or 2×8 rough stock, chosen by slat width
-    const picked = chooseResawStock(slatW);
+    const picked = Calc.chooseResawStock(slatW);
     if(!picked){
       pcsWide = 0; boardsNeeded = 0; bfPerSlat = 0; bfPerBoard = 0; rawBFTotal = 0;
       roughLabel = '— (over 7.5" max)';
@@ -3694,7 +3279,7 @@ function calcSlat(){
         ⚠ Slat width exceeds 7.5" max for 2×6/2×8 resaw stock — call for pricing
       </div>`;
     } else {
-      pcsWide      = getVGPcsPerBoard(thick, slatW, picked.width);
+      pcsWide      = Calc.getVGPcsPerBoard(thick, slatW, picked.width);
       const pcsPerBoard = pcsWide * piecesPerLen;
       boardsNeeded = Math.ceil(totalSlats / pcsPerBoard);
       bfPerBoard   = (2 * picked.nominalW * stockIn) / 144;
@@ -3705,7 +3290,7 @@ function calcSlat(){
       vgStockUsed  = picked.stock.replace('x','×');
       widthWasteLabel = `— (${picked.stock} board)`;
       if(thick > 0.6875){
-        const altPcs = getVGPcsPerBoard(0.6875, slatW, picked.width);
+        const altPcs = Calc.getVGPcsPerBoard(0.6875, slatW, picked.width);
         warningHTML = `<div style="grid-column:1/-1;background:#3a1a00;border:1px solid var(--gold);border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--gold);line-height:1.5">
           ⚠ At this thickness you get <strong>${pcsWide} pcs</strong> per ${picked.stock} board.
           Consider <strong>11/16" (${altPcs} pcs/board)</strong> for better yield.
@@ -3714,9 +3299,9 @@ function calcSlat(){
     }
   } else {
     // Standard path: lookup rough stock, apply widthWaste
-    const stockInfo = getStockInfo(thick);
-    const roughT    = stockInfo ? stockInfo.stock : getSuggestedRoughThick(thick);
-    const widthWaste = getWidthWasteFactor(slatW);
+    const stockInfo = Calc.getStockInfo(thick);
+    const roughT    = stockInfo ? stockInfo.stock : Calc.getSuggestedRoughThick(thick);
+    const widthWaste = Calc.getWidthWasteFactor(slatW);
     const stockLabel = stockInfo?.label || `${roughT}" rough`;
     const isResaw    = !!(stockInfo?.resaw);
 
@@ -3900,7 +3485,7 @@ function calcTG(){
   let rawBFTotal, roughLabel, warningHTML = '';
 
   if(isVG){
-    const picked = chooseResawStock(overallW);
+    const picked = Calc.chooseResawStock(overallW);
     if(!picked){
       rawBFTotal = 0;
       roughLabel = '— (over 7.5" max)';
@@ -3922,11 +3507,11 @@ function calcTG(){
       }
     }
   } else {
-    const roughT      = getSuggestedRoughThick(thick);
-    const widthWaste  = getWidthWasteFactor(overallW);
+    const roughT      = Calc.getSuggestedRoughThick(thick);
+    const widthWaste  = Calc.getWidthWasteFactor(overallW);
     const rawBFExact  = roughT * (overallW + widthWaste) * totalLF / 12;
     rawBFTotal        = Math.ceil(rawBFExact * safetyMult);
-    roughLabel        = getStockInfo(thick)?.label || `${roughT}" rough`;
+    roughLabel        = Calc.getStockInfo(thick)?.label || `${roughT}" rough`;
   }
 
   res.innerHTML = `
