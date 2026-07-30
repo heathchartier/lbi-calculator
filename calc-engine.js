@@ -730,6 +730,201 @@ function createCalcEngine(pricing){
     return { totalLF, standardLF, resawLF, sandingLF, cutLF, millingBase, resawMillingCost, seriesChangeCost, millingTotal, sandingCost, cutCost };
   }
 
+  // --- LAMINATION ENGINE ---------------------------------------------------
+  const LAM_THICK_KEYS = [
+    { k:'t0_25',   label:'1/4"',   val:0.25,   user:true  },
+    { k:'t0_375',  label:'3/8"',   val:0.375,  user:true  },
+    { k:'t0_5',    label:'1/2"',   val:0.5,    user:true  },
+    { k:'t0_625',  label:'5/8"',   val:0.625,  user:true  },
+    { k:'t0_6875', label:'11/16"', val:0.6875, user:false },
+    { k:'t0_75',   label:'3/4"',   val:0.75,   user:true  },
+    { k:'t1_0',    label:'1"',     val:1.0,    user:true  },
+  ];
+  const LAM_SIZES = ['4x8','4x10','5x10','5x12'];
+  const LAM_FACE_SIZES = ['4x8','4x10','5x12'];
+  // Baltic Birch (or any "net size" flagged core) ships as true net dimensions, not oversize —
+  // and only in 48x96 / 60x120. Trimmed 1/4" per edge for squaring before cutting slats.
+  const LAM_NET_DIMS = { '4x8': {w:47.5, l:95.5}, '5x10': {w:59.5, l:119.5} };
+  const LAM_NET_SIZES = ['4x8','5x10'];
+
+  // For a chosen thickness value, get a {size: price} map across all LAM_SIZES. 3/4 tries 11/16 first.
+  function getLamSheetPrices(item, thickVal){
+    const fallback = thickVal === 0.75 ? 't0_6875' : null;
+    const primary  = LAM_THICK_KEYS.find(t => t.val === thickVal)?.k || 't0_75';
+    const get = (tk, sz) => (item && item[`${tk}_${sz}`]) || 0;
+    const prices = {};
+    LAM_SIZES.forEach(sz => { prices[sz] = (fallback && get(fallback,sz)) || get(primary,sz); });
+    return prices;
+  }
+  // Face/back sheets only ever come in 4x8, 4x10, 5x12 (never 5x10). Only priced (>0) sizes count as available.
+  function getLamFacePrices(faceData){
+    const out = {};
+    if(!faceData) return out;
+    LAM_FACE_SIZES.forEach(sz => { const p = faceData[`price${sz}`]||0; if(p > 0) out[sz] = p; });
+    return out;
+  }
+  // Core's actually-available priced sizes at a thickness, respecting the net-size (Baltic Birch) size cap.
+  function getLamCoreAvailSizes(coreData, thickVal){
+    const prices = getLamSheetPrices(coreData, thickVal);
+    const allowedSizes = coreData?.netSize ? LAM_NET_SIZES : LAM_SIZES;
+    const out = {};
+    allowedSizes.forEach(sz => { if((prices[sz]||0) > 0) out[sz] = prices[sz]; });
+    return out;
+  }
+  // Usable cutting dims for a given sheet size — net sheets are already trimmed; oversize sheets get the standard squaring cut.
+  function lamUsableDims(sizeKey, isNet){
+    if(isNet){
+      const d = LAM_NET_DIMS[sizeKey];
+      return d ? { w: d.w, l: d.l } : null;
+    }
+    const w = SHEET_WIDTHS[sizeKey], l = SHEET_LENGTHS[sizeKey];
+    return (w && l) ? { w: w - SQUARING, l: l - SQUARING } : null;
+  }
+  // Brute-force search over every valid (core size × face size × back size) combo, picking the
+  // cheapest cost-per-slat. Yield for a combo is capped by whichever item (core/face/back) is
+  // physically smallest in each dimension — handles both "core is the limiting factor" (e.g. Baltic
+  // Birch net sizes smaller than the laminate) and "face is the limiting factor" (face only comes in
+  // a size smaller than the core offers) without needing separate branches for each direction.
+  function chooseLamSizes(slatW, slatL, faceAvail, coreAvail, backAvail, coreIsNet){
+    let best = null;
+    const coreSizes = Object.keys(coreAvail);
+    const faceSizes = Object.keys(faceAvail).length ? Object.keys(faceAvail) : [null];
+    const backSizes = Object.keys(backAvail).length ? Object.keys(backAvail) : [null];
+    coreSizes.forEach(coreSz => {
+      const coreDims = lamUsableDims(coreSz, !!coreIsNet);
+      if(!coreDims) return;
+      faceSizes.forEach(faceSz => {
+        const faceDims = faceSz ? lamUsableDims(faceSz, false) : null;
+        backSizes.forEach(backSz => {
+          const backDims = backSz ? lamUsableDims(backSz, false) : null;
+          const effW = Math.min(coreDims.w, faceDims?.w ?? Infinity, backDims?.w ?? Infinity);
+          const effL = Math.min(coreDims.l, faceDims?.l ?? Infinity, backDims?.l ?? Infinity);
+          const cols = Math.floor((effW + KERF) / (slatW + KERF));
+          const rows = Math.floor((effL + KERF) / (slatL + KERF));
+          const yieldPerSheet = Math.max(0, cols * rows);
+          if(yieldPerSheet <= 0) return;
+          const facePrice = faceSz ? (faceAvail[faceSz]||0) : 0;
+          const backPrice = backSz ? (backAvail[backSz]||0) : 0;
+          const corePrice = coreAvail[coreSz]||0;
+          const costPerSlat = (facePrice + backPrice + corePrice) / yieldPerSheet;
+          if(!best || costPerSlat < best.costPerSlat){
+            best = { coreSz, faceSz, backSz, yieldPerSheet, facePrice, backPrice, corePrice, costPerSlat };
+          }
+        });
+      });
+    });
+    return best;
+  }
+
+  function resolveLaminationQty(cfg){
+    if(!cfg.slatW || !cfg.slatL || !cfg.slatsPerPanel || !cfg.panelW || !cfg.panelL) return null;
+    const sqftPerPanel = (cfg.panelW * cfg.panelL) / 144;
+    if(cfg.calcMode === 'sqft'){
+      if(!cfg.sqft) return null;
+      const panelQty   = Math.ceil(cfg.sqft / sqftPerPanel);
+      const totalSlats = panelQty * cfg.slatsPerPanel;
+      return { panelQty, totalSlats, effectiveSqft: cfg.sqft };
+    } else if(cfg.calcMode === 'slats'){
+      if(!cfg.manualQty) return null;
+      const totalSlats = cfg.manualQty;
+      const panelQty   = Math.ceil(totalSlats / cfg.slatsPerPanel);
+      return { panelQty, totalSlats, effectiveSqft: panelQty * sqftPerPanel };
+    } else {
+      if(!cfg.manualQty) return null;
+      const panelQty   = cfg.manualQty;
+      const totalSlats = panelQty * cfg.slatsPerPanel;
+      return { panelQty, totalSlats, effectiveSqft: panelQty * sqftPerPanel };
+    }
+  }
+
+  function calcLaminationCost(cfg, cutCostOverride){
+    const qty = resolveLaminationQty(cfg);
+    if(!qty) return null;
+    const { panelQty, totalSlats, effectiveSqft } = qty;
+
+    const isCustomer = cfg.face === 'Customer Supplied';
+    const isBackCustomer = (cfg.back || cfg.face) === 'Customer Supplied';
+    const faceData   = isCustomer ? null : (pricing.laminationFaces||{})[cfg.face];
+    const backData   = isBackCustomer ? null : (pricing.laminationFaces||{})[cfg.back || cfg.face];
+    const coreData   = (pricing.laminationCores||{})[cfg.core];
+    const wasteMult  = wasteMultFromPct(cfg.wasteOn);
+
+    const thick = cfg.thickness || 0.75;
+
+    const faceAvail = isCustomer ? {} : getLamFacePrices(faceData);
+    const backAvail = isBackCustomer ? {} : getLamFacePrices(backData);
+    const coreAvail = getLamCoreAvailSizes(coreData, thick);
+    const coreIsNet = !!coreData?.netSize;
+    const combo = chooseLamSizes(cfg.slatW, cfg.slatL, faceAvail, coreAvail, backAvail, coreIsNet);
+
+    const sheetsNeeded = combo ? Math.ceil(totalSlats / combo.yieldPerSheet * wasteMult) : 0;
+    const faceMat = (!isCustomer && combo) ? sheetsNeeded * combo.facePrice : 0;
+    const backMat = (!isBackCustomer && combo) ? sheetsNeeded * combo.backPrice : 0;
+    const coreMat = combo ? sheetsNeeded * combo.corePrice : 0;
+    const noPricing = !combo; // no size combo fits at all — missing face/core pricing or slats too big for any size
+
+    // Glue line
+    const glueCost = effectiveSqft * (pricing.services.glueLine || 0);
+
+    // EB
+    const longSides  = (cfg.ebSides===4||cfg.ebSides===2)?2:(cfg.ebSides===3||cfg.ebSides===1)?1:0;
+    const shortSides = (cfg.ebSides===4||cfg.ebSides===3)?2:0;
+    const ebLong  = (cfg.slatL / 12) * totalSlats * longSides;
+    const ebShort = (cfg.slatW / 12) * totalSlats * shortSides;
+    const ebFt    = ebLong + ebShort;
+    const ebRolls = cfg.ebSides > 0 ? Math.ceil(ebFt * EB_WASTE_FACTOR / EB_ROLL_FEET) : 0;
+    const ebRollPrice   = isCustomer ? 0 : (faceData?.ebRoll || 0);
+    const ebMaterialCost= ebRolls * ebRollPrice;
+    const ebServiceCost = ebFt * (pricing.services.ebServicePerFt || 0);
+
+    // Cut service — flat charge under threshold, same settings as veneer's Cut Service
+    const cutCost = cutCostOverride !== undefined ? cutCostOverride : effectiveSqft * (pricing.services.cutServicePerSqft || 0);
+
+    // Assembly + brackets
+    const assemblyCost = cfg.assembly ? effectiveSqft * (pricing.services.assembly || 0) : 0;
+    const bracketCount = panelQty * (cfg.bracketsPerPanel || 0);
+    const bracketCost  = bracketCount * (pricing.services.bracketPrice || 0);
+
+    // Apply markup
+    const faceMatLine = isCustomer ? 0 : withMarkup(faceMat,      'panels');
+    const backMatLine = isBackCustomer ? 0 : withMarkup(backMat,  'panels');
+    const coreMatLine = withMarkup(coreMat,       'panels');
+    const glueLineAmt = withMarkup(glueCost,      'cutService');
+    const ebMatLine   = withMarkup(ebMaterialCost,'edgeBand');
+    const ebSvcLine   = withMarkup(ebServiceCost, 'ebService');
+    const cutLine     = withMarkup(cutCost,       'cutService');
+    const asmLine     = withMarkup(assemblyCost,  'assembly');
+    const bktLine     = withMarkup(bracketCost,   'brackets');
+
+    const lines = {};
+    if(noPricing){
+      lines['Face / Core / Back — ⚠ No sheet size fits or pricing missing, call for pricing'] = 0;
+    } else {
+      if(!isCustomer && faceMat > 0)       lines[`Face Sheets (${fmtN(sheetsNeeded)} × ${cfg.face} ${combo.faceSz})`] = faceMatLine;
+      if(isCustomer)                       lines['Face Material (Customer Supplied)'] = 0;
+      if(!isBackCustomer && backMat > 0)   lines[`Back Sheets (${fmtN(sheetsNeeded)} × ${cfg.back || cfg.face} ${combo.backSz})`] = backMatLine;
+      if(isBackCustomer)                   lines['Back Material (Customer Supplied)'] = 0;
+      if(coreMat > 0)  lines[`Core Sheets (${fmtN(sheetsNeeded)} × ${cfg.core} ${combo.coreSz})`]  = coreMatLine;
+    }
+    if(glueCost > 0) lines['Glue Line']      = glueLineAmt;
+    if(cfg.ebSides > 0){
+      if(ebMaterialCost > 0) lines[`Edge Band Material (${fmtN(ebRolls)} rolls)`] = ebMatLine;
+      if(ebServiceCost  > 0) lines[`Edge Band Service (${fmtN(ebFt,0)} ft)`]      = ebSvcLine;
+    }
+    if(cutCost > 0)      lines[cutCostOverride !== undefined ? 'Cut Service (flat)' : 'Cut Service'] = cutLine;
+    if(assemblyCost > 0) lines['Assembly / Packing']       = asmLine;
+    if(bracketCost  > 0) lines[`Black Brackets (${fmtN(bracketCount)})`] = bktLine;
+
+    const subtotal = Object.values(lines).reduce((s,v)=>s+v, 0);
+    return {
+      face:cfg.face, back:cfg.back||cfg.face, core:cfg.core,
+      effectiveSqft, panelQty, totalSlats,
+      sheetsNeeded, ebFt, ebRolls, bracketCount,
+      lines, subtotal,
+      sqftCost: effectiveSqft > 0 && subtotal > 0 ? subtotal/effectiveSqft : null,
+    };
+  }
+
   return {
     withMarkup, coreToKey, thickToKey,
     resolveVeneerQty, chooseVeneerSheet, packVeneerSheets,
@@ -738,6 +933,8 @@ function createCalcEngine(pricing){
     isTGType, effectiveFaceWidth, getBestStock, getMillStockLength,
     chooseResawStock, getVGPcsPerBoard, resolveTGQty, resolveLumberQty,
     calcContinuousBF, millLumberCalc, calcLumberCost, calcJobServices,
+    getLamSheetPrices, getLamFacePrices, getLamCoreAvailSizes, lamUsableDims,
+    chooseLamSizes, resolveLaminationQty, calcLaminationCost,
   };
 }
 
