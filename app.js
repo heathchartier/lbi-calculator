@@ -1,11 +1,9 @@
 
 // --- CONSTANTS -------------------------------------------------------
-// SECURITY: no real password may ever be hardcoded here — this file is committed to a
-// PUBLIC repo. The string below is a one-time setup credential only, meant to be changed
-// via Admin Settings -> Passwords on every device immediately after first use. Once every
-// admin device has its own password saved to localStorage, this fallback is never reached
-// again on that device (only matters for a device that's never been configured yet).
-function getAdminPassword(){ return localStorage.getItem('lbiq_admin_password') || 'Grain-Forge-1091'; }
+// Public endpoint, not a secret — same trust level as the GitHub raw URL fetched below.
+// Passwords are never checked client-side anymore; every login/change-password call goes
+// to the Worker, which holds the real password hashes in KV and never returns them.
+const WORKER_AUTH_BASE = 'https://lbi-jobs.heathchartier.workers.dev';
 const THICK_OPTIONS = [
   { key:'025', label:'1/4"' },
   { key:'050', label:'1/2"' },
@@ -164,13 +162,6 @@ function chooseLamSizes(slatW, slatL, faceAvail, coreAvail, backAvail, coreIsNet
   return best;
 }
 const SUPPLIER_LABELS = { talbert: 'Talbert (Premium)', timber: 'Timber (Standard)' };
-
-// SECURITY: no longer synced via pricing.json (that file is public — anyone could read the
-// customer password straight off GitHub before this fix). LBI's password now lives only in
-// localStorage on each admin device that's explicitly configured it; give it to him directly
-// (text/call) rather than relying on auto-distribution. 'Copper-Timber-7213' is a one-time
-// setup fallback only — same caveat as getAdminPassword() above.
-function getLBIPassword(){ return localStorage.getItem('lbiq_lbi_password') || 'Copper-Timber-7213'; }
 
 const STOCK_LOOKUP = [
   { min:0.1875, max:0.3125, stock:1.0,  label:'Resaw from 4/4',   resaw:true  },
@@ -365,17 +356,43 @@ function naturalSort(a, b){ return a.localeCompare(b, undefined, { numeric: true
 function sortedCats(cats){ return [...cats].sort((a,b) => naturalSort(a.name, b.name)); }
 
 // --- AUTH -------------------------------------------------------------
-function saveSession(role){
+// Real login: the browser never checks a password itself. It POSTs to the Worker, which
+// holds the real password hashes in KV and returns a signed session token on success.
+// The token's signature is only ever verified server-side (change-password calls send it
+// back); reading its payload here is just local UI state, not a security check.
+function saveSession(role, token){
   localStorage.setItem('lbiq_session_role', role);
+  localStorage.setItem('lbiq_session_token', token);
 }
 
 function clearSession(){
   localStorage.removeItem('lbiq_session_role');
+  localStorage.removeItem('lbiq_session_token');
   localStorage.removeItem('lbiq_session_expiry'); // remove legacy expiry key if present
 }
 
+function getSessionToken(){ return localStorage.getItem('lbiq_session_token'); }
+
 function getValidSession(){
-  return localStorage.getItem('lbiq_session_role') || null;
+  const token = localStorage.getItem('lbiq_session_token');
+  const role  = localStorage.getItem('lbiq_session_role');
+  if(!token || !role) return null;
+  try {
+    let b64 = token.split('.')[0].replace(/-/g,'+').replace(/_/g,'/');
+    while(b64.length % 4) b64 += '=';
+    const payload = JSON.parse(atob(b64));
+    if(payload.exp && Date.now() > payload.exp) return null;
+  } catch { return null; }
+  return role;
+}
+
+async function workerLogin(role, password){
+  const resp = await fetch(`${WORKER_AUTH_BASE}/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role, password }),
+  });
+  return await resp.json();
 }
 
 let sessionIsAdmin = false;
@@ -407,26 +424,34 @@ function toggleLockPwVis(){
   pw.focus();
 }
 
-function unlock(){
-  const v = document.getElementById('lockPw').value.trim();
-  const isAdmin = (v === getAdminPassword());
-  const isUser  = (v === getLBIPassword());
-  if(isAdmin || isUser){
-    saveSession(isAdmin ? 'admin' : 'user');
-    activateApp(isAdmin);
-  } else {
-    const pw = document.getElementById('lockPw');
-    const err = document.getElementById('lockErr');
-    err.textContent = 'Incorrect password — try again.';
-    pw.value = '';
-    pw.classList.add('pw-shake');
-    pw.style.borderColor = 'var(--red)';
-    setTimeout(() => {
+async function unlock(){
+  const pw = document.getElementById('lockPw');
+  const err = document.getElementById('lockErr');
+  const v = pw.value.trim();
+  if(!v) return;
+  err.textContent = 'Checking…';
+  try {
+    let result = await workerLogin('admin', v);
+    if(!result.ok) result = await workerLogin('company', v);
+    if(result.ok){
       err.textContent = '';
-      pw.classList.remove('pw-shake');
-      pw.style.borderColor = '';
-    }, 2500);
+      saveSession(result.role, result.token);
+      activateApp(result.role === 'admin');
+      return;
+    }
+  } catch(e){
+    err.textContent = 'Could not reach server — check your connection and try again.';
+    return;
   }
+  err.textContent = 'Incorrect password — try again.';
+  pw.value = '';
+  pw.classList.add('pw-shake');
+  pw.style.borderColor = 'var(--red)';
+  setTimeout(() => {
+    err.textContent = '';
+    pw.classList.remove('pw-shake');
+    pw.style.borderColor = '';
+  }, 2500);
 }
 document.getElementById('lockPw').addEventListener('keydown', e => { if(e.key === 'Enter') unlock(); });
 
@@ -445,7 +470,6 @@ function logout(){
 function checkSession(){
   const role = getValidSession();
   if(role){
-    saveSession(role); // bump expiry on each load
     activateApp(role === 'admin');
   }
 }
@@ -544,17 +568,27 @@ function closeChangePw(){
   m.style.height = '';
   unlockBodyScroll();
 }
-function saveChangePw(){
+async function saveChangePw(){
   const pw = document.getElementById('changePwNew').value;
   const confirm = document.getElementById('changePwConfirm').value;
   const errEl = document.getElementById('changePwError');
   if(!pw || pw.length < 4){ errEl.textContent = 'Password must be at least 4 characters.'; return; }
   if(pw !== confirm){ errEl.textContent = "Passwords don't match."; return; }
-  // Each device stores its own password locally — there's no server, so this can only ever
-  // change what THIS device/browser requires, never push a password onto any other device.
-  localStorage.setItem(sessionIsAdmin ? 'lbiq_admin_password' : 'lbiq_lbi_password', pw);
+  errEl.textContent = 'Saving…';
+  try {
+    const resp = await fetch(`${WORKER_AUTH_BASE}/change-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: getSessionToken(), newPassword: pw }),
+    });
+    const result = await resp.json();
+    if(!result.ok){ errEl.textContent = result.msg || 'Could not update password.'; return; }
+  } catch(e){
+    errEl.textContent = 'Could not reach server — check your connection and try again.';
+    return;
+  }
   closeChangePw();
-  showToast('Password updated on this device');
+  showToast('Password updated — takes effect on every device immediately');
 }
 
 function openAdmin(){
@@ -2404,10 +2438,6 @@ function renderAdminModal(){
     }
   }
 
-  // LBI Password
-  const lbiPwEl = document.getElementById('admin-lbi-password');
-  if(lbiPwEl) lbiPwEl.value = getLBIPassword();
-
   // Markup grid
   const mg = document.getElementById('markupGrid');
   const markupLabels = {
@@ -2577,10 +2607,34 @@ function saveAdmin(){
   delete pricing.workerUrl;
   delete pricing.workerKey;
 
+  // Passwords now live server-side only (Worker + KV) — write-only fields here, blank
+  // means "leave unchanged". Admin's own password goes through the same self-service
+  // change-password endpoint the header button uses; the LBI/company password is a
+  // manual admin-driven reset (no email/forgot-password flow), matching what Heath chose.
   const adminPw = document.getElementById('admin-admin-password')?.value?.trim();
-  if(adminPw) localStorage.setItem('lbiq_admin_password', adminPw);
-  const lbiPw = document.getElementById('admin-lbi-password')?.value?.trim();
-  if(lbiPw) localStorage.setItem('lbiq_lbi_password', lbiPw);
+  const lbiPw   = document.getElementById('admin-lbi-password')?.value?.trim();
+  const pwToken = getSessionToken();
+  const pwPromises = [];
+  if(adminPw){
+    pwPromises.push(fetch(`${WORKER_AUTH_BASE}/change-password`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: pwToken, newPassword: adminPw }),
+    }).then(r => r.json()));
+  }
+  if(lbiPw){
+    pwPromises.push(fetch(`${WORKER_AUTH_BASE}/admin/reset-company-password`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: pwToken, newPassword: lbiPw }),
+    }).then(r => r.json()));
+  }
+  if(pwPromises.length){
+    document.getElementById('admin-admin-password').value = '';
+    document.getElementById('admin-lbi-password').value = '';
+    Promise.all(pwPromises).then(results => {
+      const failed = results.find(r => !r.ok);
+      showToast(failed ? '⚠ Password update failed: ' + failed.msg : '✓ Password(s) updated');
+    });
+  }
 
   collectAdminForm();
 
