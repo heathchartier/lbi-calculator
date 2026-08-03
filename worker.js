@@ -1301,13 +1301,21 @@ export default {
       const pricing = await getPricing(env);
       if (!pricing) return json({ ok: false, msg: 'Could not load options' }, 500, corsHeaders);
 
+      // Everything here is either a name/label, a structural flag (resaw, netSize — needed for
+      // correct UI behavior, not a dollar figure), or a deliberately-computed sell price
+      // (standardProducts) — never a raw cost or margin.
       const options = {
         veneerSpecies: Object.keys(pricing.veneerSpecies || {}),
-        lumberSpecies: Object.keys(pricing.lumberSpecies || {}),
-        veneerCores: (pricing.veneerCores || []).map(c => c.label),
+        lumberSpecies: Object.entries(pricing.lumberSpecies || {}).map(([name, p]) => ({ name, resaw: !!p.resaw })),
+        veneerCores: (pricing.veneerCores || []).map(c => ({ key: c.key, label: c.label })),
         laminationFaces: Object.keys(pricing.laminationFaces || {}),
-        laminationCores: Object.keys(pricing.laminationCores || {}),
+        laminationCores: Object.entries(pricing.laminationCores || {}).map(([name, c]) => ({ name, netSize: !!c.netSize })),
         thicknessOptions: ['1/4"', '1/2"', '3/4"', '1"'],
+        standardProducts: (pricing.standardProducts || []).map(p => ({
+          id: p.id, name: p.name, type: p.type, category: p.category,
+          sellPrice: (p.markup||0) >= 100 ? (p.cost||0) : (p.cost||0) / (1 - (p.markup||0)/100),
+        })),
+        productCategories: (pricing.productCategories || []).map(c => ({ id: c.id, name: c.name })),
       };
       return json({ ok: true, options }, 200, corsHeaders);
     }

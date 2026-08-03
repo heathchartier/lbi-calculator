@@ -312,7 +312,7 @@ async function workerLogin(role, password){
 }
 
 let sessionIsAdmin = false;
-function activateApp(isAdmin){
+async function activateApp(isAdmin){
   sessionIsAdmin = !!isAdmin;
   document.getElementById('lockScreen').style.display = 'none';
   const app = document.getElementById('app');
@@ -321,6 +321,12 @@ function activateApp(isAdmin){
   document.getElementById('logoutBtn').style.display  = '';
   document.getElementById('changePwBtn').style.display = '';
   document.getElementById('jobDate').value = new Date().toISOString().split('T')[0];
+
+  // Admin needs real numbers to edit pricing — full fetch, same as always. Company role
+  // never receives real pricing.json at all — see applyCompanyPricingOptions() above.
+  if(isAdmin) await fetchCloudPricing();
+  else await applyCompanyPricingOptions();
+
   addVeneerConfig();
   addLumberConfig();
   addLaminationConfig();
@@ -352,7 +358,7 @@ async function unlock(){
     if(result.ok){
       err.textContent = '';
       saveSession(result.role, result.token);
-      activateApp(result.role === 'admin');
+      await activateApp(result.role === 'admin');
       return;
     }
   } catch(e){
@@ -383,10 +389,10 @@ function logout(){
 }
 
 // Auto-restore session — called after mergePricing() at bottom of file
-function checkSession(){
+async function checkSession(){
   const role = getValidSession();
   if(role){
-    activateApp(role === 'admin');
+    await activateApp(role === 'admin');
   }
 }
 
@@ -2865,6 +2871,70 @@ async function pushAdminPricingSecure(){
   }
 }
 
+// Company role never gets real pricing.json — this builds a structurally-identical `pricing`
+// object from the cost-free /pricing/options endpoint instead, so every existing render/lookup
+// function (visibleVeneerSpecies, renderLumberConfigs, calcVeneerPreview, etc.) keeps working
+// completely unmodified, but every dollar field is a fixed placeholder (1), never a real
+// number — deliberately not 0, since several filters check `price > 0` to decide whether an
+// option should appear, and a uniform non-zero placeholder makes every option appear equally
+// available (correct: the real availability check now happens server-side in
+// Calc.calcVeneerCost/calcLumberCost/calcLaminationCost via /pricing/calculate, which returns
+// a "⚠ Call for pricing" line for anything actually unpriced — same as admin already sees).
+// Structural, non-monetary flags (resaw, netSize, veneer core keys) come through as real
+// values, since those drive genuine UI/calc behavior and reveal nothing about cost.
+function placeholderVeneerSpecies(){
+  const o = blankVeneerSpecies();
+  Object.keys(o).forEach(k => { o[k] = 1; });
+  return o;
+}
+function placeholderLamFace(){ return { price4x8:1, price4x10:1, price5x12:1, ebRoll:1 }; }
+function placeholderLamCore(netSize){
+  const o = blankLamCore();
+  Object.keys(o).forEach(k => { if(k !== 'netSize') o[k] = 1; });
+  o.netSize = !!netSize;
+  return o;
+}
+async function applyCompanyPricingOptions(){
+  try {
+    const resp = await fetch(`${WORKER_AUTH_BASE}/pricing/options`);
+    const result = await resp.json();
+    if(!result.ok) return;
+    const opts = result.options;
+
+    Object.keys(pricing).forEach(k => delete pricing[k]);
+    Object.assign(pricing, deepCopy(DEFAULT_PRICING));
+
+    pricing.veneerSpecies = {};
+    (opts.veneerSpecies || []).forEach(name => { pricing.veneerSpecies[name] = placeholderVeneerSpecies(); });
+
+    pricing.lumberSpecies = {};
+    (opts.lumberSpecies || []).forEach(({name, resaw}) => {
+      pricing.lumberSpecies[name] = { price:1, price5_4:1, price6_4:1, price8_4:1, price2x6:1, price2x8:1, resaw:!!resaw };
+    });
+
+    (opts.veneerCores || []).forEach(({key, label}) => {
+      if(!pricing.veneerCores.find(c => c.key === key)) pricing.veneerCores.push({ key, label });
+    });
+
+    pricing.laminationFaces = {};
+    (opts.laminationFaces || []).forEach(name => { pricing.laminationFaces[name] = placeholderLamFace(); });
+
+    pricing.laminationCores = {};
+    (opts.laminationCores || []).forEach(({name, netSize}) => { pricing.laminationCores[name] = placeholderLamCore(netSize); });
+
+    // Stock products: the sell price IS meant to be visible (that's the final quoted price) —
+    // stored here as cost with markup 0 so the existing renderProductsTab math (cost/(1-markup))
+    // reproduces exactly that sell price, without a real wholesale cost or margin ever existing
+    // in this object.
+    pricing.standardProducts = (opts.standardProducts || []).map(p => ({
+      id: p.id, name: p.name, type: p.type, category: p.category, cost: p.sellPrice, markup: 0,
+    }));
+    pricing.productCategories = opts.productCategories || [];
+
+    ensureAllCoreKeys();
+  } catch(e){ /* keep whatever was already in `pricing` (structural defaults) */ }
+}
+
 // --- PRICING EXPORT / IMPORT ------------------------------------------
 function exportPricing(){
   const json = JSON.stringify(pricing, null, 2);
@@ -3491,9 +3561,11 @@ function showToast(msg){
 
   localStorage.setItem('lbiq_pricing', JSON.stringify(pricing));
 
-  // Fetch cloud pricing then start session (3s timeout so offline never blocks)
-  Promise.race([
-    fetchCloudPricing(),
-    new Promise(r => setTimeout(r, 3000))
-  ]).catch(() => {}).finally(() => checkSession());
+  // No pricing fetch here anymore — that used to run unconditionally for every visitor,
+  // before any login, which meant real cost/margin data loaded into memory regardless of
+  // role. Real pricing now loads only after a role is known, inside activateApp() (admin:
+  // real fetchCloudPricing(); company: cost-free applyCompanyPricingOptions()). Until then,
+  // `pricing` just holds the structural DEFAULT_PRICING shape merged above — enough to render
+  // the lock screen, nothing sensitive.
+  checkSession();
 })();
