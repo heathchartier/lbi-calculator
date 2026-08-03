@@ -157,8 +157,17 @@ export default {
       let body;
       try { body = await request.json(); }
       catch { return json({ ok: false, msg: 'Invalid JSON' }, 400, corsHeaders); }
-      const claims = await verifyToken(body.token, env.SESSION_SECRET);
-      if (!claims) return json({ ok: false, msg: 'Session expired — please log in again' }, 401, corsHeaders);
+
+      // Two ways in: a browser session (admin/company login), or a partner API key for a
+      // machine caller like APS's system — a static secret, not a KV-stored hashed password,
+      // since there's no human typing it in. Either is sufficient; neither is required beyond
+      // the other. env.PARTNER_API_KEY unset means the partner path is simply never available.
+      const partnerKey = request.headers.get('X-Partner-Key');
+      const isPartner = !!(partnerKey && env.PARTNER_API_KEY && partnerKey === env.PARTNER_API_KEY);
+      if (!isPartner) {
+        const claims = await verifyToken(body.token, env.SESSION_SECRET);
+        if (!claims) return json({ ok: false, msg: 'Session expired — please log in again' }, 401, corsHeaders);
+      }
 
       const PRICING_RAW = 'https://raw.githubusercontent.com/heathchartier/lbi-calculator/main/pricing.json';
       const pricingResp = await fetch(`${PRICING_RAW}?_=${Date.now()}`, { cache: 'no-store' });
@@ -175,6 +184,29 @@ export default {
         productCart: (body.productCart && typeof body.productCart === 'object') ? body.productCart : {},
       });
       return json({ ok: true, data }, 200, corsHeaders);
+    }
+
+    // --- PRICING: cost-free option lists (species/size/etc names) ---------
+    // Public, no auth — deliberately contains no dollar amounts of any kind, so there's
+    // nothing here for a login gate to protect. Lets a UI (yours or a partner's) build
+    // species/thickness/size dropdowns without ever touching real pricing.json.
+    if (path === '/pricing/options' && request.method === 'GET') {
+      const PRICING_RAW = 'https://raw.githubusercontent.com/heathchartier/lbi-calculator/main/pricing.json';
+      const resp = await fetch(`${PRICING_RAW}?_=${Date.now()}`, { cache: 'no-store' });
+      if (!resp.ok) return json({ ok: false, msg: 'Could not load options' }, 500, corsHeaders);
+      let pricing;
+      try { pricing = await resp.json(); }
+      catch { return json({ ok: false, msg: 'Pricing data invalid' }, 500, corsHeaders); }
+
+      const options = {
+        veneerSpecies: Object.keys(pricing.veneerSpecies || {}),
+        lumberSpecies: Object.keys(pricing.lumberSpecies || {}),
+        veneerCores: (pricing.veneerCores || []).map(c => c.label),
+        laminationFaces: Object.keys(pricing.laminationFaces || {}),
+        laminationCores: Object.keys(pricing.laminationCores || {}),
+        thicknessOptions: ['1/4"', '1/2"', '3/4"', '1"'],
+      };
+      return json({ ok: true, options }, 200, corsHeaders);
     }
 
     // --- EXISTING JOB SYNC (unchanged) ------------------------------------
