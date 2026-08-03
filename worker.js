@@ -1151,6 +1151,22 @@ function json(obj, status, corsHeaders) {
   return new Response(JSON.stringify(obj), { status, headers: corsHeaders });
 }
 
+// --- PRICING STORAGE ------------------------------------------------------
+// Real pricing (cost basis + margins) lives in PRICING_KV once seeded — nobody outside
+// this Worker can read it. Falls back to the current public pricing.json if KV hasn't been
+// seeded yet, so none of this breaks anything while it's still being tested: an unbound or
+// empty PRICING_KV means "behave exactly like before," not "fail."
+const PRICING_RAW_URL = 'https://raw.githubusercontent.com/heathchartier/lbi-calculator/main/pricing.json';
+async function getPricing(env) {
+  const stored = env.PRICING_KV && (await env.PRICING_KV.get('pricing'));
+  if (stored) {
+    try { return JSON.parse(stored); } catch { /* fall through to public file */ }
+  }
+  const resp = await fetch(`${PRICING_RAW_URL}?_=${Date.now()}`, { cache: 'no-store' });
+  if (!resp.ok) return null;
+  try { return await resp.json(); } catch { return null; }
+}
+
 export default {
   async fetch(request, env) {
     const corsHeaders = {
@@ -1244,7 +1260,7 @@ export default {
 
     // --- PRICING: server-side job total, for the company role -------------
     // The browser sends job configuration (species, dimensions, quantities) — never
-    // pricing data — and gets back only computed dollar totals/labels. Real pricing.json
+    // pricing data — and gets back only computed dollar totals/labels. Real pricing
     // (cost basis + margins) is fetched and held here, never sent to the client. Requires
     // ANY valid session (admin or company); admin doesn't normally call this (it computes
     // locally so it can edit pricing), but there's no extra exposure in allowing it.
@@ -1264,12 +1280,8 @@ export default {
         if (!claims) return json({ ok: false, msg: 'Session expired — please log in again' }, 401, corsHeaders);
       }
 
-      const PRICING_RAW = 'https://raw.githubusercontent.com/heathchartier/lbi-calculator/main/pricing.json';
-      const pricingResp = await fetch(`${PRICING_RAW}?_=${Date.now()}`, { cache: 'no-store' });
-      if (!pricingResp.ok) return json({ ok: false, msg: 'Could not load pricing' }, 500, corsHeaders);
-      let pricing;
-      try { pricing = await pricingResp.json(); }
-      catch { return json({ ok: false, msg: 'Pricing data invalid' }, 500, corsHeaders); }
+      const pricing = await getPricing(env);
+      if (!pricing) return json({ ok: false, msg: 'Could not load pricing' }, 500, corsHeaders);
 
       const engine = createCalcEngine(pricing);
       const data = engine.computeJobTotals({
@@ -1284,14 +1296,10 @@ export default {
     // --- PRICING: cost-free option lists (species/size/etc names) ---------
     // Public, no auth — deliberately contains no dollar amounts of any kind, so there's
     // nothing here for a login gate to protect. Lets a UI (yours or a partner's) build
-    // species/thickness/size dropdowns without ever touching real pricing.json.
+    // species/thickness/size dropdowns without ever touching real pricing data.
     if (path === '/pricing/options' && request.method === 'GET') {
-      const PRICING_RAW = 'https://raw.githubusercontent.com/heathchartier/lbi-calculator/main/pricing.json';
-      const resp = await fetch(`${PRICING_RAW}?_=${Date.now()}`, { cache: 'no-store' });
-      if (!resp.ok) return json({ ok: false, msg: 'Could not load options' }, 500, corsHeaders);
-      let pricing;
-      try { pricing = await resp.json(); }
-      catch { return json({ ok: false, msg: 'Pricing data invalid' }, 500, corsHeaders); }
+      const pricing = await getPricing(env);
+      if (!pricing) return json({ ok: false, msg: 'Could not load options' }, 500, corsHeaders);
 
       const options = {
         veneerSpecies: Object.keys(pricing.veneerSpecies || {}),
@@ -1302,6 +1310,37 @@ export default {
         thicknessOptions: ['1/4"', '1/2"', '3/4"', '1"'],
       };
       return json({ ok: true, options }, 200, corsHeaders);
+    }
+
+    // --- PRICING: admin read/write of the real pricing data ---------------
+    // The new home for what fetchCloudPricing()/pushCloudPricing() in app.js currently do
+    // via the public pricing.json file and a GitHub token sitting in the admin's browser.
+    // Both require an admin session. GET returns the full real pricing object — same shape
+    // as pricing.json today — falling back to the public file until PRICING_KV is seeded
+    // (first successful PUT seeds it). PUT is the ONLY way real pricing data changes from
+    // here on; nothing here touches the public pricing.json file or the GitHub repo at all.
+    if (path === '/admin/pricing' && request.method === 'GET') {
+      const authHeader = request.headers.get('Authorization') || '';
+      const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+      const claims = await verifyToken(bearerToken, env.SESSION_SECRET);
+      if (!claims || claims.role !== 'admin') return json({ ok: false, msg: 'Admin session required' }, 401, corsHeaders);
+      const pricing = await getPricing(env);
+      if (!pricing) return json({ ok: false, msg: 'Could not load pricing' }, 500, corsHeaders);
+      return json({ ok: true, pricing }, 200, corsHeaders);
+    }
+    if (path === '/admin/pricing' && request.method === 'PUT') {
+      let body;
+      try { body = await request.json(); }
+      catch { return json({ ok: false, msg: 'Invalid JSON' }, 400, corsHeaders); }
+      const claims = await verifyToken(body.token, env.SESSION_SECRET);
+      if (!claims || claims.role !== 'admin') return json({ ok: false, msg: 'Admin session required' }, 401, corsHeaders);
+      const pricingData = body.pricing;
+      if (!pricingData || typeof pricingData !== 'object' || !pricingData.veneerSpecies || !pricingData.services) {
+        return json({ ok: false, msg: 'Pricing data missing required fields' }, 400, corsHeaders);
+      }
+      if (!env.PRICING_KV) return json({ ok: false, msg: 'PRICING_KV not bound on this Worker yet' }, 500, corsHeaders);
+      await env.PRICING_KV.put('pricing', JSON.stringify(pricingData));
+      return json({ ok: true }, 200, corsHeaders);
     }
 
     // --- EXISTING JOB SYNC (unchanged) ------------------------------------
