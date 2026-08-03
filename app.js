@@ -184,11 +184,19 @@ function migrateThicknessKeys(){
   });
 }
 
+// SECURITY: every dollar-rate field below is 0, deliberately — this file is public source
+// (unlike pricing.json, it can never be made private, since it's the app your browser runs).
+// It used to hold real pricing as a "sensible fallback" before the first cloud fetch — some
+// of those numbers were an exact match to live pricing at the time this was found (2026-08-02).
+// This object is only ever a brief placeholder now: real pricing loads immediately after login
+// (fetchCloudPricing for admin, applyCompanyPricingOptions for company), so there's no
+// functional reason for a fallback value to ever be a real number. Structural/quantity fields
+// (thresholds, resaw flags) are left as reasonable defaults — only $ rates were zeroed.
 const DEFAULT_PRICING = {
   veneerSpecies: {
-    'Walnut':         blankVeneerSpecies({ timber_A3_4x8_frmdf:258, timber_A3_4x10_frmdf:381, timber_AA_4x8_frmdf:350, timber_AA_4x10_frmdf:515, timber_eb_roll:167 }),
-    'White Oak':      blankVeneerSpecies({ timber_A3_4x8_frmdf:236, timber_A3_4x10_frmdf:338, timber_AA_4x8_frmdf:303, timber_AA_4x10_frmdf:430, timber_eb_roll:147 }),
-    'Rift White Oak': blankVeneerSpecies({ timber_A3_4x8_frmdf:283, timber_A3_4x10_frmdf:431, timber_AA_4x8_frmdf:401, timber_AA_4x10_frmdf:617, timber_eb_roll:167 }),
+    'Walnut':         blankVeneerSpecies(),
+    'White Oak':      blankVeneerSpecies(),
+    'Rift White Oak': blankVeneerSpecies(),
     'Maple':          blankVeneerSpecies(),
     'Cherry':         blankVeneerSpecies(),
     'Alder':          blankVeneerSpecies(),
@@ -196,30 +204,30 @@ const DEFAULT_PRICING = {
     'Custom':         blankVeneerSpecies(),
   },
   lumberSpecies: {
-    'Flat Cut White Oak': { price:7.25, resaw:false },
-    'Rift White Oak':     { price:11.90, resaw:false },
-    'Walnut':             { price:11.20, resaw:false },
-    'Stain Grade Poplar': { price:2.50,  resaw:false },
-    'Hard Maple':         { price:3.50,  resaw:false },
-    'V.G. Hemlock':       { price:7.25,  resaw:true  },
-    'V.G. Fir':           { price:0,     resaw:true  },
-    'Therm Ash':          { price:7.27,  resaw:false },
-    'Therm Poplar':       { price:5.61,  resaw:false },
-    'Therm Oak':          { price:12.48, resaw:false },
-    'Therm Pine':         { price:7.20,  resaw:false },
-    'Therm VG Hemlock':   { price:12.50, resaw:true  },
-    'Grey Accoya':        { price:12.25, resaw:false },
-    'Custom':             { price:3.25,  resaw:false },
+    'Flat Cut White Oak': { price:0, resaw:false },
+    'Rift White Oak':     { price:0, resaw:false },
+    'Walnut':             { price:0, resaw:false },
+    'Stain Grade Poplar': { price:0, resaw:false },
+    'Hard Maple':         { price:0, resaw:false },
+    'V.G. Hemlock':       { price:0, resaw:true  },
+    'V.G. Fir':           { price:0, resaw:true  },
+    'Therm Ash':          { price:0, resaw:false },
+    'Therm Poplar':       { price:0, resaw:false },
+    'Therm Oak':          { price:0, resaw:false },
+    'Therm Pine':         { price:0, resaw:false },
+    'Therm VG Hemlock':   { price:0, resaw:true  },
+    'Grey Accoya':        { price:0, resaw:false },
+    'Custom':             { price:0, resaw:false },
   },
   services: {
-    ebServicePerFt: 0.50, cutServicePerSqft: 0.19,
+    ebServicePerFt: 0, cutServicePerSqft: 0,
     cutFlatVeneer: 0, cutVeneerThreshold: 20,
-    dadoServicePerSqft: 1.50, dadoFlatCharge: 0, dadoThreshold: 20,
-    assembly: 1.50, bracketPrice: 2.50, glueLine: 0,
-    millingFlat: 780, millingThreshold: 3000, millingPerLF: 0.21, seriesChange: 115,
-    resawFlat: 780, resawThreshold: 3000, resawPerLF: 0.21,
-    sandingFlat: 240, sandingThreshold: 1700, sandingPerLF: 0.19,
-    cutFlat: 500, cutThreshold: 3000, cutPerLF: 0.21,
+    dadoServicePerSqft: 0, dadoFlatCharge: 0, dadoThreshold: 20,
+    assembly: 0, bracketPrice: 0, glueLine: 0,
+    millingFlat: 0, millingThreshold: 3000, millingPerLF: 0, seriesChange: 0,
+    resawFlat: 0, resawThreshold: 3000, resawPerLF: 0,
+    sandingFlat: 0, sandingThreshold: 1700, sandingPerLF: 0,
+    cutFlat: 0, cutThreshold: 3000, cutPerLF: 0,
   },
   markup: {
     panels:0, edgeBand:0, lumber:0, milling:0,
@@ -241,7 +249,12 @@ const DEFAULT_PRICING = {
 };
 
 // --- STATE -----------------------------------------------------------
-let pricing = JSON.parse(localStorage.getItem('lbiq_pricing') || 'null') || deepCopy(DEFAULT_PRICING);
+// SECURITY: deliberately NOT seeded from the localStorage cache here — a device that used
+// this app before this fix shipped may still have real pricing cached from the old
+// unconditional pre-login fetch. Starting from the (now-zeroed) DEFAULT_PRICING and letting
+// mergePricing() below immediately re-save that safe state to localStorage means any stale
+// real-data cache gets overwritten on first load, not read back into memory pre-login.
+let pricing = deepCopy(DEFAULT_PRICING);
 // Shared veneer-costing engine (calc-engine.js) — closes over this exact `pricing` object.
 // pricing is mutated in place everywhere (fetchCloudPricing, saveAdmin), never reassigned,
 // so this binding stays correct for the life of the page without re-creating it.
