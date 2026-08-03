@@ -1842,6 +1842,7 @@ function saveAdmin(){
   } else {
     showToast('Pricing saved!');
   }
+  pushAdminPricingSecure().then(r => { if(r.ok) showToast('✓ Also synced to secure pricing storage'); });
 }
 
 // --- CLOUD JOB SYNC ---------------------------------------------------
@@ -2839,6 +2840,29 @@ async function pushCloudPricing(){
     } catch(e){ return { ok:false, msg:'Network error' }; }
   }
   return tryPush(1);
+}
+
+// New secure pricing storage (PRICING_KV via the Worker's /admin/pricing) — runs alongside
+// pushCloudPricing() above, not instead of it. Both stay live until Ryan's system has fully
+// moved onto /pricing/calculate and /pricing/options; only then does the GitHub push above
+// get retired. Silent on failure by design: until PRICING_KV is actually created and this
+// branch is deployed, every call here is expected to fail (network error or 401 against the
+// still-live old Worker, which requires X-Worker-Key for any PUT and never gets it from this
+// call) — that's a safe no-op, not a real error, so there's nothing to alarm the admin with.
+async function pushAdminPricingSecure(){
+  const token = getSessionToken();
+  if(!token) return { ok:false, msg:'Not logged in' };
+  try {
+    const resp = await fetch(`${WORKER_AUTH_BASE}/admin/pricing`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, pricing }),
+    });
+    try { return await resp.json(); }
+    catch { return { ok:false, msg:'Bad response' }; }
+  } catch(e){
+    return { ok:false, msg: e.message };
+  }
 }
 
 // --- PRICING EXPORT / IMPORT ------------------------------------------
