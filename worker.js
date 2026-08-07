@@ -1208,11 +1208,28 @@ export default {
     }
 
     // --- AUTH: login ----------------------------------------------------
+    // Employee accounts are a third path alongside the shared admin/company logins: a
+    // username identifies WHICH employee, looked up as its own KV entry (pw:employee:<username>)
+    // rather than sharing a single company-wide password. Token claims carry `username` (and
+    // `displayName`, purely for greeting text) only when role is 'employee'.
     if (path === '/login' && request.method === 'POST') {
       let body;
       try { body = await request.json(); }
       catch { return json({ ok: false, msg: 'Invalid JSON' }, 400, corsHeaders); }
       const { role, password } = body;
+
+      if (role === 'employee') {
+        const username = (body.username || '').trim().toLowerCase();
+        if (!username) return json({ ok: false, msg: 'Username required' }, 400, corsHeaders);
+        const stored = await env.AUTH_KV.get(`pw:employee:${username}`);
+        if (!stored) return json({ ok: false, msg: 'Incorrect username or password' }, 401, corsHeaders);
+        const { salt, hash, displayName } = JSON.parse(stored);
+        const valid = password && (await verifyPassword(password, salt, hash));
+        if (!valid) return json({ ok: false, msg: 'Incorrect username or password' }, 401, corsHeaders);
+        const token = await signToken({ role: 'employee', username, displayName, exp: Date.now() + SESSION_TTL_MS }, env.SESSION_SECRET);
+        return json({ ok: true, token, role: 'employee', displayName }, 200, corsHeaders);
+      }
+
       if (role !== 'admin' && role !== 'company') {
         return json({ ok: false, msg: 'Invalid role' }, 400, corsHeaders);
       }
@@ -1226,7 +1243,8 @@ export default {
     }
 
     // --- AUTH: self-service change password ------------------------------
-    // Whoever holds a valid token for a role can change that role's own password.
+    // Whoever holds a valid token for a role can change that role's own password. Employee
+    // tokens carry a username, so their KV key is pw:employee:<username>, not pw:employee.
     if (path === '/change-password' && request.method === 'POST') {
       let body;
       try { body = await request.json(); }
@@ -1238,7 +1256,75 @@ export default {
         return json({ ok: false, msg: 'Password must be at least 4 characters' }, 400, corsHeaders);
       }
       const hashed = await hashPassword(newPassword);
-      await env.AUTH_KV.put(`pw:${claims.role}`, JSON.stringify(hashed));
+      const kvKey = claims.role === 'employee' ? `pw:employee:${claims.username}` : `pw:${claims.role}`;
+      const existing = claims.role === 'employee' ? JSON.parse(await env.AUTH_KV.get(kvKey) || '{}') : null;
+      const displayName = existing?.displayName;
+      await env.AUTH_KV.put(kvKey, JSON.stringify({ ...hashed, ...(displayName ? { displayName } : {}) }),
+        claims.role === 'employee' ? { metadata: { displayName } } : undefined);
+      return json({ ok: true }, 200, corsHeaders);
+    }
+
+    // --- ADMIN: employee account management --------------------------------
+    // Employee usernames/display names are non-sensitive (visible to admin only anyway) —
+    // password hashes never leave the Worker. KV `list()` returns each key's metadata without
+    // a separate GET per employee, so the listing endpoint stays cheap regardless of headcount.
+    if (path === '/admin/employees' && request.method === 'GET') {
+      const authHeader = request.headers.get('Authorization') || '';
+      const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+      const claims = await verifyToken(bearerToken, env.SESSION_SECRET);
+      if (!claims || claims.role !== 'admin') return json({ ok: false, msg: 'Admin session required' }, 401, corsHeaders);
+      const list = await env.AUTH_KV.list({ prefix: 'pw:employee:' });
+      const employees = list.keys.map(k => ({
+        username: k.name.slice('pw:employee:'.length),
+        displayName: k.metadata?.displayName || '',
+      }));
+      return json({ ok: true, employees }, 200, corsHeaders);
+    }
+    if (path === '/admin/employees' && request.method === 'POST') {
+      let body;
+      try { body = await request.json(); }
+      catch { return json({ ok: false, msg: 'Invalid JSON' }, 400, corsHeaders); }
+      const claims = await verifyToken(body.token, env.SESSION_SECRET);
+      if (!claims || claims.role !== 'admin') return json({ ok: false, msg: 'Admin session required' }, 401, corsHeaders);
+      const username = (body.username || '').trim().toLowerCase();
+      const displayName = (body.displayName || '').trim() || username;
+      const password = body.password || '';
+      if (!/^[a-z0-9._-]{2,32}$/.test(username)) {
+        return json({ ok: false, msg: 'Username must be 2-32 characters: letters, numbers, dot, dash, underscore' }, 400, corsHeaders);
+      }
+      if (password.length < 4) return json({ ok: false, msg: 'Password must be at least 4 characters' }, 400, corsHeaders);
+      const kvKey = `pw:employee:${username}`;
+      if (await env.AUTH_KV.get(kvKey)) return json({ ok: false, msg: 'That username already exists' }, 409, corsHeaders);
+      const hashed = await hashPassword(password);
+      await env.AUTH_KV.put(kvKey, JSON.stringify({ ...hashed, displayName }), { metadata: { displayName } });
+      return json({ ok: true }, 200, corsHeaders);
+    }
+    if (path === '/admin/employees/remove' && request.method === 'POST') {
+      let body;
+      try { body = await request.json(); }
+      catch { return json({ ok: false, msg: 'Invalid JSON' }, 400, corsHeaders); }
+      const claims = await verifyToken(body.token, env.SESSION_SECRET);
+      if (!claims || claims.role !== 'admin') return json({ ok: false, msg: 'Admin session required' }, 401, corsHeaders);
+      const username = (body.username || '').trim().toLowerCase();
+      if (!username) return json({ ok: false, msg: 'Username required' }, 400, corsHeaders);
+      await env.AUTH_KV.delete(`pw:employee:${username}`);
+      return json({ ok: true }, 200, corsHeaders);
+    }
+    if (path === '/admin/employees/reset-password' && request.method === 'POST') {
+      let body;
+      try { body = await request.json(); }
+      catch { return json({ ok: false, msg: 'Invalid JSON' }, 400, corsHeaders); }
+      const claims = await verifyToken(body.token, env.SESSION_SECRET);
+      if (!claims || claims.role !== 'admin') return json({ ok: false, msg: 'Admin session required' }, 401, corsHeaders);
+      const username = (body.username || '').trim().toLowerCase();
+      const newPassword = body.newPassword || '';
+      if (!username) return json({ ok: false, msg: 'Username required' }, 400, corsHeaders);
+      if (newPassword.length < 4) return json({ ok: false, msg: 'Password must be at least 4 characters' }, 400, corsHeaders);
+      const kvKey = `pw:employee:${username}`;
+      const existing = JSON.parse(await env.AUTH_KV.get(kvKey) || 'null');
+      if (!existing) return json({ ok: false, msg: 'No such employee' }, 404, corsHeaders);
+      const hashed = await hashPassword(newPassword);
+      await env.AUTH_KV.put(kvKey, JSON.stringify({ ...hashed, displayName: existing.displayName }), { metadata: { displayName: existing.displayName } });
       return json({ ok: true }, 200, corsHeaders);
     }
 

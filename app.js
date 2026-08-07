@@ -311,20 +311,22 @@ function getValidSession(){
     while(b64.length % 4) b64 += '=';
     const payload = JSON.parse(atob(b64));
     if(payload.exp && Date.now() > payload.exp) return null;
+    sessionEmployeeName = payload.displayName || '';
   } catch { return null; }
   return role;
 }
 
-async function workerLogin(role, password){
+async function workerLogin(role, password, username){
   const resp = await fetch(`${WORKER_AUTH_BASE}/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ role, password }),
+    body: JSON.stringify({ role, password, username }),
   });
   return await resp.json();
 }
 
 let sessionIsAdmin = false;
+let sessionEmployeeName = ''; // display name for the greeting, employee logins only
 async function activateApp(isAdmin){
   sessionIsAdmin = !!isAdmin;
   document.getElementById('lockScreen').style.display = 'none';
@@ -361,15 +363,22 @@ function toggleLockPwVis(){
 
 async function unlock(){
   const pw = document.getElementById('lockPw');
+  const userEl = document.getElementById('lockUsername');
   const err = document.getElementById('lockErr');
   const v = pw.value.trim();
+  const username = userEl.value.trim();
   if(!v) return;
   err.textContent = 'Checking…';
   try {
-    let result = await workerLogin('admin', v);
-    if(!result.ok) result = await workerLogin('company', v);
+    // A username routes straight to an employee-account login. Blank username keeps the
+    // existing shared-login behavior: try admin, then company.
+    let result = username
+      ? await workerLogin('employee', v, username)
+      : await workerLogin('admin', v);
+    if(!username && !result.ok) result = await workerLogin('company', v);
     if(result.ok){
       err.textContent = '';
+      sessionEmployeeName = result.displayName || '';
       saveSession(result.role, result.token);
       await activateApp(result.role === 'admin');
       return;
@@ -378,7 +387,7 @@ async function unlock(){
     err.textContent = 'Could not reach server — check your connection and try again.';
     return;
   }
-  err.textContent = 'Incorrect password — try again.';
+  err.textContent = username ? 'Incorrect username or password — try again.' : 'Incorrect password — try again.';
   pw.value = '';
   pw.classList.add('pw-shake');
   pw.style.borderColor = 'var(--red)';
@@ -389,6 +398,7 @@ async function unlock(){
   }, 2500);
 }
 document.getElementById('lockPw').addEventListener('keydown', e => { if(e.key === 'Enter') unlock(); });
+document.getElementById('lockUsername').addEventListener('keydown', e => { if(e.key === 'Enter') document.getElementById('lockPw').focus(); });
 
 function logout(){
   clearSession();
@@ -399,6 +409,8 @@ function logout(){
   document.getElementById('logoutBtn').style.display  = 'none';
   document.getElementById('changePwBtn').style.display = 'none';
   document.getElementById('lockPw').value = '';
+  document.getElementById('lockUsername').value = '';
+  sessionEmployeeName = '';
 }
 
 // Auto-restore session — called after mergePricing() at bottom of file
@@ -489,7 +501,9 @@ function closeHelp(){
 
 function openChangePw(){
   const label = document.getElementById('changePwRoleLabel');
-  if(label) label.textContent = sessionIsAdmin ? 'the Admin account' : 'the LBI account';
+  if(label) label.textContent = sessionIsAdmin ? 'the Admin account'
+    : sessionEmployeeName ? `your account (${sessionEmployeeName})`
+    : 'the LBI account';
   document.getElementById('changePwNew').value = '';
   document.getElementById('changePwConfirm').value = '';
   document.getElementById('changePwError').textContent = '';
@@ -528,6 +542,7 @@ async function saveChangePw(){
 
 function openAdmin(){
   renderAdminModal();
+  renderEmployeesAdmin();
   document.getElementById('adminModal').classList.remove('hidden');
   lockBodyScroll();
   syncModalViewport();
@@ -2946,6 +2961,99 @@ async function applyCompanyPricingOptions(){
 
     ensureAllCoreKeys();
   } catch(e){ /* keep whatever was already in `pricing` (structural defaults) */ }
+}
+
+// --- EMPLOYEE LOGINS (admin management) --------------------------------
+// Employee accounts live entirely in the Worker's AUTH_KV, not in `pricing` — nothing here
+// touches pricing.json or the GitHub push. Only ever called from the Admin modal.
+async function renderEmployeesAdmin(){
+  const cont = document.getElementById('employeesList');
+  if(!cont) return;
+  cont.innerHTML = '<p style="font-size:13px;color:var(--mid)">Loading…</p>';
+  try {
+    const resp = await fetch(`${WORKER_AUTH_BASE}/admin/employees`, {
+      headers: { 'Authorization': `Bearer ${getSessionToken()}` },
+    });
+    const result = await resp.json();
+    if(!result.ok){ cont.innerHTML = `<p style="font-size:13px;color:var(--red)">⚠ ${result.msg || 'Could not load employees'}</p>`; return; }
+    if(!result.employees.length){ cont.innerHTML = '<p style="font-size:13px;color:var(--mid)">No individual employee logins yet.</p>'; return; }
+    cont.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px;max-width:700px">
+      <thead><tr>
+        <th style="text-align:left;padding:4px 8px;color:var(--mid)">Username</th>
+        <th style="text-align:left;padding:4px 8px;color:var(--mid)">Display Name</th>
+        <th style="width:220px"></th>
+      </tr></thead>
+      <tbody>
+        ${result.employees.map(e => `<tr>
+          <td style="padding:4px 8px">${e.username}</td>
+          <td style="padding:4px 8px">${e.displayName || ''}</td>
+          <td style="padding:4px 8px;display:flex;gap:8px">
+            <button class="btn-secondary" style="padding:4px 10px;font-size:12px" onclick="resetEmployeePassword('${e.username}')">Reset Password</button>
+            <button class="btn-danger" style="padding:4px 10px;font-size:12px" onclick="removeEmployee('${e.username}')">Remove</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+  } catch(e){
+    cont.innerHTML = '<p style="font-size:13px;color:var(--red)">⚠ Could not reach server — check your connection.</p>';
+  }
+}
+
+async function addEmployee(){
+  const usernameEl = document.getElementById('newEmployeeUsername');
+  const nameEl = document.getElementById('newEmployeeDisplayName');
+  const pwEl = document.getElementById('newEmployeePassword');
+  const username = usernameEl.value.trim();
+  const displayName = nameEl.value.trim();
+  const password = pwEl.value;
+  if(!username || !password){ showToast('Username and password are required'); return; }
+  try {
+    const resp = await fetch(`${WORKER_AUTH_BASE}/admin/employees`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: getSessionToken(), username, displayName, password }),
+    });
+    const result = await resp.json();
+    if(!result.ok){ showToast('⚠ ' + (result.msg || 'Could not add employee')); return; }
+    usernameEl.value = ''; nameEl.value = ''; pwEl.value = '';
+    showToast(`✓ Added ${displayName || username}`);
+    renderEmployeesAdmin();
+  } catch(e){
+    showToast('⚠ Could not reach server — check your connection.');
+  }
+}
+
+async function removeEmployee(username){
+  if(!confirm(`Remove login access for "${username}"? They won't be able to log in anymore.`)) return;
+  try {
+    const resp = await fetch(`${WORKER_AUTH_BASE}/admin/employees/remove`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: getSessionToken(), username }),
+    });
+    const result = await resp.json();
+    if(!result.ok){ showToast('⚠ ' + (result.msg || 'Could not remove employee')); return; }
+    showToast('✓ Removed');
+    renderEmployeesAdmin();
+  } catch(e){
+    showToast('⚠ Could not reach server — check your connection.');
+  }
+}
+
+async function resetEmployeePassword(username){
+  const newPassword = prompt(`New password for "${username}" (min 4 characters):`);
+  if(!newPassword) return;
+  try {
+    const resp = await fetch(`${WORKER_AUTH_BASE}/admin/employees/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: getSessionToken(), username, newPassword }),
+    });
+    const result = await resp.json();
+    showToast(result.ok ? '✓ Password reset' : '⚠ ' + (result.msg || 'Could not reset password'));
+  } catch(e){
+    showToast('⚠ Could not reach server — check your connection.');
+  }
 }
 
 // --- PRICING EXPORT / IMPORT ------------------------------------------
