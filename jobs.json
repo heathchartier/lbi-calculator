@@ -85,20 +85,6 @@
     "savedAt": "2026-07-27T18:16:56.525Z"
   },
   {
-    "sourceId": "test-verify-123",
-    "name": "Test Verify Quote UPDATED",
-    "customer": "LBI",
-    "po": "TV-2",
-    "date": "2026-08-08",
-    "notes": "Synced from APS quoting tool",
-    "veneerConfigs": [],
-    "lumberConfigs": [],
-    "laminationConfigs": [],
-    "productCart": {},
-    "savedAt": "2026-08-08T00:36:38.254Z",
-    "id": 1786149398900
-  },
-  {
     "sourceId": "test-rapid-A",
     "name": "Rapid A v2 UPDATED",
     "customer": "LBI",
