@@ -83,5 +83,23 @@
     ],
     "productCart": {},
     "savedAt": "2026-07-27T18:16:56.525Z"
+  },
+  {
+    "sourceId": "test-verify-123",
+    "name": "Test Verify Quote",
+    "customer": "LBI",
+    "po": "TV-1",
+    "date": "2026-08-08",
+    "notes": "Synced from APS quoting tool",
+    "veneerConfigs": [
+      {
+        "species": "Walnut"
+      }
+    ],
+    "lumberConfigs": [],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-08-08T00:34:46.006Z",
+    "id": 1786149286351
   }
 ]
