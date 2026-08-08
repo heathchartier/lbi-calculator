@@ -97,5 +97,19 @@
     "productCart": {},
     "savedAt": "2026-08-08T00:36:38.254Z",
     "id": 1786149398900
+  },
+  {
+    "sourceId": "test-rapid-A",
+    "name": "Rapid A v1",
+    "customer": "LBI",
+    "po": "A-1",
+    "date": "2026-08-08",
+    "notes": "Synced from APS quoting tool",
+    "veneerConfigs": [],
+    "lumberConfigs": [],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-08-08T00:46:03.064Z",
+    "id": 1786149963562
   }
 ]
