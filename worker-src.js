@@ -438,16 +438,25 @@ export default {
       };
 
       async function upsertJob(retries) {
-        const rawResp = await fetch(`${RAW}?_=${Date.now()}`, { cache: 'no-store' });
-        let jobs = [];
-        if (rawResp.ok) { try { jobs = await rawResp.json(); } catch { jobs = []; } }
+        // Read the CURRENT job list from the same GitHub Contents API call that gives us the
+        // sha, not from raw.githubusercontent.com — that raw endpoint sits behind its own CDN
+        // cache with an unpredictable TTL, independent of what's actually committed. Reading
+        // jobs from there for a merge is a real bug: a write immediately followed by another
+        // write can read stale (pre-write) data for the merge, silently lose the first write
+        // when the second is pushed. The Contents API always reflects the actual latest commit.
+        let jobs = [], sha;
+        const getResp = await fetch(API, { headers: GH_HEADERS });
+        if (getResp.ok) {
+          const d = await getResp.json();
+          sha = d.sha;
+          try { jobs = JSON.parse(decodeURIComponent(escape(atob(d.content.replace(/\s/g, ''))))); }
+          catch { jobs = []; }
+        } else if (getResp.status === 401) {
+          return { ok: false, msg: 'GitHub token invalid' };
+        } else if (getResp.status !== 404) {
+          return { ok: false, msg: 'GitHub error ' + getResp.status };
+        }
         if (!Array.isArray(jobs)) jobs = [];
-
-        const shaResp = await fetch(API, { headers: GH_HEADERS });
-        let sha;
-        if (shaResp.ok) sha = (await shaResp.json()).sha;
-        else if (shaResp.status === 401) return { ok: false, msg: 'GitHub token invalid' };
-        else if (shaResp.status !== 404) return { ok: false, msg: 'GitHub error ' + shaResp.status };
 
         const idx = jobs.findIndex(j => j.sourceId === sourceId);
         if (idx >= 0) {
