@@ -404,6 +404,79 @@ export default {
       }
     }
 
+    // --- PARTNER: job upsert (APS quote sync) ------------------------------
+    // Adds or updates exactly ONE job, matched by sourceId — never touches any other job,
+    // never replaces the whole list. This is the safety property Ryan's write-up promised
+    // ("fetch-modify-write, never truncate") — enforced here server-side, on its own scoped
+    // key, rather than relied on as a promise about his client code. customer/date/notes are
+    // set here, never trusted from the caller, so this can only ever create a properly-tagged
+    // LBI-sourced job entry, nothing else.
+    if (path === '/jobs/upsert' && request.method === 'POST') {
+      const partnerKey = request.headers.get('X-Partner-Key');
+      if (!partnerKey || !env.PARTNER_JOBS_KEY || partnerKey !== env.PARTNER_JOBS_KEY) {
+        return json({ ok: false, msg: 'Unauthorized' }, 401, corsHeaders);
+      }
+      let body;
+      try { body = await request.json(); }
+      catch { return json({ ok: false, msg: 'Invalid JSON' }, 400, corsHeaders); }
+
+      const sourceId = (body.sourceId || '').toString().trim();
+      if (!sourceId) return json({ ok: false, msg: 'sourceId is required' }, 400, corsHeaders);
+
+      const newEntry = {
+        sourceId,
+        name: (body.name || 'APS Quote').toString(),
+        customer: 'LBI', // always — never trusts the caller for this field
+        po: (body.po || '').toString(),
+        date: new Date().toISOString().split('T')[0],
+        notes: 'Synced from APS quoting tool' + (body.notes ? ` — ${body.notes}` : ''),
+        veneerConfigs: Array.isArray(body.veneerConfigs) ? body.veneerConfigs : [],
+        lumberConfigs: Array.isArray(body.lumberConfigs) ? body.lumberConfigs : [],
+        laminationConfigs: Array.isArray(body.laminationConfigs) ? body.laminationConfigs : [],
+        productCart: (body.productCart && typeof body.productCart === 'object') ? body.productCart : {},
+        savedAt: new Date().toISOString(),
+      };
+
+      async function upsertJob(retries) {
+        const rawResp = await fetch(`${RAW}?_=${Date.now()}`, { cache: 'no-store' });
+        let jobs = [];
+        if (rawResp.ok) { try { jobs = await rawResp.json(); } catch { jobs = []; } }
+        if (!Array.isArray(jobs)) jobs = [];
+
+        const shaResp = await fetch(API, { headers: GH_HEADERS });
+        let sha;
+        if (shaResp.ok) sha = (await shaResp.json()).sha;
+        else if (shaResp.status === 401) return { ok: false, msg: 'GitHub token invalid' };
+        else if (shaResp.status !== 404) return { ok: false, msg: 'GitHub error ' + shaResp.status };
+
+        const idx = jobs.findIndex(j => j.sourceId === sourceId);
+        if (idx >= 0) {
+          newEntry.id = jobs[idx].id; // preserve identity across updates
+          jobs[idx] = newEntry;
+        } else {
+          newEntry.id = Date.now();
+          jobs.push(newEntry);
+        }
+
+        const content = btoa(unescape(encodeURIComponent(JSON.stringify(jobs, null, 2))));
+        const putBody = { message: 'Upsert job from APS', content };
+        if (sha) putBody.sha = sha;
+
+        const putResp = await fetch(API, { method: 'PUT', headers: GH_HEADERS, body: JSON.stringify(putBody) });
+        if (putResp.ok) return { ok: true, id: newEntry.id };
+        if (putResp.status === 409 && retries > 0) return upsertJob(retries - 1);
+        if (putResp.status === 401) return { ok: false, msg: 'GitHub token invalid' };
+        return { ok: false, msg: 'Push failed ' + putResp.status };
+      }
+
+      try {
+        const result = await upsertJob(2);
+        return json(result, result.ok ? 200 : 500, corsHeaders);
+      } catch (e) {
+        return json({ ok: false, msg: e.message }, 500, corsHeaders);
+      }
+    }
+
     return new Response('Not found', { status: 404, headers: corsHeaders });
   },
 };
