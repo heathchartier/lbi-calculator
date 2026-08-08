@@ -49,13 +49,15 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--ink);min-heig
   padding:32px;width:100%;max-width:380px;display:flex;flex-direction:column;gap:20px;
 }
 #lockScreen h2{font-family:var(--font-head);font-size:22px;font-weight:700;text-align:center;color:var(--mid)}
-#lockPw{
+#lockPw,#lockUsername{
   background:var(--surf2);border:1px solid var(--bdr2);border-radius:var(--r);
   color:var(--ink);font-size:18px;padding:14px 16px;width:100%;
-  font-family:var(--font-mono);letter-spacing:3px;outline:none;
-  transition:border-color .2s;text-align:center;
+  outline:none;transition:border-color .2s;text-align:center;
+  box-sizing:border-box;
 }
-#lockPw:focus{border-color:var(--teal)}
+#lockPw{font-family:var(--font-mono);letter-spacing:3px}
+#lockUsername{font-size:15px}
+#lockPw:focus,#lockUsername:focus{border-color:var(--teal)}
 #lockErr{color:var(--red);font-size:14px;font-weight:600;text-align:center;min-height:20px}
 @keyframes pw-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
 .pw-shake{animation:pw-shake .4s ease;border-color:var(--red)!important}
@@ -448,8 +450,9 @@ select option{background:#1e2226}
   <div class="lock-logo">LBI<span>IQ</span> Calculator</div>
   <div class="lock-card">
     <h2>Enter Access Code</h2>
+    <input type="text" id="lockUsername" placeholder="Employee username (leave blank for shared login)" autocomplete="off" autocapitalize="none" spellcheck="false" style="margin-bottom:10px">
     <div style="position:relative">
-      <input type="password" id="lockPw" placeholder="••••••••••••" autocomplete="off" autofocus style="padding-right:48px">
+      <input type="password" id="lockPw" placeholder="••••••••••••" autocomplete="off" style="padding-right:48px">
       <button type="button" id="lockPwEye" onclick="toggleLockPwVis()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;color:var(--mid);line-height:0">
         <svg id="eye-show" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
         <svg id="eye-hide" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
@@ -950,10 +953,35 @@ select option{background:#1e2226}
             style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
         </div>
         <div>
-          <label class="field-label">LBI Password</label>
+          <label class="field-label">LBI Password (shared)</label>
           <input type="text" id="admin-lbi-password" placeholder="Leave blank to keep current" autocomplete="off"
             style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
         </div>
+      </div>
+    </div>
+
+    <!-- Employee Logins -->
+    <div class="modal-section">
+      <h3>Employee Logins</h3>
+      <p style="font-size:12px;color:var(--mid);margin-bottom:12px">Optional — instead of everyone sharing the LBI password above, give individual employees their own username and password.</p>
+      <div id="employeesList" style="margin-bottom:16px"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end;max-width:700px">
+        <div>
+          <label class="field-label">Username</label>
+          <input type="text" id="newEmployeeUsername" placeholder="e.g. jsmith" autocomplete="off" autocapitalize="none" spellcheck="false"
+            style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+        </div>
+        <div>
+          <label class="field-label">Display Name</label>
+          <input type="text" id="newEmployeeDisplayName" placeholder="e.g. John Smith" autocomplete="off"
+            style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+        </div>
+        <div>
+          <label class="field-label">Initial Password</label>
+          <input type="text" id="newEmployeePassword" placeholder="Min 4 characters" autocomplete="off"
+            style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+        </div>
+        <button class="btn-secondary" onclick="addEmployee()">+ Add Employee</button>
       </div>
     </div>
 
@@ -1423,7 +1451,8 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="app.js?v=20260727h"></script>
+<script src="calc-engine.js?v=20260807a"></script>
+<script src="app.js?v=20260807a"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });

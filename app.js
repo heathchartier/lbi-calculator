@@ -1,11 +1,9 @@
 
 // --- CONSTANTS -------------------------------------------------------
-// SECURITY: no real password may ever be hardcoded here — this file is committed to a
-// PUBLIC repo. The string below is a one-time setup credential only, meant to be changed
-// via Admin Settings -> Passwords on every device immediately after first use. Once every
-// admin device has its own password saved to localStorage, this fallback is never reached
-// again on that device (only matters for a device that's never been configured yet).
-function getAdminPassword(){ return localStorage.getItem('lbiq_admin_password') || 'Grain-Forge-1091'; }
+// Public endpoint, not a secret — same trust level as the GitHub raw URL fetched below.
+// Passwords are never checked client-side anymore; every login/change-password call goes
+// to the Worker, which holds the real password hashes in KV and never returns them.
+const WORKER_AUTH_BASE = 'https://lbi-jobs.heathchartier.workers.dev';
 const THICK_OPTIONS = [
   { key:'025', label:'1/4"' },
   { key:'050', label:'1/2"' },
@@ -95,82 +93,10 @@ const LAM_NET_SIZES = ['4x8','5x10'];
 const LAM_SIZE_AREA = { '4x8': 4608, '4x10': 5760, '5x10': 7200, '5x12': 8640 };
 function blankLamFace(){ return { price4x8:0, price4x10:0, price5x12:0, ebRoll:0 }; }
 function blankLamCore(){ const o={netSize:false}; LAM_THICK_KEYS.forEach(t=>LAM_SIZES.forEach(s=>{o[`${t.k}_${s}`]=0;})); return o; }
-// For a chosen thickness value, get a {size: price} map across all LAM_SIZES. 3/4 tries 11/16 first.
-function getLamSheetPrices(item, thickVal){
-  const fallback = thickVal === 0.75 ? 't0_6875' : null;
-  const primary  = LAM_THICK_KEYS.find(t => t.val === thickVal)?.k || 't0_75';
-  const get = (tk, sz) => (item && item[`${tk}_${sz}`]) || 0;
-  const prices = {};
-  LAM_SIZES.forEach(sz => { prices[sz] = (fallback && get(fallback,sz)) || get(primary,sz); });
-  return prices;
-}
-// Face/back sheets only ever come in 4x8, 4x10, 5x12 (never 5x10). Only priced (>0) sizes count as available.
-function getLamFacePrices(faceData){
-  const out = {};
-  if(!faceData) return out;
-  LAM_FACE_SIZES.forEach(sz => { const p = faceData[`price${sz}`]||0; if(p > 0) out[sz] = p; });
-  return out;
-}
-// Core's actually-available priced sizes at a thickness, respecting the net-size (Baltic Birch) size cap.
-function getLamCoreAvailSizes(coreData, thickVal){
-  const prices = getLamSheetPrices(coreData, thickVal);
-  const allowedSizes = coreData?.netSize ? LAM_NET_SIZES : LAM_SIZES;
-  const out = {};
-  allowedSizes.forEach(sz => { if((prices[sz]||0) > 0) out[sz] = prices[sz]; });
-  return out;
-}
-// Usable cutting dims for a given sheet size — net sheets are already trimmed; oversize sheets get the standard squaring cut.
-function lamUsableDims(sizeKey, isNet){
-  if(isNet){
-    const d = LAM_NET_DIMS[sizeKey];
-    return d ? { w: d.w, l: d.l } : null;
-  }
-  const w = SHEET_WIDTHS[sizeKey], l = SHEET_LENGTHS[sizeKey];
-  return (w && l) ? { w: w - SQUARING, l: l - SQUARING } : null;
-}
-// Brute-force search over every valid (core size × face size × back size) combo, picking the
-// cheapest cost-per-slat. Yield for a combo is capped by whichever item (core/face/back) is
-// physically smallest in each dimension — handles both "core is the limiting factor" (e.g. Baltic
-// Birch net sizes smaller than the laminate) and "face is the limiting factor" (face only comes in
-// a size smaller than the core offers) without needing separate branches for each direction.
-function chooseLamSizes(slatW, slatL, faceAvail, coreAvail, backAvail, coreIsNet){
-  let best = null;
-  const coreSizes = Object.keys(coreAvail);
-  const faceSizes = Object.keys(faceAvail).length ? Object.keys(faceAvail) : [null];
-  const backSizes = Object.keys(backAvail).length ? Object.keys(backAvail) : [null];
-  coreSizes.forEach(coreSz => {
-    const coreDims = lamUsableDims(coreSz, !!coreIsNet);
-    if(!coreDims) return;
-    faceSizes.forEach(faceSz => {
-      const faceDims = faceSz ? lamUsableDims(faceSz, false) : null;
-      backSizes.forEach(backSz => {
-        const backDims = backSz ? lamUsableDims(backSz, false) : null;
-        const effW = Math.min(coreDims.w, faceDims?.w ?? Infinity, backDims?.w ?? Infinity);
-        const effL = Math.min(coreDims.l, faceDims?.l ?? Infinity, backDims?.l ?? Infinity);
-        const cols = Math.floor((effW + KERF) / (slatW + KERF));
-        const rows = Math.floor((effL + KERF) / (slatL + KERF));
-        const yieldPerSheet = Math.max(0, cols * rows);
-        if(yieldPerSheet <= 0) return;
-        const facePrice = faceSz ? (faceAvail[faceSz]||0) : 0;
-        const backPrice = backSz ? (backAvail[backSz]||0) : 0;
-        const corePrice = coreAvail[coreSz]||0;
-        const costPerSlat = (facePrice + backPrice + corePrice) / yieldPerSheet;
-        if(!best || costPerSlat < best.costPerSlat){
-          best = { coreSz, faceSz, backSz, yieldPerSheet, facePrice, backPrice, corePrice, costPerSlat };
-        }
-      });
-    });
-  });
-  return best;
-}
+// getLamSheetPrices, getLamFacePrices, getLamCoreAvailSizes, lamUsableDims, chooseLamSizes
+// now live in calc-engine.js as Calc.getLamSheetPrices / Calc.getLamFacePrices /
+// Calc.getLamCoreAvailSizes / Calc.lamUsableDims / Calc.chooseLamSizes.
 const SUPPLIER_LABELS = { talbert: 'Talbert (Premium)', timber: 'Timber (Standard)' };
-
-// SECURITY: no longer synced via pricing.json (that file is public — anyone could read the
-// customer password straight off GitHub before this fix). LBI's password now lives only in
-// localStorage on each admin device that's explicitly configured it; give it to him directly
-// (text/call) rather than relying on auto-distribution. 'Copper-Timber-7213' is a one-time
-// setup fallback only — same caveat as getAdminPassword() above.
-function getLBIPassword(){ return localStorage.getItem('lbiq_lbi_password') || 'Copper-Timber-7213'; }
 
 const STOCK_LOOKUP = [
   { min:0.1875, max:0.3125, stock:1.0,  label:'Resaw from 4/4',   resaw:true  },
@@ -185,14 +111,7 @@ const STOCK_LOOKUP = [
   { min:2.875,  max:3.8125, stock:4.0,  label:'Milled from 16/4', resaw:false },
 ];
 
-// Maps a STOCK_LOOKUP stock value to its admin price field + short label.
-// 10/4, 12/4, 16/4 (stock 2.5/3.0/4.0) fall back to the 8/4 price — not stocked separately.
-function tierPriceInfo(stockVal){
-  if(stockVal <= 1.0)  return { key:'price',    label:'4/4' };
-  if(stockVal <= 1.25) return { key:'price5_4', label:'5/4' };
-  if(stockVal <= 1.5)  return { key:'price6_4', label:'6/4' };
-  return { key:'price8_4', label:'8/4' };
-}
+// tierPriceInfo now lives in calc-engine.js as Calc.tierPriceInfo.
 
 function parseFraction(str){
   str = (str||'').trim();
@@ -207,25 +126,8 @@ function parseFraction(str){
   return NaN;
 }
 
-function getStockInfo(t){ return STOCK_LOOKUP.find(s => t >= s.min && t <= s.max) || null; }
-
-// --- MILL LOOKUP TABLES ----------------------------------------------
-// Width waste factor: additional inches lost per rip (includes saw kerf + edge prep)
-// Source: mill production guide
-function getWidthWasteFactor(finishedW){
-  if(finishedW <= 1.000) return 1.000;   // 1/4" – 1"
-  if(finishedW <= 1.500) return 1.125;   // 1-1/8" – 1-1/2"
-  if(finishedW <= 2.375) return 1.375;   // 1-5/8" – 2-3/8"
-  if(finishedW <= 3.375) return 1.625;   // 2-1/2" – 3-3/8"
-  if(finishedW <= 4.375) return 1.750;   // 3-1/2" – 4-3/8"
-  if(finishedW <= 6.375) return 2.000;   // 4-1/2" – 6-3/8"
-  return 2.500;                          // 6-1/2" – 8-3/4"+
-}
-
-function getSuggestedRoughThick(finishedT){
-  const info = getStockInfo(finishedT);
-  return info ? info.stock : 1.0;
-}
+// getStockInfo, getWidthWasteFactor, getSuggestedRoughThick now live in calc-engine.js
+// as Calc.getStockInfo / Calc.getWidthWasteFactor / Calc.getSuggestedRoughThick.
 
 // --- DEFAULT PRICING -------------------------------------------------
 // veneerSpecies keys: {sup}_{grade}_{size}_{core}  e.g. talbert_A3_4x8_frmdf
@@ -282,11 +184,19 @@ function migrateThicknessKeys(){
   });
 }
 
+// SECURITY: every dollar-rate field below is 0, deliberately — this file is public source
+// (unlike pricing.json, it can never be made private, since it's the app your browser runs).
+// It used to hold real pricing as a "sensible fallback" before the first cloud fetch — some
+// of those numbers were an exact match to live pricing at the time this was found (2026-08-02).
+// This object is only ever a brief placeholder now: real pricing loads immediately after login
+// (fetchCloudPricing for admin, applyCompanyPricingOptions for company), so there's no
+// functional reason for a fallback value to ever be a real number. Structural/quantity fields
+// (thresholds, resaw flags) are left as reasonable defaults — only $ rates were zeroed.
 const DEFAULT_PRICING = {
   veneerSpecies: {
-    'Walnut':         blankVeneerSpecies({ timber_A3_4x8_frmdf:258, timber_A3_4x10_frmdf:381, timber_AA_4x8_frmdf:350, timber_AA_4x10_frmdf:515, timber_eb_roll:167 }),
-    'White Oak':      blankVeneerSpecies({ timber_A3_4x8_frmdf:236, timber_A3_4x10_frmdf:338, timber_AA_4x8_frmdf:303, timber_AA_4x10_frmdf:430, timber_eb_roll:147 }),
-    'Rift White Oak': blankVeneerSpecies({ timber_A3_4x8_frmdf:283, timber_A3_4x10_frmdf:431, timber_AA_4x8_frmdf:401, timber_AA_4x10_frmdf:617, timber_eb_roll:167 }),
+    'Walnut':         blankVeneerSpecies(),
+    'White Oak':      blankVeneerSpecies(),
+    'Rift White Oak': blankVeneerSpecies(),
     'Maple':          blankVeneerSpecies(),
     'Cherry':         blankVeneerSpecies(),
     'Alder':          blankVeneerSpecies(),
@@ -294,30 +204,30 @@ const DEFAULT_PRICING = {
     'Custom':         blankVeneerSpecies(),
   },
   lumberSpecies: {
-    'Flat Cut White Oak': { price:7.25, resaw:false },
-    'Rift White Oak':     { price:11.90, resaw:false },
-    'Walnut':             { price:11.20, resaw:false },
-    'Stain Grade Poplar': { price:2.50,  resaw:false },
-    'Hard Maple':         { price:3.50,  resaw:false },
-    'V.G. Hemlock':       { price:7.25,  resaw:true  },
-    'V.G. Fir':           { price:0,     resaw:true  },
-    'Therm Ash':          { price:7.27,  resaw:false },
-    'Therm Poplar':       { price:5.61,  resaw:false },
-    'Therm Oak':          { price:12.48, resaw:false },
-    'Therm Pine':         { price:7.20,  resaw:false },
-    'Therm VG Hemlock':   { price:12.50, resaw:true  },
-    'Grey Accoya':        { price:12.25, resaw:false },
-    'Custom':             { price:3.25,  resaw:false },
+    'Flat Cut White Oak': { price:0, resaw:false },
+    'Rift White Oak':     { price:0, resaw:false },
+    'Walnut':             { price:0, resaw:false },
+    'Stain Grade Poplar': { price:0, resaw:false },
+    'Hard Maple':         { price:0, resaw:false },
+    'V.G. Hemlock':       { price:0, resaw:true  },
+    'V.G. Fir':           { price:0, resaw:true  },
+    'Therm Ash':          { price:0, resaw:false },
+    'Therm Poplar':       { price:0, resaw:false },
+    'Therm Oak':          { price:0, resaw:false },
+    'Therm Pine':         { price:0, resaw:false },
+    'Therm VG Hemlock':   { price:0, resaw:true  },
+    'Grey Accoya':        { price:0, resaw:false },
+    'Custom':             { price:0, resaw:false },
   },
   services: {
-    ebServicePerFt: 0.50, cutServicePerSqft: 0.19,
+    ebServicePerFt: 0, cutServicePerSqft: 0,
     cutFlatVeneer: 0, cutVeneerThreshold: 20,
-    dadoServicePerSqft: 1.50, dadoFlatCharge: 0, dadoThreshold: 20,
-    assembly: 1.50, bracketPrice: 2.50, glueLine: 0,
-    millingFlat: 780, millingThreshold: 3000, millingPerLF: 0.21, seriesChange: 115,
-    resawFlat: 780, resawThreshold: 3000, resawPerLF: 0.21,
-    sandingFlat: 240, sandingThreshold: 1700, sandingPerLF: 0.19,
-    cutFlat: 500, cutThreshold: 3000, cutPerLF: 0.21,
+    dadoServicePerSqft: 0, dadoFlatCharge: 0, dadoThreshold: 20,
+    assembly: 0, bracketPrice: 0, glueLine: 0,
+    millingFlat: 0, millingThreshold: 3000, millingPerLF: 0, seriesChange: 0,
+    resawFlat: 0, resawThreshold: 3000, resawPerLF: 0,
+    sandingFlat: 0, sandingThreshold: 1700, sandingPerLF: 0,
+    cutFlat: 0, cutThreshold: 3000, cutPerLF: 0,
   },
   markup: {
     panels:0, edgeBand:0, lumber:0, milling:0,
@@ -339,7 +249,17 @@ const DEFAULT_PRICING = {
 };
 
 // --- STATE -----------------------------------------------------------
-let pricing = JSON.parse(localStorage.getItem('lbiq_pricing') || 'null') || deepCopy(DEFAULT_PRICING);
+// SECURITY: deliberately NOT seeded from the localStorage cache here — a device that used
+// this app before this fix shipped may still have real pricing cached from the old
+// unconditional pre-login fetch. Starting from the (now-zeroed) DEFAULT_PRICING and letting
+// mergePricing() below immediately re-save that safe state to localStorage means any stale
+// real-data cache gets overwritten on first load, not read back into memory pre-login.
+let pricing = deepCopy(DEFAULT_PRICING);
+// Shared veneer-costing engine (calc-engine.js) — closes over this exact `pricing` object.
+// pricing is mutated in place everywhere (fetchCloudPricing, saveAdmin), never reassigned,
+// so this binding stays correct for the life of the page without re-creating it.
+let Calc = createCalcEngine(pricing);
+window.Calc = Calc; // exposed for debugging/testing only — app.js code always uses the local `Calc` binding above
 let veneerConfigs = [];
 let lumberConfigs = [];
 let laminationConfigs = [];
@@ -365,21 +285,49 @@ function naturalSort(a, b){ return a.localeCompare(b, undefined, { numeric: true
 function sortedCats(cats){ return [...cats].sort((a,b) => naturalSort(a.name, b.name)); }
 
 // --- AUTH -------------------------------------------------------------
-function saveSession(role){
+// Real login: the browser never checks a password itself. It POSTs to the Worker, which
+// holds the real password hashes in KV and returns a signed session token on success.
+// The token's signature is only ever verified server-side (change-password calls send it
+// back); reading its payload here is just local UI state, not a security check.
+function saveSession(role, token){
   localStorage.setItem('lbiq_session_role', role);
+  localStorage.setItem('lbiq_session_token', token);
 }
 
 function clearSession(){
   localStorage.removeItem('lbiq_session_role');
+  localStorage.removeItem('lbiq_session_token');
   localStorage.removeItem('lbiq_session_expiry'); // remove legacy expiry key if present
 }
 
+function getSessionToken(){ return localStorage.getItem('lbiq_session_token'); }
+
 function getValidSession(){
-  return localStorage.getItem('lbiq_session_role') || null;
+  const token = localStorage.getItem('lbiq_session_token');
+  const role  = localStorage.getItem('lbiq_session_role');
+  if(!token || !role) return null;
+  try {
+    let b64 = token.split('.')[0].replace(/-/g,'+').replace(/_/g,'/');
+    while(b64.length % 4) b64 += '=';
+    const payload = JSON.parse(atob(b64));
+    if(payload.exp && Date.now() > payload.exp) return null;
+    sessionEmployeeName = payload.displayName || '';
+  } catch { return null; }
+  return role;
+}
+
+async function workerLogin(role, password, username){
+  const resp = await fetch(`${WORKER_AUTH_BASE}/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role, password, username }),
+  });
+  return await resp.json();
 }
 
 let sessionIsAdmin = false;
-function activateApp(isAdmin){
+let sessionEmployeeName = ''; // display name for the greeting, employee logins only
+async function activateApp(isAdmin){
   sessionIsAdmin = !!isAdmin;
   document.getElementById('lockScreen').style.display = 'none';
   const app = document.getElementById('app');
@@ -388,6 +336,12 @@ function activateApp(isAdmin){
   document.getElementById('logoutBtn').style.display  = '';
   document.getElementById('changePwBtn').style.display = '';
   document.getElementById('jobDate').value = new Date().toISOString().split('T')[0];
+
+  // Admin needs real numbers to edit pricing — full fetch, same as always. Company role
+  // never receives real pricing.json at all — see applyCompanyPricingOptions() above.
+  if(isAdmin) await fetchCloudPricing();
+  else await applyCompanyPricingOptions();
+
   addVeneerConfig();
   addLumberConfig();
   addLaminationConfig();
@@ -407,28 +361,44 @@ function toggleLockPwVis(){
   pw.focus();
 }
 
-function unlock(){
-  const v = document.getElementById('lockPw').value.trim();
-  const isAdmin = (v === getAdminPassword());
-  const isUser  = (v === getLBIPassword());
-  if(isAdmin || isUser){
-    saveSession(isAdmin ? 'admin' : 'user');
-    activateApp(isAdmin);
-  } else {
-    const pw = document.getElementById('lockPw');
-    const err = document.getElementById('lockErr');
-    err.textContent = 'Incorrect password — try again.';
-    pw.value = '';
-    pw.classList.add('pw-shake');
-    pw.style.borderColor = 'var(--red)';
-    setTimeout(() => {
+async function unlock(){
+  const pw = document.getElementById('lockPw');
+  const userEl = document.getElementById('lockUsername');
+  const err = document.getElementById('lockErr');
+  const v = pw.value.trim();
+  const username = userEl.value.trim();
+  if(!v) return;
+  err.textContent = 'Checking…';
+  try {
+    // A username routes straight to an employee-account login. Blank username keeps the
+    // existing shared-login behavior: try admin, then company.
+    let result = username
+      ? await workerLogin('employee', v, username)
+      : await workerLogin('admin', v);
+    if(!username && !result.ok) result = await workerLogin('company', v);
+    if(result.ok){
       err.textContent = '';
-      pw.classList.remove('pw-shake');
-      pw.style.borderColor = '';
-    }, 2500);
+      sessionEmployeeName = result.displayName || '';
+      saveSession(result.role, result.token);
+      await activateApp(result.role === 'admin');
+      return;
+    }
+  } catch(e){
+    err.textContent = 'Could not reach server — check your connection and try again.';
+    return;
   }
+  err.textContent = username ? 'Incorrect username or password — try again.' : 'Incorrect password — try again.';
+  pw.value = '';
+  pw.classList.add('pw-shake');
+  pw.style.borderColor = 'var(--red)';
+  setTimeout(() => {
+    err.textContent = '';
+    pw.classList.remove('pw-shake');
+    pw.style.borderColor = '';
+  }, 2500);
 }
 document.getElementById('lockPw').addEventListener('keydown', e => { if(e.key === 'Enter') unlock(); });
+document.getElementById('lockUsername').addEventListener('keydown', e => { if(e.key === 'Enter') document.getElementById('lockPw').focus(); });
 
 function logout(){
   clearSession();
@@ -439,14 +409,15 @@ function logout(){
   document.getElementById('logoutBtn').style.display  = 'none';
   document.getElementById('changePwBtn').style.display = 'none';
   document.getElementById('lockPw').value = '';
+  document.getElementById('lockUsername').value = '';
+  sessionEmployeeName = '';
 }
 
 // Auto-restore session — called after mergePricing() at bottom of file
-function checkSession(){
+async function checkSession(){
   const role = getValidSession();
   if(role){
-    saveSession(role); // bump expiry on each load
-    activateApp(role === 'admin');
+    await activateApp(role === 'admin');
   }
 }
 
@@ -530,7 +501,9 @@ function closeHelp(){
 
 function openChangePw(){
   const label = document.getElementById('changePwRoleLabel');
-  if(label) label.textContent = sessionIsAdmin ? 'the Admin account' : 'the LBI account';
+  if(label) label.textContent = sessionIsAdmin ? 'the Admin account'
+    : sessionEmployeeName ? `your account (${sessionEmployeeName})`
+    : 'the LBI account';
   document.getElementById('changePwNew').value = '';
   document.getElementById('changePwConfirm').value = '';
   document.getElementById('changePwError').textContent = '';
@@ -544,21 +517,32 @@ function closeChangePw(){
   m.style.height = '';
   unlockBodyScroll();
 }
-function saveChangePw(){
+async function saveChangePw(){
   const pw = document.getElementById('changePwNew').value;
   const confirm = document.getElementById('changePwConfirm').value;
   const errEl = document.getElementById('changePwError');
   if(!pw || pw.length < 4){ errEl.textContent = 'Password must be at least 4 characters.'; return; }
   if(pw !== confirm){ errEl.textContent = "Passwords don't match."; return; }
-  // Each device stores its own password locally — there's no server, so this can only ever
-  // change what THIS device/browser requires, never push a password onto any other device.
-  localStorage.setItem(sessionIsAdmin ? 'lbiq_admin_password' : 'lbiq_lbi_password', pw);
+  errEl.textContent = 'Saving…';
+  try {
+    const resp = await fetch(`${WORKER_AUTH_BASE}/change-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: getSessionToken(), newPassword: pw }),
+    });
+    const result = await resp.json();
+    if(!result.ok){ errEl.textContent = result.msg || 'Could not update password.'; return; }
+  } catch(e){
+    errEl.textContent = 'Could not reach server — check your connection and try again.';
+    return;
+  }
   closeChangePw();
-  showToast('Password updated on this device');
+  showToast('Password updated — takes effect on every device immediately');
 }
 
 function openAdmin(){
   renderAdminModal();
+  renderEmployeesAdmin();
   document.getElementById('adminModal').classList.remove('hidden');
   lockBodyScroll();
   syncModalViewport();
@@ -582,7 +566,6 @@ function switchTab(name, btn){
 // --- HELPERS ----------------------------------------------------------
 function fmt(n){ return n == null ? '—' : '$' + Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function fmtN(n, dec=0){ return n == null ? '—' : Number(n).toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec}); }
-function withMarkup(cost, cat){ const m = pricing.markup[cat]||0; return m>=100 ? cost : cost/(1-m/100); }
 function markDirty(){ isDirty = true; }
 function getSupplier(){ return document.getElementById('jobSupplier')?.value || 'talbert'; }
 
@@ -867,210 +850,32 @@ function vUpdate(id){
 }
 
 // --- VENEER QUANTITY HELPERS ------------------------------------------
-function resolveVeneerQty(cfg){
-  if(!cfg.panelW || !cfg.panelL || !cfg.slatW || !cfg.slatL || !cfg.slatsPerPanel) return null;
-  const sqftPerPanel = (cfg.panelW * cfg.panelL) / 144;
-  if(cfg.calcMode === 'sqft'){
-    if(!cfg.sqft) return null;
-    const panelQty   = Math.ceil(cfg.sqft / sqftPerPanel);
-    const totalSlats = panelQty * cfg.slatsPerPanel;
-    return { panelQty, totalSlats, effectiveSqft: cfg.sqft, sqftPerPanel };
-  } else if(cfg.calcMode === 'slats'){
-    if(!cfg.manualQty) return null;
-    const totalSlats = cfg.manualQty;
-    const panelQty   = Math.ceil(totalSlats / cfg.slatsPerPanel);
-    return { panelQty, totalSlats, effectiveSqft: panelQty * sqftPerPanel, sqftPerPanel };
-  } else { // panels
-    if(!cfg.manualQty) return null;
-    const panelQty   = cfg.manualQty;
-    const totalSlats = panelQty * cfg.slatsPerPanel;
-    return { panelQty, totalSlats, effectiveSqft: panelQty * sqftPerPanel, sqftPerPanel };
-  }
-}
+// resolveVeneerQty, chooseVeneerSheet, packVeneerSheets now live in calc-engine.js
+// (Calc.resolveVeneerQty / Calc.chooseVeneerSheet / Calc.packVeneerSheets) — shared
+// with the Worker so a company-role login never has to run this math in the browser.
 
-// Returns { size, slatsPerSheet, sheetPrice } — picks 4x8 vs 4x10 by cost-per-slat
-// (or by yield if prices are 0). Tries both normal and rotated orientation.
-function chooseVeneerSheet(slatW, slatL, price4x8, price4x10){
-  function yieldFor(sheetW, sheetL){
-    const cols = Math.floor((sheetW - SQUARING + KERF) / (slatW + KERF));
-    const rows = Math.floor((sheetL - SQUARING + KERF) / (slatL + KERF));
-    return Math.max(1, cols * rows);
-  }
-  const sw8 = SHEET_WIDTHS['4x8'], sl8 = SHEET_LENGTHS['4x8'];
-  const sw10 = SHEET_WIDTHS['4x10'], sl10 = SHEET_LENGTHS['4x10'];
-  const sps8  = yieldFor(sw8,  sl8);
-  const sps10 = yieldFor(sw10, sl10);
-  const fits8  = slatW <= sw8  && slatL <= sl8;
-  const fits10 = slatW <= sw10 && slatL <= sl10;
-  if(!fits8 && !fits10) return { size: '4x8',  slatsPerSheet: 1,    sheetPrice: price4x8  || 0 };
-  if(!fits8)            return { size: '4x10', slatsPerSheet: sps10, sheetPrice: price4x10 || 0 };
-  if(!fits10)           return { size: '4x8',  slatsPerSheet: sps8,  sheetPrice: price4x8  || 0 };
-  if(price4x8 && price4x10){
-    return (price4x10 / sps10) < (price4x8 / sps8)
-      ? { size: '4x10', slatsPerSheet: sps10, sheetPrice: price4x10 }
-      : { size: '4x8',  slatsPerSheet: sps8,  sheetPrice: price4x8  };
-  }
-  if(price4x10 && !price4x8) return { size: '4x10', slatsPerSheet: sps10, sheetPrice: price4x10 };
-  if(price4x8  && !price4x10) return { size: '4x8',  slatsPerSheet: sps8,  sheetPrice: price4x8  };
-  return { size: '4x8', slatsPerSheet: sps8, sheetPrice: 0 };
-}
-
-// Nests multiple different slat sizes onto as few sheets as possible, mixing 4x8/4x10 when
-// cheaper. No rotation — veneer grain direction has to stay fixed, so pieces are only ever
-// placed the way they're specified (w along sheet width, l along sheet length).
-// Uses a shelf/best-fit-decreasing-height heuristic: not provably optimal, but a real nesting
-// pass instead of rounding each size up to its own whole sheet independently.
-function packVeneerSheets(pieces, sheetOptions){
-  const usable = sheetOptions
-    .map(s => ({ ...s, uw: s.w - SQUARING, ul: s.l - SQUARING }))
-    .filter(s => s.price > 0 && s.uw > 0 && s.ul > 0);
-  if(!usable.length){
-    const unfitCount = pieces.reduce((s,p) => s + (p.qty||0), 0);
-    return { sheets: [], totalCost: 0, totalSheets: 0, unfitCount };
-  }
-
-  const instances = [];
-  pieces.forEach(p => {
-    if(!p.w || !p.l || !p.qty) return;
-    for(let i=0;i<p.qty;i++) instances.push({ w:p.w, l:p.l });
-  });
-  instances.sort((a,b) => (b.l - a.l) || (b.w - a.w));
-
-  const openSheets = []; // { key, price, uw, ul, usedLength, shelves:[{height, usedWidth}] }
-  let unfitCount = 0;
-
-  function tryPlaceOnExistingShelf(piece){
-    let best = null;
-    openSheets.forEach(sheet => {
-      sheet.shelves.forEach(shelf => {
-        const remainingW = sheet.uw - shelf.usedWidth;
-        if(remainingW >= piece.w && shelf.height >= piece.l){
-          const waste = remainingW - piece.w;
-          if(!best || waste < best.waste) best = { shelf, waste };
-        }
-      });
-    });
-    return best;
-  }
-  function tryNewShelfOnOpenSheet(piece){
-    let best = null;
-    openSheets.forEach(sheet => {
-      const remainingL = sheet.ul - sheet.usedLength;
-      if(remainingL >= piece.l && sheet.uw >= piece.w){
-        const waste = remainingL - piece.l;
-        if(!best || waste < best.waste) best = { sheet, waste };
-      }
-    });
-    return best;
-  }
-  function openNewSheet(piece){
-    const fits = usable.filter(s => s.uw >= piece.w && s.ul >= piece.l);
-    if(!fits.length) return null;
-    fits.sort((a,b) => a.price - b.price);
-    const chosen = fits[0];
-    const sheet = { key: chosen.key, price: chosen.price, uw: chosen.uw, ul: chosen.ul, usedLength: 0, shelves: [] };
-    openSheets.push(sheet);
-    return sheet;
-  }
-
-  instances.forEach(piece => {
-    const onShelf = tryPlaceOnExistingShelf(piece);
-    if(onShelf){ onShelf.shelf.usedWidth += piece.w + KERF; return; }
-    const newShelf = tryNewShelfOnOpenSheet(piece);
-    if(newShelf){
-      newShelf.sheet.shelves.push({ height: piece.l, usedWidth: piece.w + KERF });
-      newShelf.sheet.usedLength += piece.l + KERF;
-      return;
-    }
-    const sheet = openNewSheet(piece);
-    if(!sheet){ unfitCount++; return; }
-    sheet.shelves.push({ height: piece.l, usedWidth: piece.w + KERF });
-    sheet.usedLength += piece.l + KERF;
-  });
-
-  const counts = {};
-  openSheets.forEach(s => { counts[s.key] = (counts[s.key]||0) + 1; });
-  const sheets = Object.entries(counts).map(([key,count]) => ({ key, count, price: usable.find(u=>u.key===key).price }));
-  const totalCost = sheets.reduce((sum,s) => sum + s.count*s.price, 0);
-  return { sheets, totalCost, totalSheets: openSheets.length, unfitCount };
-}
-
-// Groups veneer configs that can share a cut list: same species, grade, core, thickness,
-// finish, and orientation (grain direction can't be mixed). Custom species only pool
-// together when they also share the same entered sheet price.
-function veneerPoolKey(cfg){
-  const sup = cfg.grade || 'talbert';
-  const gr  = cfg.orientation === 'Vertical' ? 'AA' : 'A3';
-  const ck  = coreToKey(cfg.core || 'Fire Rated MDF');
-  const tk  = thickToKey(cfg.thickness || '3/4"');
-  const fin = cfg.satinFinish ? '_satin' : '';
-  let key = `${cfg.species}|${sup}|${gr}|${ck}|${tk}${fin}|${cfg.orientation}`;
-  if(cfg.species === 'Custom') key += `|${cfg.customPricePerPanel||0}`;
-  return key;
-}
-
-function computeVeneerPools(){
-  const pools = {};
-  veneerConfigs.forEach((cfg, idx) => {
-    if(!cfg.species || !cfg.slatW || !cfg.slatL || !cfg.panelW || !cfg.panelL) return;
-    if(!pricing.veneerSpecies[cfg.species]) return;
-    const qty = resolveVeneerQty(cfg);
-    if(!qty) return;
-    const key = veneerPoolKey(cfg);
-    if(!pools[key]) pools[key] = { members: [] };
-    const wasteMult = wasteMultFromPct(cfg.wasteOn);
-    const pieceQty = Math.ceil(qty.totalSlats * wasteMult);
-    pools[key].members.push({ idx, cfg, totalSlats: qty.totalSlats, pieceQty });
-  });
-
-  Object.values(pools).forEach(pool => {
-    const first = pool.members[0].cfg;
-    const isCustom = first.species === 'Custom';
-    let p8, p10;
-    if(isCustom){
-      p8 = p10 = first.customPricePerPanel || 0;
-    } else {
-      const sData = pricing.veneerSpecies[first.species];
-      const sup = first.grade || 'talbert';
-      const gr  = first.orientation === 'Vertical' ? 'AA' : 'A3';
-      const ck  = coreToKey(first.core || 'Fire Rated MDF');
-      const tk  = thickToKey(first.thickness || '3/4"');
-      const fin = first.satinFinish ? '_satin' : '';
-      p8  = sData[`${sup}_${gr}_4x8_${ck}_${tk}${fin}`]  || 0;
-      p10 = sData[`${sup}_${gr}_4x10_${ck}_${tk}${fin}`] || 0;
-    }
-    const sheetOptions = [
-      { key:'4x8',  w:SHEET_WIDTHS['4x8'],  l:SHEET_LENGTHS['4x8'],  price:p8  },
-      { key:'4x10', w:SHEET_WIDTHS['4x10'], l:SHEET_LENGTHS['4x10'], price:p10 },
-    ];
-    const pieces = pool.members.map(m => ({ w:m.cfg.slatW, l:m.cfg.slatL, qty:m.pieceQty }));
-    pool.pack = packVeneerSheets(pieces, sheetOptions);
-    pool.repIdx = pool.members[0].idx;
-    pool.noPricing = !sheetOptions.some(s => s.price > 0);
-  });
-
-  return pools;
-}
+// veneerPoolKey, computeVeneerPools, calcVeneerCost now live in calc-engine.js as
+// Calc.veneerPoolKey / Calc.computeVeneerPools(veneerConfigs) / Calc.calcVeneerCost.
 
 function calcVeneerPreview(cfg){
   const preview = document.getElementById('v-preview-'+cfg.id);
   if(!preview) return;
   if(!cfg.slatW || !cfg.panelW || !cfg.panelL){ preview.innerHTML = ''; return; }
 
-  const qty = resolveVeneerQty(cfg);
+  const qty = Calc.resolveVeneerQty(cfg);
   if(!qty){ preview.innerHTML = ''; return; }
   const { panelQty, totalSlats } = qty;
   const isTile = cfg.ceilingType === 'tile';
 
   const grade = cfg.orientation === 'Vertical' ? 'AA' : 'A3';
   const sup   = cfg.grade || 'talbert';
-  const coreK  = coreToKey(cfg.core || 'Fire Rated MDF');
-  const thickK = thickToKey(cfg.thickness || '3/4"');
+  const coreK  = Calc.coreToKey(cfg.core || 'Fire Rated MDF');
+  const thickK = Calc.thickToKey(cfg.thickness || '3/4"');
   const finSfx = cfg.satinFinish ? '_satin' : '';
   const sData  = (pricing.veneerSpecies || {})[cfg.species] || {};
   const p8  = sData[`${sup}_${grade}_4x8_${coreK}_${thickK}${finSfx}`]  || 0;
   const p10 = sData[`${sup}_${grade}_4x10_${coreK}_${thickK}${finSfx}`] || 0;
-  const opt = chooseVeneerSheet(cfg.slatW, cfg.slatL, p8, p10);
+  const opt = Calc.chooseVeneerSheet(cfg.slatW, cfg.slatL, p8, p10);
   const { size, slatsPerSheet, sheetPrice: previewSheetPrice } = opt;
   const wasteMult   = wasteMultFromPct(cfg.wasteOn);
   const sheetsNeeded = Math.ceil(totalSlats / slatsPerSheet * wasteMult);
@@ -1095,106 +900,6 @@ function calcVeneerPreview(cfg){
   `;
 }
 
-function calcVeneerCost(cfg, cutCostOverride, poolInfo, dadoCostOverride){
-  if(!cfg.species || !cfg.slatW || !cfg.panelW || !cfg.panelL) return null;
-  const sData = pricing.veneerSpecies[cfg.species];
-  if(!sData) return null;
-
-  const qty = resolveVeneerQty(cfg);
-  if(!qty) return null;
-  const { panelQty, totalSlats, effectiveSqft } = qty;
-
-  const sup   = cfg.grade || 'talbert';
-  const grade = cfg.orientation === 'Vertical' ? 'AA' : 'A3';
-  const coreK  = coreToKey(cfg.core || 'Fire Rated MDF');
-  const thickK = thickToKey(cfg.thickness || '3/4"');
-  const finishSuffix = cfg.satinFinish ? '_satin' : '';
-
-  // Sheet material cost comes from the pooled cut list (shared across every config with the
-  // same species/grade/core/thickness/finish/orientation) rather than being rounded up per
-  // config on its own — see computeVeneerPools()/packVeneerSheets().
-  let sheetCost, sheetLineLabel, sheetsNeeded = 0;
-  if(poolInfo){
-    if(poolInfo.isRep){
-      const pk = poolInfo.pack;
-      const sizesDesc = pk.sheets.map(s => `${s.count} × ${grade} ${s.key}`).join(' + ') || 'no sheet fits';
-      sheetCost = pk.totalCost;
-      sheetsNeeded = pk.totalSheets;
-      const warn = (poolInfo.noPricing || pk.unfitCount > 0) ? ' ⚠ Call for pricing' : '';
-      sheetLineLabel = (poolInfo.memberCount > 1
-        ? `Sheet Material — pooled across ${poolInfo.memberCount} configs (${sizesDesc})`
-        : `Sheet Material (${sizesDesc})`) + warn;
-    } else {
-      sheetCost = 0;
-      sheetLineLabel = `Sheet Material — pooled with Panel Config ${poolInfo.repLabel}`;
-    }
-  } else {
-    // Fallback (shouldn't normally happen — renderResults always supplies poolInfo)
-    const p8  = sData[`${sup}_${grade}_4x8_${coreK}_${thickK}${finishSuffix}`]  || 0;
-    const p10 = sData[`${sup}_${grade}_4x10_${coreK}_${thickK}${finishSuffix}`] || 0;
-    const opt = chooseVeneerSheet(cfg.slatW, cfg.slatL, p8, p10);
-    const wasteMult = wasteMultFromPct(cfg.wasteOn);
-    sheetsNeeded = Math.ceil(totalSlats / opt.slatsPerSheet * wasteMult);
-    sheetCost = cfg.species === 'Custom' && cfg.customPricePerPanel
-      ? sheetsNeeded * cfg.customPricePerPanel
-      : sheetsNeeded * opt.sheetPrice;
-    sheetLineLabel = `Sheet Material (${fmtN(sheetsNeeded)} x ${opt.size})` + (opt.sheetPrice ? '' : ' ⚠ Call for pricing');
-  }
-
-  const longSides  = (cfg.ebSides===4||cfg.ebSides===2)?2:(cfg.ebSides===3||cfg.ebSides===1)?1:0;
-  const shortSides = (cfg.ebSides===4||cfg.ebSides===3)?2:0;
-  const ebLong  = (cfg.slatL/12) * totalSlats * longSides;
-  const ebShort = (cfg.slatW/12) * totalSlats * shortSides;
-  const ebFt    = ebLong + ebShort;
-  const ebRolls     = Math.ceil(ebFt * EB_WASTE_FACTOR / EB_ROLL_FEET);
-  const isCustom    = cfg.species === 'Custom';
-  const ebRollPrice = isCustom
-    ? (cfg.customEBRollPrice || 0)
-    : (cfg.satinFinish ? (sData['eb_roll_satin'] || sData['eb_roll'] || 0) : (sData['eb_roll'] || 0));
-  const ebMaterialCost = ebRolls * ebRollPrice;
-  const ebServiceCost  = ebFt * pricing.services.ebServicePerFt;
-
-  const isTile = cfg.ceilingType === 'tile';
-  const dadoSqft = isTile ? panelQty * (cfg.nominalSqFt || 0) : effectiveSqft;
-
-  const cutCost = cutCostOverride !== undefined ? cutCostOverride : effectiveSqft * pricing.services.cutServicePerSqft;
-  let assemblyCost = 0;
-  if(cfg.assembly){
-    if(isTile){
-      assemblyCost = dadoCostOverride !== undefined ? dadoCostOverride : dadoSqft * pricing.services.dadoServicePerSqft;
-    } else {
-      assemblyCost = dadoSqft * pricing.services.assembly;
-    }
-  }
-  const bracketCount = panelQty * cfg.bracketsPerPanel;
-  const bracketCost  = bracketCount * pricing.services.bracketPrice;
-
-  // Custom: user enters sell price directly — skip markup on materials only
-  const panelLine = isCustom ? sheetCost      : withMarkup(sheetCost,      'panels');
-  const ebMatLine = isCustom ? ebMaterialCost : withMarkup(ebMaterialCost, 'edgeBand');
-  const ebSvcLine = withMarkup(ebServiceCost,  'ebService');
-  const cutLine   = withMarkup(cutCost,        'cutService');
-  const asmLine   = withMarkup(assemblyCost,   isTile ? 'dado' : 'assembly');
-  const bktLine   = withMarkup(bracketCost,    'brackets');
-
-  const subtotal = panelLine+ebMatLine+ebSvcLine+cutLine+asmLine+bktLine;
-  return {
-    species:cfg.species, orientation:cfg.orientation, grade, supplier:sup, cfgGrade:sup,
-    sqftPerPanel:qty.sqftPerPanel, panelQty, totalSlats, sheetsNeeded,
-    ebFt, ebRolls, ebRollPrice, bracketCount, effectiveSqft,
-    lines:{
-      [sheetLineLabel]: panelLine,
-      ['Edge Band Material ('+fmtN(ebRolls)+' rolls)']: ebMatLine,
-      ['Edge Band Service ('+fmtN(ebFt,0)+' ft)']: ebSvcLine,
-      [cutCostOverride !== undefined ? 'Cut Service (flat)' : 'Cut Service']: cutLine,
-      ...(cfg.assembly ? {[isTile ? (dadoCostOverride !== undefined ? 'Dado / Groove (flat)' : 'Dado / Groove') : 'Assembly / Packing']: asmLine} : {}),
-      ...(isTile ? {} : {['Black Brackets ('+fmtN(bracketCount)+')']: bktLine}),
-    },
-    subtotal,
-    sqftCost: effectiveSqft > 0 ? subtotal / effectiveSqft : null,
-  };
-}
-
 // --- LUMBER CONFIG ---------------------------------------------------
 function addLumberConfig(){
   const id   = ++lumberCounter;
@@ -1213,7 +918,7 @@ function addLumberConfig(){
     slatW:0, slatL:0, slatsPerPanel:0, panelW:0, panelL:0, bracketsPerPanel:0,
     faceWidth:0, overallWidth:0,
     assembly:false, notes:'', manualQty:0, sqft:0, customPricePerBF:0,
-    roughThick: getSuggestedRoughThick(thick),
+    roughThick: Calc.getSuggestedRoughThick(thick),
   };
   lumberConfigs.push(cfg);
   renderLumberConfigs();
@@ -1233,75 +938,18 @@ function removeLumberConfig(id){
   recalcAll();
 }
 
-function getBestStock(slatL, species){
-  const lengths = LONG_STOCK_SPECIES.has(species) ? STOCK_LENGTHS : STOCK_LENGTHS_STD;
-  let best = null, bestPieces = 0;
-  for(const stockIn of lengths){
-    const usable = stockIn - END_TRIM;
-    const pieces = Math.floor(usable / slatL);
-    if(pieces > bestPieces){ bestPieces=pieces; best=stockIn; }
-    else if(pieces===bestPieces && pieces>0 && stockIn<best){ best=stockIn; }
-  }
-  return { stockIn: best||96, piecesPerBoard: Math.max(1,bestPieces) };
-}
-
-// Stock length for a given slat length.
-// Most species: max 12' stock. Long-stock species can use 14'/16'.
-function getMillStockLength(slatL, species){
-  const isLong = LONG_STOCK_SPECIES.has(species);
-  if(slatL >= 72){
-    // Breakpoints sit a half inch under each stock length (e.g. 119.5" -> 10' stock) since
-    // that's the standard way lengths are submitted here: entering exactly a stock length
-    // (120") means zero trim margin, so it bumps to the next size up, while X.5" under is
-    // the deliberate "reserve a hair for end splits" convention and fits the shorter stock.
-    if(slatL <= 95.5)  return 96;   // 8'
-    if(slatL <= 119.5) return 120;  // 10'
-    if(slatL <= 143.5) return 144;  // 12'
-    if(!isLong)         return 144;  // cap at 12' for standard species
-    if(slatL <= 167.5) return 168;  // 14'
-    return 192;                   // 16'
-  }
-  return getBestStock(slatL, species).stockIn;
-}
-
-// Picks 2x6 vs 2x8 rough stock by slat width. Widths above 7.5" have no valid resaw stock.
-function chooseResawStock(slatW){
-  if(slatW <= 2.5)  return { stock:'2x6', width:TWO_X_SIX_W,   nominalW:6 };
-  if(slatW <= 3.25) return { stock:'2x8', width:TWO_X_EIGHT_W, nominalW:8 };
-  if(slatW <= 5.5)  return { stock:'2x6', width:TWO_X_SIX_W,   nominalW:6 };
-  if(slatW <= 7.5)  return { stock:'2x8', width:TWO_X_EIGHT_W, nominalW:8 };
-  return null;
-}
+// getBestStock, getMillStockLength, chooseResawStock, isTGType, effectiveFaceWidth,
+// getVGPcsPerBoard now live in calc-engine.js as Calc.getBestStock / Calc.getMillStockLength /
+// Calc.chooseResawStock / Calc.isTGType / Calc.effectiveFaceWidth / Calc.getVGPcsPerBoard.
 
 // Label for the small "Milled from ..." badge next to Finished Thickness — must reflect the
-// actual width-based 2x6-vs-2x8 pick (chooseResawStock), not a hardcoded guess, since the
+// actual width-based 2x6-vs-2x8 pick (Calc.chooseResawStock), not a hardcoded guess, since the
 // two rough stocks price differently and the badge previously always said "2×6" even when
 // the real calculation picked 2×8.
 function resawStockLabel(cfg){
-  const width = isTGType(cfg) ? cfg.overallWidth : cfg.slatW;
-  const picked = width ? chooseResawStock(width) : null;
+  const width = Calc.isTGType(cfg) ? cfg.overallWidth : cfg.slatW;
+  const picked = width ? Calc.chooseResawStock(width) : null;
   return picked ? `Milled from ${picked.stock.replace('x','×')}` : 'Milled from 2×6 or 2×8';
-}
-
-// Trim shares T&G's continuous-LF math (no panel/slat breakdown, no assembly/brackets) but
-// has no separate Face Width — face and overall width are the same board, so Trim only asks
-// for Overall Width and effectiveFaceWidth() below feeds that in wherever T&G would use
-// cfg.faceWidth for coverage math.
-function isTGType(cfg){ return cfg.lumberType === 'tg' || cfg.lumberType === 'trim'; }
-function effectiveFaceWidth(cfg){ return cfg.lumberType === 'trim' ? cfg.overallWidth : cfg.faceWidth; }
-
-// VG Fir/Hemlock: pieces per board — width rips × thickness slabs
-// 2x6/2x8 stock: 1.5" actual thickness; thin-kerf resaw/rip (RESAW_KERF = 1/16")
-// Slabs from thickness:  floor(1.5 / (slatT + RESAW_KERF))
-//   11/16" (0.6875): 1.5/0.75 = 2 slabs  |  3/4" (0.75): 1.5/0.8125 = 1 slab
-// Strips from width:     floor(stockWidth / (slatW + RESAW_KERF))
-//   1.75" from 2x6:  6/1.8125 = 3 strips  |  2.75" from 2x6:  6/2.8125 = 2 strips
-// Examples: 11/16"×1.75" → 2×3=6 ✓  3/4"×1.75" → 1×3=3 ✓
-//           11/16"×2.75" → 2×2=4 ✓  3/4"×2.75" → 1×2=2 ✓
-function getVGPcsPerBoard(slatT, slatW, stockWidth = TWO_X_SIX_W){
-  const slabs  = Math.floor(TWO_X_SIX_T / (slatT + RESAW_KERF));
-  const strips = Math.floor(stockWidth / (slatW + RESAW_KERF));
-  return Math.max(1, slabs * strips);
 }
 
 const ROUGH_THICKNESSES = [
@@ -1319,13 +967,13 @@ function renderLumberConfigs(){
   cont.innerHTML = '';
   lumberConfigs.forEach(cfg => {
     cfg.safetyBuffer = normalizeWastePct(cfg.safetyBuffer, 10);
-    const isTG = isTGType(cfg);
+    const isTG = Calc.isTGType(cfg);
     const isTrim = cfg.lumberType === 'trim';
     const species  = visibleLumberSpecies();
     if(!cfg.species && species.length > 0) cfg.species = species[0];
     const sData    = pricing.lumberSpecies[cfg.species] || {};
     const isResaw  = sData.resaw || false;
-    const millStockIn = cfg.slatL ? getMillStockLength(cfg.slatL, cfg.species) : 0;
+    const millStockIn = cfg.slatL ? Calc.getMillStockLength(cfg.slatL, cfg.species) : 0;
     const stockFt     = millStockIn / 12;
     const pcsPerLen   = cfg.slatL >= 72 ? 1 : Math.max(1, Math.floor((millStockIn - END_TRIM) / cfg.slatL));
     const qtyLabel = isTG ? 'Total Pieces' : (cfg.calcMode === 'slats' ? 'Total Slats' : 'Number of Panels');
@@ -1390,7 +1038,7 @@ function renderLumberConfigs(){
           <div>
             <label class="field-label">Finished Thickness (in)</label>
             <input type="text" id="l-thick-${cfg.id}" value="${cfg.thickness}" autocorrect="off" autocapitalize="none" placeholder="e.g. 3/4 or .75" oninput="lUpdate(${cfg.id})">
-            <span class="stock-tag" id="l-thick-tag-${cfg.id}" style="${isResaw||getStockInfo(cfg.thickness)?'':'display:none'}">${isResaw?resawStockLabel(cfg):(getStockInfo(cfg.thickness)?.label||'')}</span>
+            <span class="stock-tag" id="l-thick-tag-${cfg.id}" style="${isResaw||Calc.getStockInfo(cfg.thickness)?'':'display:none'}">${isResaw?resawStockLabel(cfg):(Calc.getStockInfo(cfg.thickness)?.label||'')}</span>
           </div>
           ${isTG ? `
           ${isTrim ? '' : `<div>
@@ -1479,15 +1127,15 @@ function lUpdate(id){
   cfg.panelW       = parseFraction(document.getElementById('l-panelW-'+id)?.value) || cfg.panelW;
   cfg.panelL       = parseFraction(document.getElementById('l-panelL-'+id)?.value) || cfg.panelL;
   cfg.bracketsPerPanel = parseInt(document.getElementById('l-brackets-'+id)?.value) || 0;
-  cfg.assembly     = isTGType(cfg) ? false : (document.getElementById('l-assembly-'+id)?.checked ?? true);
+  cfg.assembly     = Calc.isTGType(cfg) ? false : (document.getElementById('l-assembly-'+id)?.checked ?? true);
   cfg.sanding      = document.getElementById('l-sanding-'+id)?.checked ?? true;
   cfg.cutToLength  = document.getElementById('l-cut-'+id)?.checked ?? true;
   const prevMode   = cfg.calcMode;
   cfg.calcMode     = document.getElementById('l-mode-'+id)?.value || cfg.calcMode;
-  if(isTGType(cfg) && cfg.calcMode === 'panels') cfg.calcMode = 'sqft';
+  if(Calc.isTGType(cfg) && cfg.calcMode === 'panels') cfg.calcMode = 'sqft';
   cfg.sqft         = parseFloat(document.getElementById('l-sqft-'+id)?.value) || 0;
   cfg.manualQty    = parseInt(document.getElementById('l-manualQty-'+id)?.value) || 0;
-  cfg.roughThick      = getSuggestedRoughThick(cfg.thickness);
+  cfg.roughThick      = Calc.getSuggestedRoughThick(cfg.thickness);
   cfg.safetyBuffer    = readWastePct(`l-safety-${id}-10`, `l-safety-${id}-15`);
   cfg.customPricePerBF = parseFloat(document.getElementById('l-custombf-'+id)?.value) || 0;
 
@@ -1500,7 +1148,7 @@ function lUpdate(id){
   const stockTag = document.getElementById('l-stock-'+id);
   if(stockTag){
     if(cfg.slatL > 0){
-      const millStockIn   = getMillStockLength(cfg.slatL, cfg.species);
+      const millStockIn   = Calc.getMillStockLength(cfg.slatL, cfg.species);
       const millPcsPerLen = cfg.slatL >= 72 ? 1 : Math.max(1, Math.floor((millStockIn - END_TRIM) / cfg.slatL));
       stockTag.textContent = `📏 ${millStockIn/12}' stock · ${millPcsPerLen} pc/length`;
       stockTag.style.display = '';
@@ -1516,7 +1164,7 @@ function lUpdate(id){
       thickTag.textContent = resawStockLabel(cfg);
       thickTag.style.display = '';
     } else {
-      const si = getStockInfo(cfg.thickness);
+      const si = Calc.getStockInfo(cfg.thickness);
       thickTag.textContent = si ? si.label : '';
       thickTag.style.display = si ? '' : 'none';
     }
@@ -1533,249 +1181,26 @@ function lUpdate(id){
 // (BF/waste), not panel/slat breakdown. Finished length is optional in sqft mode (random
 // lengths assumed) but required in piece-count mode, since totalLF can't be derived from a
 // piece count without a real length.
-function resolveTGQty(cfg){
-  const faceWidth = effectiveFaceWidth(cfg);
-  if(!faceWidth || !cfg.overallWidth) return null;
-  if(cfg.calcMode === 'sqft'){
-    if(!cfg.sqft) return null;
-    const totalLF = cfg.sqft * 12 / faceWidth;
-    return { panelQty:0, totalSlats:0, effectiveSqft: cfg.sqft, sqftPerPanel:0, randomLength: !cfg.slatL, totalLF };
-  } else {
-    if(!cfg.manualQty || !cfg.slatL) return null;
-    const totalLF = cfg.manualQty * cfg.slatL / 12;
-    const effectiveSqft = totalLF * faceWidth / 12;
-    return { panelQty:0, totalSlats:cfg.manualQty, effectiveSqft, sqftPerPanel:0, randomLength:false, totalLF };
-  }
-}
-
-function resolveLumberQty(cfg){
-  if(isTGType(cfg)) return resolveTGQty(cfg);
-  if(!cfg.panelW || !cfg.panelL || !cfg.slatW || !cfg.slatsPerPanel) return null;
-  const sqftPerPanel = (cfg.panelW * cfg.panelL) / 144;
-  if(cfg.calcMode === 'sqft'){
-    if(!cfg.sqft) return null;
-    const panelQty   = Math.ceil(cfg.sqft / sqftPerPanel);
-    const totalSlats = panelQty * cfg.slatsPerPanel;
-    const randomLength = !cfg.slatL;
-    const totalLF = randomLength ? (cfg.sqft * 12 / cfg.slatW) : (totalSlats * cfg.slatL / 12);
-    return { panelQty, totalSlats, effectiveSqft: cfg.sqft, sqftPerPanel, randomLength, totalLF };
-  } else if(cfg.calcMode === 'slats'){
-    if(!cfg.manualQty || !cfg.slatL) return null;
-    const totalSlats = cfg.manualQty;
-    const panelQty   = Math.ceil(totalSlats / cfg.slatsPerPanel);
-    const totalLF = totalSlats * cfg.slatL / 12;
-    return { panelQty, totalSlats, effectiveSqft: panelQty * sqftPerPanel, sqftPerPanel, randomLength:false, totalLF };
-  } else {
-    if(!cfg.manualQty || !cfg.slatL) return null;
-    const panelQty   = cfg.manualQty;
-    const totalSlats = panelQty * cfg.slatsPerPanel;
-    const totalLF = totalSlats * cfg.slatL / 12;
-    return { panelQty, totalSlats, effectiveSqft: panelQty * sqftPerPanel, sqftPerPanel, randomLength:false, totalLF };
-  }
-}
-
-// Used only when no finished length is given at all (sqft mode, "random length" assumption —
-// works for both Grille and T&G). Computes BF straight from linear footage instead of the
-// discrete board-count model, since there's no real piece length to count boards against.
-// Still respects VG resaw species correctly: a resaw species consumes a full nominal 2" board
-// per (slabs) finished-thickness layers and (strips) finished-width pieces, same yield concept
-// as the discrete VG path below, just expressed per linear foot instead of per discrete board.
-function calcContinuousBF(cfg, totalLF, width, isTG, randomLength){
-  const sData = pricing.lumberSpecies[cfg.species] || {};
-  const isVGResaw = !!sData.resaw;
-  const safetyMult = wasteMultFromPct(cfg.safetyBuffer);
-
-  if(isVGResaw){
-    const picked = chooseResawStock(width);
-    if(!picked){
-      return {
-        isVGResaw, vgWarning:false, noStock:true, stockUsed:null, isTG:!!isTG, isContinuous:true,
-        stockIn:null, stockFt:null, piecesPerLen:null,
-        roughT:2.0, widthWaste:null, pcsWide:0,
-        bfPerSlat:null, rawBFTotal:0, defectPct:0,
-        safetyBuffer: cfg.safetyBuffer, stockLabel:null, isThickResaw:false,
-        totalLF, randomLength: !!randomLength,
-      };
-    }
-    const slabs   = Math.max(1, Math.floor(TWO_X_SIX_T / (cfg.thickness + RESAW_KERF)));
-    const strips  = Math.max(1, Math.floor(picked.width / (width + RESAW_KERF)));
-    const vgAltPcs = Math.max(1, Math.floor(TWO_X_SIX_T / (0.6875 + RESAW_KERF))) * strips;
-    const vgWarning = cfg.thickness > 0.6875;
-    const bfPerLF = (2.0 / slabs) * (picked.nominalW / strips) / 12;
-    const rawBFTotal = Math.ceil(bfPerLF * totalLF * safetyMult);
-    return {
-      isVGResaw, vgWarning, vgAltPcs, noStock:false, stockUsed:picked.stock, isTG:!!isTG, isContinuous:true,
-      stockIn:null, stockFt:null, piecesPerLen:null,
-      roughT: 2.0/slabs, widthWaste:null, pcsWide: slabs*strips,
-      bfPerSlat:null, rawBFTotal, defectPct:0,
-      safetyBuffer: cfg.safetyBuffer, stockLabel:null, isThickResaw:false,
-      totalLF, randomLength: !!randomLength,
-    };
-  }
-
-  const roughT = getSuggestedRoughThick(cfg.thickness);
-  const widthWaste = getWidthWasteFactor(width);
-  const rawBFExact = roughT * (width + widthWaste) * totalLF / 12;
-  const rawBFTotal = Math.ceil(rawBFExact * safetyMult);
-  return {
-    isVGResaw:false, vgWarning:false, isTG:!!isTG, isContinuous:true, noStock:false,
-    stockIn:null, stockFt:null, piecesPerLen:null,
-    roughT, widthWaste, pcsWide:null,
-    bfPerSlat:null, rawBFTotal, defectPct: pricing.services.lumberDefectPct || 0,
-    safetyBuffer: cfg.safetyBuffer,
-    stockLabel: getStockInfo(cfg.thickness)?.label || null,
-    isThickResaw:false, totalLF, randomLength: !!randomLength,
-  };
-}
-
-function millLumberCalc(cfg, qty){
-  const isTG = isTGType(cfg);
-  const width = isTG ? cfg.overallWidth : cfg.slatW;
-
-  if(qty.randomLength) return calcContinuousBF(cfg, qty.totalLF, width, isTG, true);
-
-  // Discrete/board-count path — same model for Grille and T&G-with-a-real-length, just using
-  // whichever width variable applies and (for T&G) a piece count derived from LF/length
-  // instead of the panel breakdown, since T&G has no panels.
-  const totalSlats = isTG ? Math.ceil(qty.totalLF * 12 / cfg.slatL) : qty.totalSlats;
-  const sData    = pricing.lumberSpecies[cfg.species] || {};
-  const isVGResaw = !!(sData.resaw);
-  const defectPct = pricing.services.lumberDefectPct || 0;
-
-  // --- Stock length ---
-  const stockIn = getMillStockLength(cfg.slatL, cfg.species);
-  const stockFt = stockIn / 12;
-
-  // --- Pieces per board in the LENGTH direction (for <72" slats only) ---
-  let piecesPerLen;
-  if(cfg.slatL >= 72){
-    piecesPerLen = 1;
-  } else {
-    const usable = stockIn - END_TRIM;
-    piecesPerLen = Math.max(1, Math.floor(usable / cfg.slatL));
-  }
-
-  // --- BF per slat ---
-  let roughT, widthWaste, pcsWide, bfPerSlat, vgWarning = false;
-
-  if(isVGResaw){
-    const picked = chooseResawStock(width);
-    if(!picked){
-      // Wider than 7.5" — no 2x6 or 2x8 rough stock fits. Flag for manual pricing.
-      return {
-        isVGResaw, vgWarning:false, noStock:true, stockUsed:null, isTG,
-        stockIn, stockFt, piecesPerLen,
-        roughT:2.0, widthWaste:null, pcsWide:0,
-        boardsNeeded:0, bfPerBoard:0, pcsPerBoard:0, actualPieces:0, actualLF:0,
-        bfPerSlat:0, rawBFTotal:0, defectPct:0, totalSlatsUsed: totalSlats,
-      };
-    }
-    roughT     = 2.0;
-    widthWaste = null;
-    pcsWide    = getVGPcsPerBoard(cfg.thickness, width, picked.width);
-    const vgAltPcs = getVGPcsPerBoard(0.6875, width, picked.width); // 11/16" yield for comparison, same stock
-    if(cfg.thickness > 0.6875) vgWarning = true; // suggest 11/16" for better yield
-
-    // Board-based: buy whole boards, each yields pcsWide × piecesPerLen slats
-    // You can't buy a fraction of a board so ceil first, then multiply by BF/board
-    const pcsPerBoard  = pcsWide * piecesPerLen;
-    const boardsNeeded = Math.ceil(totalSlats / pcsPerBoard);
-    const bfPerBoard   = (2 * picked.nominalW * stockIn) / 144;
-    // Store for return, then override rawBFTotal calculation below
-    bfPerSlat = bfPerBoard / pcsPerBoard; // per-slat rate (for display)
-    const rawBFResaw = boardsNeeded * bfPerBoard;
-    // Apply safety buffer if on
-    const safetyMult = wasteMultFromPct(cfg.safetyBuffer);
-    // Resawing only rips width/thickness — it doesn't trim to the ordered finished length,
-    // so every piece a board yields is a full STOCK-length piece, not a slatL-length piece.
-    // Rounding boardsNeeded up also means you actually receive more pieces than were asked
-    // for (whole boards only). actualPieces/actualLF reflect what's really being milled and
-    // delivered — e.g. 10 pcs asked -> 3 boards -> 12 pcs @ full stock length, not 10 @ slatL.
-    const actualPieces = boardsNeeded * pcsPerBoard;
-    const actualLF = actualPieces * stockFt;
-    return {
-      isVGResaw, vgWarning, vgAltPcs, noStock:false, stockUsed:picked.stock, isTG,
-      stockIn, stockFt, piecesPerLen,
-      roughT, widthWaste, pcsWide,
-      boardsNeeded, bfPerBoard, pcsPerBoard, actualPieces, actualLF,
-      bfPerSlat, rawBFTotal: Math.ceil(rawBFResaw * safetyMult), defectPct:0, totalSlatsUsed: totalSlats,
-    };
-
-  } else {
-    const stockInfo = getStockInfo(cfg.thickness);
-    roughT     = stockInfo ? stockInfo.stock : getSuggestedRoughThick(cfg.thickness);
-    widthWaste = getWidthWasteFactor(width);
-
-    if(stockInfo?.resaw){
-      // Resaw: multiple finished slats from one board's thickness. Same overproduction/
-      // full-length issue as the VG branch above: a thickness-slab is still a full
-      // stock-length layer before any length-wise cut, so rounding boardsNeeded up hands
-      // out more, full-stock-length pieces than were actually asked for.
-      const pcsFromThick = Math.floor((roughT + RESAW_KERF) / (cfg.thickness + RESAW_KERF));
-      pcsWide  = Math.max(1, pcsFromThick);
-      const pcsPerBoard = pcsWide * piecesPerLen;
-      const boardsNeeded = Math.ceil(totalSlats / pcsPerBoard);
-      bfPerSlat = roughT * (width + widthWaste) * stockIn / (144 * pcsPerBoard);
-      const rawBFExact = bfPerSlat * totalSlats;
-      const safetyMult = wasteMultFromPct(cfg.safetyBuffer);
-      const rawBFTotal = Math.ceil(rawBFExact * safetyMult);
-      // Total footage is conserved regardless of piecesPerLen (cutting a layer into shorter
-      // pieces divides length but multiplies count, so the product boardsNeeded*pcsWide*stockFt
-      // holds either way) — same actualLF formula as the VG branch above.
-      const actualLF = boardsNeeded * pcsWide * stockFt;
-      return {
-        isVGResaw, vgWarning, isTG,
-        stockIn, stockFt, piecesPerLen,
-        roughT, widthWaste, pcsWide,
-        boardsNeeded, pcsPerBoard, actualPieces: boardsNeeded * pcsPerBoard, actualLF,
-        bfPerSlat, rawBFTotal, defectPct,
-        safetyBuffer: cfg.safetyBuffer,
-        stockLabel: stockInfo?.label || null,
-        isThickResaw: true, totalSlatsUsed: totalSlats,
-      };
-    } else {
-      pcsWide    = null;
-      bfPerSlat = roughT * (width + widthWaste) * stockIn / (144 * piecesPerLen);
-    }
-
-    const rawBFExact = bfPerSlat * totalSlats;
-    const safetyMult = wasteMultFromPct(cfg.safetyBuffer);
-    const rawBFTotal = Math.ceil(rawBFExact * safetyMult);
-    // Same principle as the resaw branches, just without the whole-board rounding: whatever
-    // stock length was actually picked (e.g. 96" -> 120" stock) is what gets milled, not the
-    // nominal finished length that was typed in. No board-count rounding happens here (this
-    // path bills continuously per exact piece, not whole boards), so piece count is unchanged
-    // — only the length-per-piece basis moves from the nominal slatL to the real stockFt,
-    // diluted across piecesPerLen when multiple finished pieces share one board's length.
-    const actualLF = totalSlats * stockFt / piecesPerLen;
-    return {
-      isVGResaw, vgWarning, isTG,
-      stockIn, stockFt, piecesPerLen,
-      roughT, widthWaste, pcsWide, actualLF,
-      bfPerSlat, rawBFTotal, defectPct,
-      safetyBuffer: cfg.safetyBuffer,
-      stockLabel: stockInfo?.label || null,
-      isThickResaw: false, totalSlatsUsed: totalSlats,
-    };
-  }
-}
+// resolveTGQty, resolveLumberQty, calcContinuousBF, millLumberCalc now live in
+// calc-engine.js as Calc.resolveTGQty / Calc.resolveLumberQty / Calc.calcContinuousBF /
+// Calc.millLumberCalc.
 
 function calcLumberPreview(cfg){
   const preview = document.getElementById('l-preview-'+cfg.id);
   if(!preview) return;
-  const isTG = isTGType(cfg);
+  const isTG = Calc.isTGType(cfg);
   if(isTG){
-    if(!effectiveFaceWidth(cfg) || !cfg.overallWidth){ preview.innerHTML = ''; return; }
+    if(!Calc.effectiveFaceWidth(cfg) || !cfg.overallWidth){ preview.innerHTML = ''; return; }
   } else {
     if(!cfg.slatW || !cfg.panelW || !cfg.panelL){ preview.innerHTML = ''; return; }
   }
 
-  const qty = resolveLumberQty(cfg);
+  const qty = Calc.resolveLumberQty(cfg);
   if(!qty){ preview.innerHTML = ''; return; }
   const { panelQty, totalSlats } = qty;
   const calcWidth = isTG ? cfg.overallWidth : cfg.slatW;
 
-  const m = millLumberCalc(cfg, qty);
+  const m = Calc.millLumberCalc(cfg, qty);
   const displaySlats = m.totalSlatsUsed ?? totalSlats;
 
   // Update VG resaw note banner — show/hide and update text based on current species
@@ -1844,119 +1269,8 @@ function calcLumberPreview(cfg){
   `;
 }
 
-function calcLumberCost(cfg){
-  if(!cfg.species) return null;
-  if(isTGType(cfg)){
-    if(!effectiveFaceWidth(cfg) || !cfg.overallWidth) return null;
-  } else if(!cfg.slatW || !cfg.panelW || !cfg.panelL){
-    return null;
-  }
-  const sData = pricing.lumberSpecies[cfg.species] || {};
-  const isCustom = cfg.species === 'Custom';
-
-  const qty = resolveLumberQty(cfg);
-  if(!qty) return null;
-  const { panelQty, totalSlats, effectiveSqft } = qty;
-
-  const m = millLumberCalc(cfg, qty);
-  const { rawBFTotal } = m;
-
-  const tier = m.isVGResaw ? null : tierPriceInfo(m.roughT);
-  const bfPrice = isCustom
-    ? (cfg.customPricePerBF || 0)
-    : m.isVGResaw
-      ? (m.stockUsed === '2x8' ? (sData.price2x8 || 0) : (sData.price2x6 || 0))
-      : (sData[tier.key] || 0);
-
-  const lumberCost = rawBFTotal * bfPrice;
-  const assemblyCost = (cfg.assembly && !isTGType(cfg)) ? effectiveSqft * pricing.services.assembly : 0;
-  const bracketCost  = (panelQty * cfg.bracketsPerPanel) * pricing.services.bracketPrice;
-
-  const lumberLine = withMarkup(lumberCost,   'lumber');
-  const asmLine    = withMarkup(assemblyCost,  'assembly');
-  const bktLine    = withMarkup(bracketCost,   'brackets');
-
-  const subtotal = lumberLine + asmLine + bktLine;
-  // Resaw configs deliver more, full-stock-length pieces than the nominal ask (see
-  // millLumberCalc) — actualLF reflects what's really being milled, not the nominal request.
-  const lf = m.actualLF || qty.totalLF;
-
-  const missingPrice = !isCustom && !m.noStock && !bfPrice;
-  const tierTag = m.isVGResaw ? m.stockUsed : (tier ? tier.label : null);
-  const lumberLabel = m.noStock
-    ? `Raw Lumber — width exceeds 7.5" max ⚠ Call for pricing`
-    : `Raw Lumber (${fmtN(rawBFTotal,0)} BF${tierTag ? ' · '+tierTag : ''})` + (missingPrice ? ' ⚠ Call for pricing' : '');
-
-  return {
-    species:cfg.species, isVGResaw:m.isVGResaw, rawBFTotal,
-    panelQty, totalSlats, effectiveSqft, lf,
-    lines:{
-      [lumberLabel]: lumberLine,
-      ...(cfg.assembly ? {'Assembly / Packing': asmLine} : {}),
-      [`Black Brackets (${fmtN(panelQty*cfg.bracketsPerPanel)})`]: bktLine,
-    },
-    subtotal,
-    sqftCost: effectiveSqft > 0 ? subtotal / effectiveSqft : null,
-  };
-}
-
-// --- JOB-LEVEL MILL SERVICES -----------------------------------------
-// Called once per renderResults — totals all lumber configs together
-function calcJobServices(){
-  const svc = pricing.services;
-  let totalLF = 0, standardLF = 0, resawLF = 0, sandingLF = 0, cutLF = 0;
-
-  lumberConfigs.forEach(cfg => {
-    const qty = resolveLumberQty(cfg);
-    if(!qty) return;
-    // Resaw configs deliver more, full-stock-length pieces than the nominal ask (rounding
-    // up to whole boards, then not trimming the resulting strips to the ordered length) —
-    // actualLF from millLumberCalc reflects what's really being milled/sanded/cut, not the
-    // nominal request. Falls back to the nominal totalLF for every non-resaw/continuous case.
-    const m = millLumberCalc(cfg, qty);
-    const lf = m.actualLF || qty.totalLF;
-    totalLF += lf;
-    const sDataJ = pricing.lumberSpecies[cfg.species] || {};
-    const isResawCfg = !isTGType(cfg) && (sDataJ.resaw || !!(getStockInfo(cfg.thickness)?.resaw));
-    if(isResawCfg) resawLF += lf; else standardLF += lf;
-    if(cfg.sanding)     sandingLF += lf;
-    if(cfg.cutToLength) cutLF     += lf;
-  });
-
-  // Standard milling: flat fee up to threshold, then $/LF
-  const millingBase = standardLF > 0
-    ? (standardLF <= svc.millingThreshold ? svc.millingFlat : standardLF * svc.millingPerLF)
-    : 0;
-
-  // Resaw milling: separate flat fee and $/LF
-  const resawMillingCost = resawLF > 0
-    ? (resawLF <= svc.resawThreshold ? svc.resawFlat : resawLF * svc.resawPerLF)
-    : 0;
-
-  // Series change: one charge per additional unique (thickness × width) mill setup
-  // Only count configs with actual quantities and valid numeric dimensions
-  const setupKeys = new Set(
-    lumberConfigs
-      .filter(c => {
-        const w = isTGType(c) ? c.overallWidth : c.slatW;
-        return resolveLumberQty(c) && +c.thickness > 0 && +w > 0;
-      })
-      .map(c => `${(+c.thickness).toFixed(4)}_${(+(isTGType(c)?c.overallWidth:c.slatW)).toFixed(4)}`)
-  );
-  const seriesChangeCost = Math.max(0, setupKeys.size - 1) * svc.seriesChange;
-
-  const millingTotal = millingBase + resawMillingCost + seriesChangeCost;
-
-  // Sanding: flat fee up to threshold, then $/LF
-  const sandingCost = sandingLF <= 0 ? 0
-    : (sandingLF <= svc.sandingThreshold ? svc.sandingFlat : sandingLF * svc.sandingPerLF);
-
-  // Cut to length: flat fee up to threshold, then $/LF
-  const cutCost = cutLF <= 0 ? 0
-    : (cutLF <= svc.cutThreshold ? svc.cutFlat : cutLF * svc.cutPerLF);
-
-  return { totalLF, standardLF, resawLF, sandingLF, cutLF, millingBase, resawMillingCost, seriesChangeCost, millingTotal, sandingCost, cutCost };
-}
+// calcLumberCost, calcJobServices now live in calc-engine.js as Calc.calcLumberCost /
+// Calc.calcJobServices(lumberConfigs).
 
 // --- RECALC -----------------------------------------------------------
 function recalcAll(){
@@ -1966,126 +1280,63 @@ function recalcAll(){
   renderResults();
 }
 
+// Admin computes locally (full pricing already in memory, needed to edit it). Company
+// role never runs pricing math client-side — it sends job configuration to the Worker's
+// /pricing/calculate endpoint and renders whatever totals come back, via the exact same
+// renderResultsHTML() so the two roles are guaranteed pixel-identical for the same job.
 function renderResults(){
+  if(!sessionIsAdmin){ renderResultsCompanyDebounced(); return; }
+  const data = Calc.computeJobTotals({ veneerConfigs, lumberConfigs, laminationConfigs, productCart });
+  renderResultsHTML(data);
+}
+
+let _companyCalcTimer = null;
+function renderResultsCompanyDebounced(){
+  clearTimeout(_companyCalcTimer);
   const cont = document.getElementById('resultsContent');
-  const allResults = [];
+  if(cont) cont.innerHTML = '<div class="results-empty">Calculating…</div>';
+  _companyCalcTimer = setTimeout(renderResultsCompany, 400);
+}
 
-  // Pool veneer configs that share species/grade/core/thickness/finish/orientation so their
-  // slats get nested onto a shared cut list instead of each config rounding up its own sheets.
-  const veneerPools = computeVeneerPools();
-  const poolByIdx = {};
-  Object.values(veneerPools).forEach(pool => {
-    pool.members.forEach(m => {
-      poolByIdx[m.idx] = {
-        isRep: m.idx === pool.repIdx,
-        pack: pool.pack,
-        memberCount: pool.members.length,
-        noPricing: pool.noPricing,
-        repLabel: pool.repIdx + 1,
-      };
-    });
-  });
-
-  // Total sheets across all pools decides flat vs per-sqft cut charge
-  let totalVeneerSheets = 0, totalVeneerSqft = 0;
-  Object.values(veneerPools).forEach(pool => { totalVeneerSheets += pool.pack.totalSheets; });
-  const veneerSqfts = veneerConfigs.map(cfg => {
-    const qty = resolveVeneerQty(cfg);
-    if(!qty || !cfg.slatW || !cfg.slatL) return 0;
-    totalVeneerSqft += qty.effectiveSqft;
-    return qty.effectiveSqft;
-  });
-  const flatCharge   = pricing.services.cutFlatVeneer     || 0;
-  const flatThresh   = pricing.services.cutVeneerThreshold || 20;
-  const useVeneerFlat = flatCharge > 0 && totalVeneerSheets > 0 && totalVeneerSheets <= flatThresh;
-
-  // Total tile count across all Ceiling Tile configs with Dado/Groove enabled decides
-  // flat vs per-sqft dado charge, same flat/threshold pattern as the veneer cut service.
-  let totalDadoTiles = 0, totalDadoSqft = 0;
-  const dadoSqfts = veneerConfigs.map(cfg => {
-    if(cfg.ceilingType !== 'tile' || !cfg.assembly) return 0;
-    const qty = resolveVeneerQty(cfg);
-    if(!qty) return 0;
-    const sqft = qty.panelQty * (cfg.nominalSqFt || 0);
-    totalDadoTiles += qty.panelQty;
-    totalDadoSqft  += sqft;
-    return sqft;
-  });
-  const dadoFlatCharge = pricing.services.dadoFlatCharge || 0;
-  const dadoThresh     = pricing.services.dadoThreshold  || 20;
-  const useDadoFlat = dadoFlatCharge > 0 && totalDadoTiles > 0 && totalDadoTiles <= dadoThresh;
-
-  veneerConfigs.forEach((cfg,i) => {
-    let cutOverride;
-    if(useVeneerFlat && totalVeneerSqft > 0){
-      cutOverride = flatCharge * ((veneerSqfts[i] || 0) / totalVeneerSqft);
-    }
-    let dadoOverride;
-    if(useDadoFlat && totalDadoSqft > 0){
-      dadoOverride = dadoFlatCharge * ((dadoSqfts[i] || 0) / totalDadoSqft);
-    }
-    const r = calcVeneerCost(cfg, cutOverride, poolByIdx[i], dadoOverride);
-    if(r) allResults.push({...r, label:`Panel Config ${i+1} — ${r.species} (${r.orientation})`});
-  });
-  lumberConfigs.forEach((cfg,i) => {
-    const r = calcLumberCost(cfg);
-    if(r) allResults.push({...r, label:`Lumber Config ${i+1} — ${r.species}`});
-  });
-
-  // Lamination Cut Service shares the same flat-charge/threshold settings as veneer
-  // (Cut Service Flat Charge / Flat Charge Threshold), decided independently of veneer's own count.
-  let totalLamSheets = 0, totalLamSqft = 0;
-  const lamSqfts = laminationConfigs.map(cfg => {
-    const qty = resolveLaminationQty(cfg);
-    if(!qty) return 0;
-    const preview = calcLaminationCost(cfg);
-    if(preview) totalLamSheets += preview.sheetsNeeded;
-    totalLamSqft += qty.effectiveSqft;
-    return qty.effectiveSqft;
-  });
-  const useLamFlat = flatCharge > 0 && totalLamSheets > 0 && totalLamSheets <= flatThresh;
-
-  laminationConfigs.forEach((cfg,i) => {
-    let cutOverride;
-    if(useLamFlat && totalLamSqft > 0){
-      cutOverride = flatCharge * ((lamSqfts[i] || 0) / totalLamSqft);
-    }
-    const r = calcLaminationCost(cfg, cutOverride);
-    if(r) allResults.push({...r, label:`Lam Config ${i+1} — ${cfg.face||'New Config'}`, isLam:true});
-  });
-
-  // Stock items lines
-  const stockLines = [];
-  let stockTotal = 0;
-  (pricing.standardProducts || []).forEach(p => {
-    const qty = productCart[p.name];
-    if(!qty) return;
-    const sell = (p.markup||0)>=100 ? (p.cost||0) : (p.cost||0)/(1-(p.markup||0)/100);
-    const lineVal = qty * sell;
-    if(lineVal > 0){ stockLines.push({ label:`${p.name} × ${fmtN(qty,2)}`, val:lineVal }); stockTotal += lineVal; }
-  });
-
-  const hasStock = stockLines.length > 0;
-  if(!allResults.length && !hasStock){
+async function renderResultsCompany(){
+  const cont = document.getElementById('resultsContent');
+  if(!veneerConfigs.length && !lumberConfigs.length && !laminationConfigs.length && !Object.keys(productCart).length){
     cont.innerHTML = '<div class="results-empty">Fill in job details and add a configuration above to see results.</div>';
     return;
   }
-
-  // Mill services (all lumber configs combined)
-  const hasLumber = allResults.some(r => 'isVGResaw' in r);
-  let millSvc = null, millingBaseMarked = 0, resawMillingMarked = 0, seriesChangeMarked = 0, sandingMarked = 0, cutMarked = 0, svcTotal = 0;
-  if(hasLumber){
-    millSvc              = calcJobServices();
-    millingBaseMarked    = withMarkup(millSvc.millingBase,       'milling');
-    resawMillingMarked   = withMarkup(millSvc.resawMillingCost,  'milling');
-    seriesChangeMarked   = withMarkup(millSvc.seriesChangeCost,  'milling');
-    sandingMarked        = withMarkup(millSvc.sandingCost,       'milling');
-    cutMarked            = withMarkup(millSvc.cutCost,           'milling');
-    svcTotal             = millingBaseMarked + resawMillingMarked + seriesChangeMarked + sandingMarked + cutMarked;
+  try {
+    const resp = await fetch(`${WORKER_AUTH_BASE}/pricing/calculate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token: getSessionToken(),
+        veneerConfigs, lumberConfigs, laminationConfigs, productCart,
+      }),
+    });
+    const result = await resp.json();
+    if(!result.ok){
+      cont.innerHTML = `<div class="results-empty">⚠ ${result.msg || 'Could not calculate pricing.'}</div>`;
+      return;
+    }
+    renderResultsHTML(result.data);
+  } catch(e){
+    cont.innerHTML = '<div class="results-empty">⚠ Could not reach pricing server — check your connection.</div>';
   }
+}
+
+function renderResultsHTML(data){
+  const cont = document.getElementById('resultsContent');
+  if(data.empty){
+    cont.innerHTML = '<div class="results-empty">Fill in job details and add a configuration above to see results.</div>';
+    return;
+  }
+  const {
+    allResults, stockLines, stockTotal, hasStock, hasLumber, millSvc,
+    millingBaseMarked, resawMillingMarked, seriesChangeMarked, sandingMarked, cutMarked, svcTotal,
+    grandTotal, totalEffSqft,
+  } = data;
 
   let html = '';
-  let grandTotal = 0;
 
   allResults.forEach(r => {
     html += `<div class="result-config"><div class="result-config-title">${r.label}</div>`;
@@ -2097,7 +1348,6 @@ function renderResults(){
       html += `<div class="result-row"><span class="result-label">Cost per sq ft</span><span class="result-value">${fmt(r.sqftCost)}/sqft</span></div>`;
     }
     html += '</div>';
-    grandTotal += r.subtotal;
   });
 
   // Stock Items block
@@ -2109,7 +1359,6 @@ function renderResults(){
     });
     html += `<div class="result-row" style="font-weight:600"><span>Stock Items Subtotal</span><span class="result-value">${fmt(stockTotal)}</span></div>`;
     html += '</div>';
-    grandTotal += stockTotal;
   }
 
   // Combined mill services block
@@ -2135,7 +1384,6 @@ function renderResults(){
     }
     html += `<div class="result-row" style="font-weight:600"><span>Mill Services Total</span><span class="result-value">${fmt(svcTotal)}</span></div>`;
     html += `</div>`;
-    grandTotal += svcTotal;
   }
 
   html += `<div class="result-total-card">`;
@@ -2150,7 +1398,6 @@ function renderResults(){
       html += `<div class="result-total-row"><span class="result-label">Stock Items</span><span style="font-family:var(--font-mono)">${fmt(stockTotal)}</span></div>`;
     }
   }
-  const totalEffSqft = allResults.reduce((s,r) => s + (r.effectiveSqft||0), 0);
   if(totalEffSqft > 0){
     html += `<div class="result-total-row"><span class="result-label">Cost per sq ft (total)</span><span style="font-family:var(--font-mono)">${fmt(grandTotal/totalEffSqft)}/sqft</span></div>`;
   }
@@ -2404,10 +1651,6 @@ function renderAdminModal(){
     }
   }
 
-  // LBI Password
-  const lbiPwEl = document.getElementById('admin-lbi-password');
-  if(lbiPwEl) lbiPwEl.value = getLBIPassword();
-
   // Markup grid
   const mg = document.getElementById('markupGrid');
   const markupLabels = {
@@ -2577,10 +1820,34 @@ function saveAdmin(){
   delete pricing.workerUrl;
   delete pricing.workerKey;
 
+  // Passwords now live server-side only (Worker + KV) — write-only fields here, blank
+  // means "leave unchanged". Admin's own password goes through the same self-service
+  // change-password endpoint the header button uses; the LBI/company password is a
+  // manual admin-driven reset (no email/forgot-password flow), matching what Heath chose.
   const adminPw = document.getElementById('admin-admin-password')?.value?.trim();
-  if(adminPw) localStorage.setItem('lbiq_admin_password', adminPw);
-  const lbiPw = document.getElementById('admin-lbi-password')?.value?.trim();
-  if(lbiPw) localStorage.setItem('lbiq_lbi_password', lbiPw);
+  const lbiPw   = document.getElementById('admin-lbi-password')?.value?.trim();
+  const pwToken = getSessionToken();
+  const pwPromises = [];
+  if(adminPw){
+    pwPromises.push(fetch(`${WORKER_AUTH_BASE}/change-password`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: pwToken, newPassword: adminPw }),
+    }).then(r => r.json()));
+  }
+  if(lbiPw){
+    pwPromises.push(fetch(`${WORKER_AUTH_BASE}/admin/reset-company-password`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: pwToken, newPassword: lbiPw }),
+    }).then(r => r.json()));
+  }
+  if(pwPromises.length){
+    document.getElementById('admin-admin-password').value = '';
+    document.getElementById('admin-lbi-password').value = '';
+    Promise.all(pwPromises).then(results => {
+      const failed = results.find(r => !r.ok);
+      showToast(failed ? '⚠ Password update failed: ' + failed.msg : '✓ Password(s) updated');
+    });
+  }
 
   collectAdminForm();
 
@@ -2609,6 +1876,7 @@ function saveAdmin(){
   } else {
     showToast('Pricing saved!');
   }
+  pushAdminPricingSecure().then(r => { if(r.ok) showToast('✓ Also synced to secure pricing storage'); });
 }
 
 // --- CLOUD JOB SYNC ---------------------------------------------------
@@ -2834,119 +2102,13 @@ function lamUpdate(id){
   markDirty();
 }
 
-function resolveLaminationQty(cfg){
-  if(!cfg.slatW || !cfg.slatL || !cfg.slatsPerPanel || !cfg.panelW || !cfg.panelL) return null;
-  const sqftPerPanel = (cfg.panelW * cfg.panelL) / 144;
-  if(cfg.calcMode === 'sqft'){
-    if(!cfg.sqft) return null;
-    const panelQty   = Math.ceil(cfg.sqft / sqftPerPanel);
-    const totalSlats = panelQty * cfg.slatsPerPanel;
-    return { panelQty, totalSlats, effectiveSqft: cfg.sqft };
-  } else if(cfg.calcMode === 'slats'){
-    if(!cfg.manualQty) return null;
-    const totalSlats = cfg.manualQty;
-    const panelQty   = Math.ceil(totalSlats / cfg.slatsPerPanel);
-    return { panelQty, totalSlats, effectiveSqft: panelQty * sqftPerPanel };
-  } else {
-    if(!cfg.manualQty) return null;
-    const panelQty   = cfg.manualQty;
-    const totalSlats = panelQty * cfg.slatsPerPanel;
-    return { panelQty, totalSlats, effectiveSqft: panelQty * sqftPerPanel };
-  }
-}
-
-function calcLaminationCost(cfg, cutCostOverride){
-  const qty = resolveLaminationQty(cfg);
-  if(!qty) return null;
-  const { panelQty, totalSlats, effectiveSqft } = qty;
-
-  const isCustomer = cfg.face === 'Customer Supplied';
-  const isBackCustomer = (cfg.back || cfg.face) === 'Customer Supplied';
-  const faceData   = isCustomer ? null : (pricing.laminationFaces||{})[cfg.face];
-  const backData   = isBackCustomer ? null : (pricing.laminationFaces||{})[cfg.back || cfg.face];
-  const coreData   = (pricing.laminationCores||{})[cfg.core];
-  const wasteMult  = wasteMultFromPct(cfg.wasteOn);
-
-  const thick = cfg.thickness || 0.75;
-
-  const faceAvail = isCustomer ? {} : getLamFacePrices(faceData);
-  const backAvail = isBackCustomer ? {} : getLamFacePrices(backData);
-  const coreAvail = getLamCoreAvailSizes(coreData, thick);
-  const coreIsNet = !!coreData?.netSize;
-  const combo = chooseLamSizes(cfg.slatW, cfg.slatL, faceAvail, coreAvail, backAvail, coreIsNet);
-
-  const sheetsNeeded = combo ? Math.ceil(totalSlats / combo.yieldPerSheet * wasteMult) : 0;
-  const faceMat = (!isCustomer && combo) ? sheetsNeeded * combo.facePrice : 0;
-  const backMat = (!isBackCustomer && combo) ? sheetsNeeded * combo.backPrice : 0;
-  const coreMat = combo ? sheetsNeeded * combo.corePrice : 0;
-  const noPricing = !combo; // no size combo fits at all — missing face/core pricing or slats too big for any size
-
-  // Glue line
-  const glueCost = effectiveSqft * (pricing.services.glueLine || 0);
-
-  // EB
-  const longSides  = (cfg.ebSides===4||cfg.ebSides===2)?2:(cfg.ebSides===3||cfg.ebSides===1)?1:0;
-  const shortSides = (cfg.ebSides===4||cfg.ebSides===3)?2:0;
-  const ebLong  = (cfg.slatL / 12) * totalSlats * longSides;
-  const ebShort = (cfg.slatW / 12) * totalSlats * shortSides;
-  const ebFt    = ebLong + ebShort;
-  const ebRolls = cfg.ebSides > 0 ? Math.ceil(ebFt * EB_WASTE_FACTOR / EB_ROLL_FEET) : 0;
-  const ebRollPrice   = isCustomer ? 0 : (faceData?.ebRoll || 0);
-  const ebMaterialCost= ebRolls * ebRollPrice;
-  const ebServiceCost = ebFt * (pricing.services.ebServicePerFt || 0);
-
-  // Cut service — flat charge under threshold, same settings as veneer's Cut Service
-  const cutCost = cutCostOverride !== undefined ? cutCostOverride : effectiveSqft * (pricing.services.cutServicePerSqft || 0);
-
-  // Assembly + brackets
-  const assemblyCost = cfg.assembly ? effectiveSqft * (pricing.services.assembly || 0) : 0;
-  const bracketCount = panelQty * (cfg.bracketsPerPanel || 0);
-  const bracketCost  = bracketCount * (pricing.services.bracketPrice || 0);
-
-  // Apply markup
-  const faceMatLine = isCustomer ? 0 : withMarkup(faceMat,      'panels');
-  const backMatLine = isBackCustomer ? 0 : withMarkup(backMat,  'panels');
-  const coreMatLine = withMarkup(coreMat,       'panels');
-  const glueLineAmt = withMarkup(glueCost,      'cutService');
-  const ebMatLine   = withMarkup(ebMaterialCost,'edgeBand');
-  const ebSvcLine   = withMarkup(ebServiceCost, 'ebService');
-  const cutLine     = withMarkup(cutCost,       'cutService');
-  const asmLine     = withMarkup(assemblyCost,  'assembly');
-  const bktLine     = withMarkup(bracketCost,   'brackets');
-
-  const lines = {};
-  if(noPricing){
-    lines['Face / Core / Back — ⚠ No sheet size fits or pricing missing, call for pricing'] = 0;
-  } else {
-    if(!isCustomer && faceMat > 0)       lines[`Face Sheets (${fmtN(sheetsNeeded)} × ${cfg.face} ${combo.faceSz})`] = faceMatLine;
-    if(isCustomer)                       lines['Face Material (Customer Supplied)'] = 0;
-    if(!isBackCustomer && backMat > 0)   lines[`Back Sheets (${fmtN(sheetsNeeded)} × ${cfg.back || cfg.face} ${combo.backSz})`] = backMatLine;
-    if(isBackCustomer)                   lines['Back Material (Customer Supplied)'] = 0;
-    if(coreMat > 0)  lines[`Core Sheets (${fmtN(sheetsNeeded)} × ${cfg.core} ${combo.coreSz})`]  = coreMatLine;
-  }
-  if(glueCost > 0) lines['Glue Line']      = glueLineAmt;
-  if(cfg.ebSides > 0){
-    if(ebMaterialCost > 0) lines[`Edge Band Material (${fmtN(ebRolls)} rolls)`] = ebMatLine;
-    if(ebServiceCost  > 0) lines[`Edge Band Service (${fmtN(ebFt,0)} ft)`]      = ebSvcLine;
-  }
-  if(cutCost > 0)      lines[cutCostOverride !== undefined ? 'Cut Service (flat)' : 'Cut Service'] = cutLine;
-  if(assemblyCost > 0) lines['Assembly / Packing']       = asmLine;
-  if(bracketCost  > 0) lines[`Black Brackets (${fmtN(bracketCount)})`] = bktLine;
-
-  const subtotal = Object.values(lines).reduce((s,v)=>s+v, 0);
-  return {
-    face:cfg.face, back:cfg.back||cfg.face, core:cfg.core,
-    effectiveSqft, panelQty, totalSlats,
-    sheetsNeeded, ebFt, ebRolls, bracketCount,
-    lines, subtotal,
-    sqftCost: effectiveSqft > 0 && subtotal > 0 ? subtotal/effectiveSqft : null,
-  };
-}
+// resolveLaminationQty, calcLaminationCost now live in calc-engine.js as
+// Calc.resolveLaminationQty / Calc.calcLaminationCost.
 
 function calcLaminationPreview(cfg){
   const el = document.getElementById('l2-preview-'+cfg.id);
   if(!el) return;
-  const qty = resolveLaminationQty(cfg);
+  const qty = Calc.resolveLaminationQty(cfg);
   if(!qty){ el.innerHTML=''; return; }
   const { panelQty, totalSlats, effectiveSqft } = qty;
   const isCustomer = cfg.face === 'Customer Supplied';
@@ -2957,11 +2119,11 @@ function calcLaminationPreview(cfg){
   const wasteMult = wasteMultFromPct(cfg.wasteOn);
   const thick     = cfg.thickness || 0.75;
 
-  const faceAvail = isCustomer ? {} : getLamFacePrices(faceData);
-  const backAvail = isBackCustomer ? {} : getLamFacePrices(backData);
-  const coreAvail = getLamCoreAvailSizes(coreData, thick);
+  const faceAvail = isCustomer ? {} : Calc.getLamFacePrices(faceData);
+  const backAvail = isBackCustomer ? {} : Calc.getLamFacePrices(backData);
+  const coreAvail = Calc.getLamCoreAvailSizes(coreData, thick);
   const coreIsNet = !!coreData?.netSize;
-  const combo = chooseLamSizes(cfg.slatW, cfg.slatL, faceAvail, coreAvail, backAvail, coreIsNet);
+  const combo = Calc.chooseLamSizes(cfg.slatW, cfg.slatL, faceAvail, coreAvail, backAvail, coreIsNet);
   const sheetsNeeded = combo ? Math.ceil(totalSlats/combo.yieldPerSheet*wasteMult) : 0;
 
   const longSides  = (cfg.ebSides===4||cfg.ebSides===2)?2:(cfg.ebSides===3||cfg.ebSides===1)?1:0;
@@ -3157,11 +2319,11 @@ function calcLumberProduct(p){
   if(!sData) return null;
   if(!p.thickness || !p.slatW || !p.slatL) return null;
   const cfg = { species: p.lSpecies, thickness: p.thickness, slatW: p.slatW, slatL: p.slatL, safetyBuffer: false };
-  const m = millLumberCalc(cfg, { totalSlats: 1, randomLength: false });
+  const m = Calc.millLumberCalc(cfg, { totalSlats: 1, randomLength: false });
   if(m.noStock) return null;
   const bfPrice = m.isVGResaw
     ? (m.stockUsed === '2x8' ? (sData.price2x8 || 0) : (sData.price2x6 || 0))
-    : (sData[tierPriceInfo(m.roughT).key] || 0);
+    : (sData[Calc.tierPriceInfo(m.roughT).key] || 0);
   if(!bfPrice) return null;
   const finishedSqft = (p.slatW * p.slatL) / 144;
   const rawBFPerSqft = m.bfPerSlat / finishedSqft;
@@ -3714,6 +2876,186 @@ async function pushCloudPricing(){
   return tryPush(1);
 }
 
+// New secure pricing storage (PRICING_KV via the Worker's /admin/pricing) — runs alongside
+// pushCloudPricing() above, not instead of it. Both stay live until Ryan's system has fully
+// moved onto /pricing/calculate and /pricing/options; only then does the GitHub push above
+// get retired. Silent on failure by design: until PRICING_KV is actually created and this
+// branch is deployed, every call here is expected to fail (network error or 401 against the
+// still-live old Worker, which requires X-Worker-Key for any PUT and never gets it from this
+// call) — that's a safe no-op, not a real error, so there's nothing to alarm the admin with.
+async function pushAdminPricingSecure(){
+  const token = getSessionToken();
+  if(!token) return { ok:false, msg:'Not logged in' };
+  try {
+    const resp = await fetch(`${WORKER_AUTH_BASE}/admin/pricing`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, pricing }),
+    });
+    try { return await resp.json(); }
+    catch { return { ok:false, msg:'Bad response' }; }
+  } catch(e){
+    return { ok:false, msg: e.message };
+  }
+}
+
+// Company role never gets real pricing.json — this builds a structurally-identical `pricing`
+// object from the cost-free /pricing/options endpoint instead, so every existing render/lookup
+// function (visibleVeneerSpecies, renderLumberConfigs, calcVeneerPreview, etc.) keeps working
+// completely unmodified, but every dollar field is a fixed placeholder (1), never a real
+// number — deliberately not 0, since several filters check `price > 0` to decide whether an
+// option should appear, and a uniform non-zero placeholder makes every option appear equally
+// available (correct: the real availability check now happens server-side in
+// Calc.calcVeneerCost/calcLumberCost/calcLaminationCost via /pricing/calculate, which returns
+// a "⚠ Call for pricing" line for anything actually unpriced — same as admin already sees).
+// Structural, non-monetary flags (resaw, netSize, veneer core keys) come through as real
+// values, since those drive genuine UI/calc behavior and reveal nothing about cost.
+function placeholderVeneerSpecies(){
+  const o = blankVeneerSpecies();
+  Object.keys(o).forEach(k => { o[k] = 1; });
+  return o;
+}
+function placeholderLamFace(){ return { price4x8:1, price4x10:1, price5x12:1, ebRoll:1 }; }
+function placeholderLamCore(netSize){
+  const o = blankLamCore();
+  Object.keys(o).forEach(k => { if(k !== 'netSize') o[k] = 1; });
+  o.netSize = !!netSize;
+  return o;
+}
+async function applyCompanyPricingOptions(){
+  try {
+    const resp = await fetch(`${WORKER_AUTH_BASE}/pricing/options`);
+    const result = await resp.json();
+    if(!result.ok) return;
+    const opts = result.options;
+
+    Object.keys(pricing).forEach(k => delete pricing[k]);
+    Object.assign(pricing, deepCopy(DEFAULT_PRICING));
+
+    pricing.veneerSpecies = {};
+    (opts.veneerSpecies || []).forEach(name => { pricing.veneerSpecies[name] = placeholderVeneerSpecies(); });
+
+    pricing.lumberSpecies = {};
+    (opts.lumberSpecies || []).forEach(({name, resaw}) => {
+      pricing.lumberSpecies[name] = { price:1, price5_4:1, price6_4:1, price8_4:1, price2x6:1, price2x8:1, resaw:!!resaw };
+    });
+
+    (opts.veneerCores || []).forEach(({key, label}) => {
+      if(!pricing.veneerCores.find(c => c.key === key)) pricing.veneerCores.push({ key, label });
+    });
+
+    pricing.laminationFaces = {};
+    (opts.laminationFaces || []).forEach(name => { pricing.laminationFaces[name] = placeholderLamFace(); });
+
+    pricing.laminationCores = {};
+    (opts.laminationCores || []).forEach(({name, netSize}) => { pricing.laminationCores[name] = placeholderLamCore(netSize); });
+
+    // Stock products: the sell price IS meant to be visible (that's the final quoted price) —
+    // stored here as cost with markup 0 so the existing renderProductsTab math (cost/(1-markup))
+    // reproduces exactly that sell price, without a real wholesale cost or margin ever existing
+    // in this object.
+    pricing.standardProducts = (opts.standardProducts || []).map(p => ({
+      id: p.id, name: p.name, type: p.type, category: p.category, cost: p.sellPrice, markup: 0,
+    }));
+    pricing.productCategories = opts.productCategories || [];
+
+    ensureAllCoreKeys();
+  } catch(e){ /* keep whatever was already in `pricing` (structural defaults) */ }
+}
+
+// --- EMPLOYEE LOGINS (admin management) --------------------------------
+// Employee accounts live entirely in the Worker's AUTH_KV, not in `pricing` — nothing here
+// touches pricing.json or the GitHub push. Only ever called from the Admin modal.
+async function renderEmployeesAdmin(){
+  const cont = document.getElementById('employeesList');
+  if(!cont) return;
+  cont.innerHTML = '<p style="font-size:13px;color:var(--mid)">Loading…</p>';
+  try {
+    const resp = await fetch(`${WORKER_AUTH_BASE}/admin/employees`, {
+      headers: { 'Authorization': `Bearer ${getSessionToken()}` },
+    });
+    const result = await resp.json();
+    if(!result.ok){ cont.innerHTML = `<p style="font-size:13px;color:var(--red)">⚠ ${result.msg || 'Could not load employees'}</p>`; return; }
+    if(!result.employees.length){ cont.innerHTML = '<p style="font-size:13px;color:var(--mid)">No individual employee logins yet.</p>'; return; }
+    cont.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px;max-width:700px">
+      <thead><tr>
+        <th style="text-align:left;padding:4px 8px;color:var(--mid)">Username</th>
+        <th style="text-align:left;padding:4px 8px;color:var(--mid)">Display Name</th>
+        <th style="width:220px"></th>
+      </tr></thead>
+      <tbody>
+        ${result.employees.map(e => `<tr>
+          <td style="padding:4px 8px">${e.username}</td>
+          <td style="padding:4px 8px">${e.displayName || ''}</td>
+          <td style="padding:4px 8px;display:flex;gap:8px">
+            <button class="btn-secondary" style="padding:4px 10px;font-size:12px" onclick="resetEmployeePassword('${e.username}')">Reset Password</button>
+            <button class="btn-danger" style="padding:4px 10px;font-size:12px" onclick="removeEmployee('${e.username}')">Remove</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+  } catch(e){
+    cont.innerHTML = '<p style="font-size:13px;color:var(--red)">⚠ Could not reach server — check your connection.</p>';
+  }
+}
+
+async function addEmployee(){
+  const usernameEl = document.getElementById('newEmployeeUsername');
+  const nameEl = document.getElementById('newEmployeeDisplayName');
+  const pwEl = document.getElementById('newEmployeePassword');
+  const username = usernameEl.value.trim();
+  const displayName = nameEl.value.trim();
+  const password = pwEl.value;
+  if(!username || !password){ showToast('Username and password are required'); return; }
+  try {
+    const resp = await fetch(`${WORKER_AUTH_BASE}/admin/employees`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: getSessionToken(), username, displayName, password }),
+    });
+    const result = await resp.json();
+    if(!result.ok){ showToast('⚠ ' + (result.msg || 'Could not add employee')); return; }
+    usernameEl.value = ''; nameEl.value = ''; pwEl.value = '';
+    showToast(`✓ Added ${displayName || username}`);
+    renderEmployeesAdmin();
+  } catch(e){
+    showToast('⚠ Could not reach server — check your connection.');
+  }
+}
+
+async function removeEmployee(username){
+  if(!confirm(`Remove login access for "${username}"? They won't be able to log in anymore.`)) return;
+  try {
+    const resp = await fetch(`${WORKER_AUTH_BASE}/admin/employees/remove`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: getSessionToken(), username }),
+    });
+    const result = await resp.json();
+    if(!result.ok){ showToast('⚠ ' + (result.msg || 'Could not remove employee')); return; }
+    showToast('✓ Removed');
+    renderEmployeesAdmin();
+  } catch(e){
+    showToast('⚠ Could not reach server — check your connection.');
+  }
+}
+
+async function resetEmployeePassword(username){
+  const newPassword = prompt(`New password for "${username}" (min 4 characters):`);
+  if(!newPassword) return;
+  try {
+    const resp = await fetch(`${WORKER_AUTH_BASE}/admin/employees/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: getSessionToken(), username, newPassword }),
+    });
+    const result = await resp.json();
+    showToast(result.ok ? '✓ Password reset' : '⚠ ' + (result.msg || 'Could not reset password'));
+  } catch(e){
+    showToast('⚠ Could not reach server — check your connection.');
+  }
+}
+
 // --- PRICING EXPORT / IMPORT ------------------------------------------
 function exportPricing(){
   const json = JSON.stringify(pricing, null, 2);
@@ -3760,7 +3102,7 @@ function calcBF(){
     el.textContent = '—'; stockEl.textContent = ''; boardsEl.textContent = ''; totalEl.textContent = ''; return;
   }
 
-  const info = getStockInfo(t);
+  const info = Calc.getStockInfo(t);
   const stockThick = info ? info.stock : t;
   const boardsNeeded = (info && info.resaw) ? Math.ceil(q / 2) : q;
   const bf = (w * stockThick * l * boardsNeeded) / 12;
@@ -3891,7 +3233,7 @@ function calcSlat(){
   if(!totalSlats){ res.innerHTML = '<span style="color:var(--mid)">Enter a quantity to see results.</span>'; return; }
 
   // Mill calculation — mirrors lumber tab
-  const stockIn      = getMillStockLength(slatL, '');
+  const stockIn      = Calc.getMillStockLength(slatL, '');
   const stockFt      = stockIn / 12;
   const piecesPerLen = slatL >= 72 ? 1 : Math.max(1, Math.floor((stockIn - END_TRIM) / slatL));
   const safetyMult   = wasteMultFromPct(wastePct);
@@ -3905,7 +3247,7 @@ function calcSlat(){
 
   if(isVG){
     // V.G. Fir / Hemlock: milled from 2×6 or 2×8 rough stock, chosen by slat width
-    const picked = chooseResawStock(slatW);
+    const picked = Calc.chooseResawStock(slatW);
     if(!picked){
       pcsWide = 0; boardsNeeded = 0; bfPerSlat = 0; bfPerBoard = 0; rawBFTotal = 0;
       roughLabel = '— (over 7.5" max)';
@@ -3914,7 +3256,7 @@ function calcSlat(){
         ⚠ Slat width exceeds 7.5" max for 2×6/2×8 resaw stock — call for pricing
       </div>`;
     } else {
-      pcsWide      = getVGPcsPerBoard(thick, slatW, picked.width);
+      pcsWide      = Calc.getVGPcsPerBoard(thick, slatW, picked.width);
       const pcsPerBoard = pcsWide * piecesPerLen;
       boardsNeeded = Math.ceil(totalSlats / pcsPerBoard);
       bfPerBoard   = (2 * picked.nominalW * stockIn) / 144;
@@ -3925,7 +3267,7 @@ function calcSlat(){
       vgStockUsed  = picked.stock.replace('x','×');
       widthWasteLabel = `— (${picked.stock} board)`;
       if(thick > 0.6875){
-        const altPcs = getVGPcsPerBoard(0.6875, slatW, picked.width);
+        const altPcs = Calc.getVGPcsPerBoard(0.6875, slatW, picked.width);
         warningHTML = `<div style="grid-column:1/-1;background:#3a1a00;border:1px solid var(--gold);border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--gold);line-height:1.5">
           ⚠ At this thickness you get <strong>${pcsWide} pcs</strong> per ${picked.stock} board.
           Consider <strong>11/16" (${altPcs} pcs/board)</strong> for better yield.
@@ -3934,9 +3276,9 @@ function calcSlat(){
     }
   } else {
     // Standard path: lookup rough stock, apply widthWaste
-    const stockInfo = getStockInfo(thick);
-    const roughT    = stockInfo ? stockInfo.stock : getSuggestedRoughThick(thick);
-    const widthWaste = getWidthWasteFactor(slatW);
+    const stockInfo = Calc.getStockInfo(thick);
+    const roughT    = stockInfo ? stockInfo.stock : Calc.getSuggestedRoughThick(thick);
+    const widthWaste = Calc.getWidthWasteFactor(slatW);
     const stockLabel = stockInfo?.label || `${roughT}" rough`;
     const isResaw    = !!(stockInfo?.resaw);
 
@@ -4120,7 +3462,7 @@ function calcTG(){
   let rawBFTotal, roughLabel, warningHTML = '';
 
   if(isVG){
-    const picked = chooseResawStock(overallW);
+    const picked = Calc.chooseResawStock(overallW);
     if(!picked){
       rawBFTotal = 0;
       roughLabel = '— (over 7.5" max)';
@@ -4142,11 +3484,11 @@ function calcTG(){
       }
     }
   } else {
-    const roughT      = getSuggestedRoughThick(thick);
-    const widthWaste  = getWidthWasteFactor(overallW);
+    const roughT      = Calc.getSuggestedRoughThick(thick);
+    const widthWaste  = Calc.getWidthWasteFactor(overallW);
     const rawBFExact  = roughT * (overallW + widthWaste) * totalLF / 12;
     rawBFTotal        = Math.ceil(rawBFExact * safetyMult);
-    roughLabel        = getStockInfo(thick)?.label || `${roughT}" rough`;
+    roughLabel        = Calc.getStockInfo(thick)?.label || `${roughT}" rough`;
   }
 
   res.innerHTML = `
@@ -4340,9 +3682,11 @@ function showToast(msg){
 
   localStorage.setItem('lbiq_pricing', JSON.stringify(pricing));
 
-  // Fetch cloud pricing then start session (3s timeout so offline never blocks)
-  Promise.race([
-    fetchCloudPricing(),
-    new Promise(r => setTimeout(r, 3000))
-  ]).catch(() => {}).finally(() => checkSession());
+  // No pricing fetch here anymore — that used to run unconditionally for every visitor,
+  // before any login, which meant real cost/margin data loaded into memory regardless of
+  // role. Real pricing now loads only after a role is known, inside activateApp() (admin:
+  // real fetchCloudPricing(); company: cost-free applyCompanyPricingOptions()). Until then,
+  // `pricing` just holds the structural DEFAULT_PRICING shape merged above — enough to render
+  // the lock screen, nothing sensitive.
+  checkSession();
 })();
