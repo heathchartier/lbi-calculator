@@ -1,1 +1,35 @@
-[]
+[
+  {
+    "sourceId": "aps-integration-test-safe-to-delete",
+    "name": "[TEST � safe to delete] APS integration verification",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-08-09",
+    "notes": "Synced from APS quoting tool",
+    "veneerConfigs": [],
+    "lumberConfigs": [
+      {
+        "species": "Walnut",
+        "thickness": 0.75,
+        "slatW": 3.25,
+        "panelW": 12,
+        "panelL": 96,
+        "slatsPerPanel": 4,
+        "bracketsPerPanel": 8,
+        "calcMode": "count",
+        "manualQty": 1,
+        "slatL": 96,
+        "assembly": false,
+        "lumberType": "grille",
+        "orientation": "Horizontal",
+        "safetyBuffer": 10,
+        "sanding": true,
+        "cutToLength": true
+      }
+    ],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-08-09T23:22:58.743Z",
+    "id": 1786317779040
+  }
+]
