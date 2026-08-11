@@ -737,7 +737,17 @@ function createCalcEngine(pricing){
     const cutCost = cutLF <= 0 ? 0
       : (cutLF <= svc.cutThreshold ? svc.cutFlat : cutLF * svc.cutPerLF);
 
-    return { totalLF, standardLF, resawLF, sandingLF, cutLF, millingBase, resawMillingCost, seriesChangeCost, millingTotal, sandingCost, cutCost };
+    // standardOverThreshold/resawOverThreshold: whether the flat-fee vs $/LF rate applied —
+    // returned explicitly so the "flat rate" vs "at $/LF rate" label in the results UI doesn't
+    // need to re-read pricing.services.*Threshold itself. That matters for the company/employee
+    // role: their local `pricing.services` is placeholder/default data (real pricing never
+    // reaches that browser), so re-deriving the label from it would show the wrong rate type
+    // even though the dollar amount here is already correct.
+    return {
+      totalLF, standardLF, resawLF, sandingLF, cutLF, millingBase, resawMillingCost, seriesChangeCost, millingTotal, sandingCost, cutCost,
+      standardOverThreshold: standardLF > svc.millingThreshold,
+      resawOverThreshold: resawLF > svc.resawThreshold,
+    };
   }
 
   // --- LAMINATION ENGINE ---------------------------------------------------

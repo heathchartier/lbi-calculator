@@ -1366,11 +1366,11 @@ function renderResultsHTML(data){
     html += `<div class="result-config">`;
     html += `<div class="result-config-title" style="color:var(--gold)">MILL SERVICES</div>`;
     if(millSvc.millingBase > 0){
-      const millingRate = millSvc.standardLF > pricing.services.millingThreshold ? 'at $/LF rate' : 'flat rate';
+      const millingRate = millSvc.standardOverThreshold ? 'at $/LF rate' : 'flat rate';
       html += `<div class="result-row"><span class="result-label">Milling (${fmtN(millSvc.standardLF,0)} LF — ${millingRate})</span><span class="result-value">${fmt(millingBaseMarked)}</span></div>`;
     }
     if(millSvc.resawMillingCost > 0){
-      const resawRate = millSvc.resawLF > pricing.services.resawThreshold ? 'at $/LF rate' : 'flat rate';
+      const resawRate = millSvc.resawOverThreshold ? 'at $/LF rate' : 'flat rate';
       html += `<div class="result-row"><span class="result-label">Resaw Milling (${fmtN(millSvc.resawLF,0)} LF — ${resawRate})</span><span class="result-value">${fmt(resawMillingMarked)}</span></div>`;
     }
     if(millSvc.seriesChangeCost > 0){
