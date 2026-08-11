@@ -2901,25 +2901,34 @@ async function pushAdminPricingSecure(){
 
 // Company role never gets real pricing.json — this builds a structurally-identical `pricing`
 // object from the cost-free /pricing/options endpoint instead, so every existing render/lookup
-// function (visibleVeneerSpecies, renderLumberConfigs, calcVeneerPreview, etc.) keeps working
-// completely unmodified, but every dollar field is a fixed placeholder (1), never a real
-// number — deliberately not 0, since several filters check `price > 0` to decide whether an
-// option should appear, and a uniform non-zero placeholder makes every option appear equally
-// available (correct: the real availability check now happens server-side in
-// Calc.calcVeneerCost/calcLumberCost/calcLaminationCost via /pricing/calculate, which returns
-// a "⚠ Call for pricing" line for anything actually unpriced — same as admin already sees).
-// Structural, non-monetary flags (resaw, netSize, veneer core keys) come through as real
-// values, since those drive genuine UI/calc behavior and reveal nothing about cost.
-function placeholderVeneerSpecies(){
+// function (visibleVeneerSpecies, renderLumberConfigs, hasAnyFacePrice, etc.) keeps working
+// completely unmodified. Each dollar field is set to 1 or 0 based on the Worker's real
+// availability booleans (avail/priceAvail/sizesAvail/hasAnyPrice) — never a real number, but
+// never blanket-true either. An earlier version set everything to a blanket 1 ("every option
+// is available"), which broke the "hide unpriced options" filters below and let LBI select
+// species/faces/cores with no real price behind them — this restores that filtering using real
+// (boolean-only) availability instead. Structural, non-monetary flags (resaw, netSize, veneer
+// core keys) come through as real values, since those drive genuine UI/calc behavior and
+// reveal nothing about cost.
+function placeholderVeneerSpecies(avail){
   const o = blankVeneerSpecies();
-  Object.keys(o).forEach(k => { o[k] = 1; });
+  Object.keys(o).forEach(k => { o[k] = avail?.[k] ? 1 : 0; });
   return o;
 }
-function placeholderLamFace(){ return { price4x8:1, price4x10:1, price5x12:1, ebRoll:1 }; }
-function placeholderLamCore(netSize){
+function placeholderLamFace(sizesAvail){
+  return {
+    price4x8: sizesAvail?.['4x8'] ? 1 : 0,
+    price4x10: sizesAvail?.['4x10'] ? 1 : 0,
+    price5x12: sizesAvail?.['5x12'] ? 1 : 0,
+    ebRoll: 1, // not part of any visibility filter — harmless either way
+  };
+}
+function placeholderLamCore(netSize, hasAnyPrice){
   const o = blankLamCore();
-  Object.keys(o).forEach(k => { if(k !== 'netSize') o[k] = 1; });
   o.netSize = !!netSize;
+  // hasAnyCorePrice() only needs ANY one combo to be >0 — the exact combo doesn't matter,
+  // since real per-size/thickness selection happens server-side in /pricing/calculate.
+  if(hasAnyPrice) o['t0_75_4x8'] = 1;
   return o;
 }
 async function applyCompanyPricingOptions(){
@@ -2933,11 +2942,15 @@ async function applyCompanyPricingOptions(){
     Object.assign(pricing, deepCopy(DEFAULT_PRICING));
 
     pricing.veneerSpecies = {};
-    (opts.veneerSpecies || []).forEach(name => { pricing.veneerSpecies[name] = placeholderVeneerSpecies(); });
+    (opts.veneerSpecies || []).forEach(({name, avail}) => { pricing.veneerSpecies[name] = placeholderVeneerSpecies(avail); });
 
     pricing.lumberSpecies = {};
-    (opts.lumberSpecies || []).forEach(({name, resaw}) => {
-      pricing.lumberSpecies[name] = { price:1, price5_4:1, price6_4:1, price8_4:1, price2x6:1, price2x8:1, resaw:!!resaw };
+    (opts.lumberSpecies || []).forEach(({name, resaw, priceAvail, price2x6Avail, price2x8Avail}) => {
+      pricing.lumberSpecies[name] = {
+        price: priceAvail ? 1 : 0, price5_4: priceAvail ? 1 : 0, price6_4: priceAvail ? 1 : 0, price8_4: priceAvail ? 1 : 0,
+        price2x6: price2x6Avail ? 1 : 0, price2x8: price2x8Avail ? 1 : 0,
+        resaw: !!resaw,
+      };
     });
 
     (opts.veneerCores || []).forEach(({key, label}) => {
@@ -2945,10 +2958,10 @@ async function applyCompanyPricingOptions(){
     });
 
     pricing.laminationFaces = {};
-    (opts.laminationFaces || []).forEach(name => { pricing.laminationFaces[name] = placeholderLamFace(); });
+    (opts.laminationFaces || []).forEach(({name, sizesAvail}) => { pricing.laminationFaces[name] = placeholderLamFace(sizesAvail); });
 
     pricing.laminationCores = {};
-    (opts.laminationCores || []).forEach(({name, netSize}) => { pricing.laminationCores[name] = placeholderLamCore(netSize); });
+    (opts.laminationCores || []).forEach(({name, netSize, hasAnyPrice}) => { pricing.laminationCores[name] = placeholderLamCore(netSize, hasAnyPrice); });
 
     // Stock products: the sell price IS meant to be visible (that's the final quoted price) —
     // stored here as cost with markup 0 so the existing renderProductsTab math (cost/(1-markup))

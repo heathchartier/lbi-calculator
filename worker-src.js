@@ -288,19 +288,42 @@ export default {
     // Public, no auth — deliberately contains no dollar amounts of any kind, so there's
     // nothing here for a login gate to protect. Lets a UI (yours or a partner's) build
     // species/thickness/size dropdowns without ever touching real pricing data.
+    //
+    // Every "avail"/"Avail" field below is a boolean (is this combo priced at all?), never
+    // the dollar amount — the browser's own visibleVeneerSpecies()/visibleLumberSpecies()/
+    // hasAnyFacePrice()/hasAnyCorePrice() filters need real availability to correctly hide
+    // unpriced options from the company/employee dropdowns, same as they always did for
+    // admin. Sending a blanket "everything's available" (an earlier version of this endpoint)
+    // broke that — unpriced items started showing up as selectable with no real price behind
+    // them, which is the bug this was built to fix.
     if (path === '/pricing/options' && request.method === 'GET') {
       const pricing = await getPricing(env);
       if (!pricing) return json({ ok: false, msg: 'Could not load options' }, 500, corsHeaders);
 
-      // Everything here is either a name/label, a structural flag (resaw, netSize — needed for
-      // correct UI behavior, not a dollar figure), or a deliberately-computed sell price
-      // (standardProducts) — never a raw cost or margin.
+      const LAM_FACE_SIZES = ['4x8', '4x10', '5x12'];
+      const LAM_THICK_KEYS = ['t0_25','t0_375','t0_5','t0_625','t0_6875','t0_75','t1_0'];
+      const LAM_SIZES = ['4x8','4x10','5x10','5x12'];
+
       const options = {
-        veneerSpecies: Object.keys(pricing.veneerSpecies || {}),
-        lumberSpecies: Object.entries(pricing.lumberSpecies || {}).map(([name, p]) => ({ name, resaw: !!p.resaw })),
+        veneerSpecies: Object.entries(pricing.veneerSpecies || {}).map(([name, p]) => ({
+          name,
+          avail: Object.fromEntries(Object.entries(p || {}).map(([k, v]) => [k, (v || 0) > 0])),
+        })),
+        lumberSpecies: Object.entries(pricing.lumberSpecies || {}).map(([name, p]) => ({
+          name, resaw: !!p.resaw,
+          priceAvail: (p.price || 0) > 0,
+          price2x6Avail: (p.price2x6 || 0) > 0,
+          price2x8Avail: (p.price2x8 || 0) > 0,
+        })),
         veneerCores: (pricing.veneerCores || []).map(c => ({ key: c.key, label: c.label })),
-        laminationFaces: Object.keys(pricing.laminationFaces || {}),
-        laminationCores: Object.entries(pricing.laminationCores || {}).map(([name, c]) => ({ name, netSize: !!c.netSize })),
+        laminationFaces: Object.entries(pricing.laminationFaces || {}).map(([name, f]) => ({
+          name,
+          sizesAvail: Object.fromEntries(LAM_FACE_SIZES.map(s => [s, (f?.[`price${s}`] || 0) > 0])),
+        })),
+        laminationCores: Object.entries(pricing.laminationCores || {}).map(([name, c]) => ({
+          name, netSize: !!c.netSize,
+          hasAnyPrice: LAM_THICK_KEYS.some(t => LAM_SIZES.some(s => (c?.[`${t}_${s}`] || 0) > 0)),
+        })),
         thicknessOptions: ['1/4"', '1/2"', '3/4"', '1"'],
         standardProducts: (pricing.standardProducts || []).map(p => ({
           id: p.id, name: p.name, type: p.type, category: p.category,
