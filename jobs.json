@@ -221,5 +221,39 @@
     "productCart": {},
     "savedAt": "2026-08-12T13:59:47.509Z",
     "id": 1786543187831
+  },
+  {
+    "sourceId": "aps-quote-24",
+    "name": "Verify Lamination Sync",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-08-12",
+    "notes": "Synced from APS quoting tool",
+    "veneerConfigs": [],
+    "lumberConfigs": [],
+    "laminationConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "face": "White Oak FC",
+        "back": "Formica phenolic backer post",
+        "core": "MDF FR",
+        "thickness": 0.75,
+        "ebSides": 4,
+        "calcMode": "count",
+        "panelW": 24,
+        "panelL": 24,
+        "slatW": 24,
+        "slatL": 24,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "assembly": false,
+        "wasteOn": 10,
+        "manualQty": 10
+      }
+    ],
+    "productCart": {},
+    "savedAt": "2026-08-12T20:25:39.740Z",
+    "id": 1786566340037
   }
 ]
