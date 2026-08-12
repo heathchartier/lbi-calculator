@@ -99,5 +99,41 @@
     "productCart": {},
     "savedAt": "2026-08-09T23:25:33.345Z",
     "id": 1786317933603
+  },
+  {
+    "sourceId": "aps-quote-21",
+    "name": "Tomball ISD - LCS02",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-08-12",
+    "notes": "Synced from APS quoting tool",
+    "veneerConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "species": "White Oak",
+        "orientation": "Horizontal",
+        "grade": "talbert",
+        "core": "Fire Rated MDF",
+        "thickness": "3/4\"",
+        "slatW": 6,
+        "slatL": 96,
+        "panelW": 6,
+        "panelL": 96,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "ebSides": 4,
+        "wasteOn": 10,
+        "ceilingType": "linear",
+        "calcMode": "count",
+        "manualQty": 782,
+        "satinFinish": false
+      }
+    ],
+    "lumberConfigs": [],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-08-12T13:59:47.509Z",
+    "id": 1786543187831
   }
 ]
