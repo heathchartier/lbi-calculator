@@ -2,8 +2,8 @@
   {
     "id": 1786547464627,
     "name": "Small Grille Qtr Hemlock ",
-    "customer": "",
-    "po": "Brandon",
+    "customer": "Brandon",
+    "po": "",
     "date": "2026-08-12",
     "notes": "Panels only in qtr hemlock. No VG or flat cut available ",
     "veneerConfigs": [
@@ -83,7 +83,7 @@
       }
     ],
     "productCart": {},
-    "savedAt": "2026-08-12T15:12:24.918Z"
+    "savedAt": "2026-08-12T15:12:52.723Z"
   },
   {
     "sourceId": "aps-integration-test-safe-to-delete",
