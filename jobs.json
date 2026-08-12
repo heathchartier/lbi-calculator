@@ -24,7 +24,7 @@
         "bracketsPerPanel": 8,
         "ebSides": 4,
         "assembly": false,
-        "wasteOn": 0,
+        "wasteOn": 10,
         "notes": "",
         "calcMode": "sqft",
         "manualQty": 0,
@@ -83,7 +83,7 @@
       }
     ],
     "productCart": {},
-    "savedAt": "2026-08-12T15:11:04.627Z"
+    "savedAt": "2026-08-12T15:12:24.918Z"
   },
   {
     "sourceId": "aps-integration-test-safe-to-delete",
