@@ -485,6 +485,17 @@ document.addEventListener('touchmove', function(e){
   if(!e.target.closest('.modal-overlay')) e.preventDefault();
 }, { passive: false });
 
+// On a phone, tapping a field low on the screen (or anywhere in landscape, where the
+// keyboard eats most of the vertical space) often leaves it hidden behind the keyboard.
+// The delay lets the keyboard's open animation / viewport resize finish first — scrolling
+// immediately on focus, before the visible area has actually shrunk, undershoots.
+document.addEventListener('focusin', function(e){
+  const el = e.target;
+  if(!/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return;
+  if(el.type === 'checkbox' || el.type === 'radio') return;
+  setTimeout(() => { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 300);
+});
+
 function openHelp(){
   const adminSection = document.getElementById('helpAdminSection');
   if(adminSection) adminSection.style.display = sessionIsAdmin ? '' : 'none';
@@ -2335,14 +2346,20 @@ function calcLumberProduct(p){
 function renderProductsTab(){
   const cont = document.getElementById('tab-products');
   if(!cont) return;
+  // Rebuilding the search input's own DOM node on every keystroke (via innerHTML below)
+  // knocks it out of focus mid-type, which reads as the field "jumping"/losing the
+  // keyboard. Snapshot focus + cursor position here and restore them after the render.
+  const searchHadFocus = document.activeElement && document.activeElement.id === 'productSearchInput';
+  const searchSelStart = searchHadFocus ? document.activeElement.selectionStart : null;
+  const searchSelEnd = searchHadFocus ? document.activeElement.selectionEnd : null;
   const allProducts = pricing.standardProducts || [];
   const cats = sortedCats(pricing.productCategories || []);
   const q = productSearch.toLowerCase().trim();
   const products = q ? allProducts.filter(p => p.name.toLowerCase().includes(q)) : allProducts;
   const searchBar = `<div style="margin-bottom:16px">
-    <input type="text" placeholder="🔍 Search products…" value="${productSearch.replace(/"/g,'&quot;')}"
+    <input type="text" id="productSearchInput" placeholder="🔍 Search products…" value="${productSearch.replace(/"/g,'&quot;')}"
       oninput="productSearch=this.value;renderProductsTab()"
-      style="width:100%;background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:9px 12px;font-size:14px;box-sizing:border-box">
+      style="width:100%;background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:9px 12px;font-size:16px;box-sizing:border-box">
   </div>`;
   if(!allProducts.length){
     cont.innerHTML = searchBar + '<div style="text-align:center;padding:48px 0;color:var(--mid);font-size:15px">No standard products have been added yet.</div>';
@@ -2393,6 +2410,10 @@ function renderProductsTab(){
   }
   if(!html) html = '<div style="text-align:center;padding:48px 0;color:var(--mid);font-size:15px">No products match your search.</div>';
   cont.innerHTML = searchBar + html;
+  if(searchHadFocus){
+    const input = document.getElementById('productSearchInput');
+    if(input){ input.focus(); input.setSelectionRange(searchSelStart, searchSelEnd); }
+  }
 }
 
 function toggleProductCat(id){

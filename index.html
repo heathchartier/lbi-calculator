@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
 <title>LBI Panel Calculator</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
@@ -400,6 +400,14 @@ select option{background:#1e2226}
   .calc-input-wrap input{font-size:16px!important}
   .tab-bar{overflow-x:visible}
   .tab-btn{flex:1;white-space:normal;text-align:center;padding:8px 4px;font-size:11px;letter-spacing:0;line-height:1.2}
+}
+/* iOS Safari auto-zooms the whole page on focus of any input under 16px. The rule above
+   only catches narrow (portrait) phones — landscape phones are wide but short, so they
+   slip through on width alone and fall back to their smaller font-sizes, which is what
+   triggers the zoom-and-lose-the-field behavior specifically in landscape. */
+@media(max-height:500px){
+  input[type=text],input[type=number],input[type=date],select,textarea,
+  .calc-input-wrap input{font-size:16px!important}
 }
 
 /* ─── PRODUCT CARDS ─────────────────────────────────────────────── */
@@ -1451,8 +1459,8 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="calc-engine.js?v=20260811b"></script>
-<script src="app.js?v=20260811b"></script>
+<script src="calc-engine.js?v=20260811c"></script>
+<script src="app.js?v=20260811c"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });
