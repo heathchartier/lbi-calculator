@@ -284,6 +284,57 @@ export default {
       return json({ ok: true, data }, 200, corsHeaders);
     }
 
+    // --- PRICING: pick the cheapest candidate without exposing any prices -----
+    // Built for APS's "auto-cheapest species/core" feature: it needs to know WHICH
+    // candidate wins, not what any of them cost. Doing the comparison here, server-side,
+    // means real sell prices for the losing candidates (and cost/margin for any of them)
+    // never leave this Worker — only the winning candidate's identity and its own sell
+    // total come back. This is deliberately the alternative to exposing raw `markup`/
+    // `services` data via /pricing/options, which would let cost be reverse-engineered
+    // from any sell price (sell = cost / (1 - margin%)) — see 2026-08-12 conversation.
+    if (path === '/pricing/cheapest' && request.method === 'POST') {
+      let body;
+      try { body = await request.json(); }
+      catch { return json({ ok: false, msg: 'Invalid JSON' }, 400, corsHeaders); }
+
+      const partnerKey = request.headers.get('X-Partner-Key');
+      const isPartner = !!(partnerKey && env.PARTNER_API_KEY && partnerKey === env.PARTNER_API_KEY);
+      if (!isPartner) {
+        const claims = await verifyToken(body.token, env.SESSION_SECRET);
+        if (!claims) return json({ ok: false, msg: 'Session expired — please log in again' }, 401, corsHeaders);
+      }
+
+      const { category, varyField, candidates, config } = body;
+      const CALC_FNS = { veneer: 'calcVeneerCost', lumber: 'calcLumberCost', lamination: 'calcLaminationCost' };
+      if (!CALC_FNS[category]) return json({ ok: false, msg: 'category must be veneer, lumber, or lamination' }, 400, corsHeaders);
+      if (!varyField || typeof varyField !== 'string') return json({ ok: false, msg: 'varyField is required' }, 400, corsHeaders);
+      if (!Array.isArray(candidates) || !candidates.length) return json({ ok: false, msg: 'candidates must be a non-empty array' }, 400, corsHeaders);
+      if (candidates.length > 50) return json({ ok: false, msg: 'Too many candidates (max 50)' }, 400, corsHeaders);
+      if (!config || typeof config !== 'object') return json({ ok: false, msg: 'config is required' }, 400, corsHeaders);
+
+      const pricing = await getPricing(env);
+      if (!pricing) return json({ ok: false, msg: 'Could not load pricing' }, 500, corsHeaders);
+      const engine = createCalcEngine(pricing);
+      const calcFn = engine[CALC_FNS[category]];
+
+      let cheapest = null;
+      for (const candidate of candidates) {
+        let result;
+        try { result = calcFn({ ...config, [varyField]: candidate }); }
+        catch { continue; }
+        if (!result || !(result.subtotal > 0)) continue;
+        if (!cheapest || result.subtotal < cheapest.subtotal) {
+          cheapest = { value: candidate, subtotal: result.subtotal, sqftCost: result.sqftCost ?? null };
+        }
+      }
+      if (!cheapest) return json({ ok: false, msg: 'No priced candidate found' }, 200, corsHeaders);
+      return json({
+        ok: true,
+        cheapest: { [varyField]: cheapest.value, sellTotal: cheapest.subtotal, sellPerSqft: cheapest.sqftCost },
+        checked: candidates.length,
+      }, 200, corsHeaders);
+    }
+
     // --- PRICING: cost-free option lists (species/size/etc names) ---------
     // Public, no auth — deliberately contains no dollar amounts of any kind, so there's
     // nothing here for a login gate to protect. Lets a UI (yours or a partner's) build
