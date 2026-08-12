@@ -453,20 +453,20 @@ function unlockBodyScroll(){
 // overlay off position from the very first frame — worse than the problem it was meant
 // to solve. inset:0 already anchors top:0/left:0 correctly on its own.
 //
-// On engines that honor `interactive-widget=resizes-content` (iOS 16.4+, modern Chrome),
-// the browser already shrinks the LAYOUT viewport itself when the keyboard opens, so
-// window.innerHeight and visualViewport.height end up equal and 100dvh on .modal-overlay
-// is already exactly right on its own. Forcing an inline px height here on top of that
-// double-shrinks the overlay — it ends up shorter than the real visible area, and the
-// real page underneath (Save Job button, tab bar, etc.) shows through below it, which is
-// what got reported 2026-08-11. Only apply the manual override when the two heights
-// genuinely differ, i.e. the browser ISN'T already handling it natively.
+// 2026-08-11: briefly tried making this conditional on whether the browser's own
+// `interactive-widget=resizes-content` handling already matched window.innerHeight to
+// visualViewport.height, to avoid "double-shrinking" the overlay. That made things worse
+// in the field (reported: overlay drifts further off the further you scroll) — almost
+// certainly because that equality check isn't stable in Heath's actual environment (the
+// installed home-screen PWA), so the condition was flip-flopping true/false as
+// visualViewport 'resize' fired repeatedly during scrolling, toggling the inline height
+// on and off and compounding a visible drift. Reverted to always applying it
+// unconditionally, which is the long-standing, known-working behavior.
 function syncModalViewport(){
   const vv = window.visualViewport;
   if(!vv) return;
-  const needsManualFix = Math.abs(vv.height - window.innerHeight) > 1;
   document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(o => {
-    o.style.height = needsManualFix ? vv.height + 'px' : '';
+    o.style.height = vv.height + 'px';
   });
 }
 // Only listen for 'resize', not 'scroll'. In portrait, iOS Safari's address bar collapses

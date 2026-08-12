@@ -277,6 +277,12 @@ select option{background:#1e2226}
   position:fixed;inset:0;height:100vh;height:100dvh;background:rgba(0,0,0,.7);z-index:500;
   display:block;padding:20px;box-sizing:border-box;
   overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  /* iOS Safari has a known compositing bug where a semi-transparent position:fixed
+     element with scrollable content can let the real page flash through underneath
+     during scroll — worse the longer/faster you scroll. Forcing this onto its own
+     GPU layer keeps it painted as a stable, independent layer instead. */
+  transform:translateZ(0);
+  will-change:transform;
 }
 .modal-overlay.hidden{display:none}
 .modal-box{
@@ -1459,8 +1465,8 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="calc-engine.js?v=20260811d"></script>
-<script src="app.js?v=20260811d"></script>
+<script src="calc-engine.js?v=20260811e"></script>
+<script src="app.js?v=20260811e"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });
