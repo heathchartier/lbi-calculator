@@ -290,5 +290,40 @@
     "productCart": {},
     "savedAt": "2026-08-13T14:52:53.392Z",
     "id": 1786631379041
+  },
+  {
+    "sourceId": "aps-quote-23",
+    "name": "Sato Bento",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-08-13",
+    "notes": "Synced from APS quoting tool",
+    "veneerConfigs": [],
+    "lumberConfigs": [],
+    "laminationConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "face": "Walnut Qtr",
+        "back": "Formica phenolic backer post",
+        "core": "MDF FR",
+        "thickness": 0.75,
+        "ebLongSides": 0,
+        "ebShortSides": 0,
+        "calcMode": "count",
+        "panelW": 24,
+        "panelL": 24,
+        "slatW": 24,
+        "slatL": 24,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "assembly": false,
+        "wasteOn": 10,
+        "manualQty": 76
+      }
+    ],
+    "productCart": {},
+    "savedAt": "2026-08-13T15:05:58.642Z",
+    "id": 1786633558915
   }
 ]
