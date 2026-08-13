@@ -421,10 +421,13 @@ function createCalcEngine(pricing){
     return { stockIn: best||96, piecesPerBoard: Math.max(1,bestPieces) };
   }
 
-  // Stock length for a given slat length.
-  // Most species: max 12' stock. Long-stock species can use 14'/16'.
+  // Stock length for a given slat length. Any species can use 8'/10'/12'/14'/16' stock —
+  // confirmed with Heath 2026-08-13 after a real bug: standard (non-long-stock) species used
+  // to hard-cap at 12' stock regardless of how much longer the finished length actually was,
+  // silently undercharging anything over 12' (flat board-footage from 12' all the way to 18').
+  // Returns null past 16' stock — nothing longer is available, caller must not silently price
+  // it as 16' either; that's a "needs splicing / call for quote" case, not a normal quote.
   function getMillStockLength(slatL, species){
-    const isLong = LONG_STOCK_SPECIES.has(species);
     if(slatL >= 72){
       // Breakpoints sit a half inch under each stock length (e.g. 119.5" -> 10' stock) since
       // that's the standard way lengths are submitted here: entering exactly a stock length
@@ -433,9 +436,12 @@ function createCalcEngine(pricing){
       if(slatL <= 95.5)  return 96;   // 8'
       if(slatL <= 119.5) return 120;  // 10'
       if(slatL <= 143.5) return 144;  // 12'
-      if(!isLong)         return 144;  // cap at 12' for standard species
       if(slatL <= 167.5) return 168;  // 14'
-      return 192;                   // 16'
+      // 16' is the last available size, so there's no next-tier-up to reserve trim margin
+      // against — Heath confirmed 2026-08-13 that exactly 192" still uses 16' stock; only
+      // strictly past it needs splicing/a custom quote, unlike every tier below.
+      if(slatL <= 192)   return 192;  // 16'
+      return null;                   // exceeds longest available stock
     }
     return getBestStock(slatL, species).stockIn;
   }
@@ -560,6 +566,18 @@ function createCalcEngine(pricing){
     const defectPct = pricing.services.lumberDefectPct || 0;
 
     const stockIn = getMillStockLength(cfg.slatL, cfg.species);
+    if(stockIn == null){
+      // Longer than the 16' max any species' stock comes in — not a normal quote, needs a
+      // human decision (splice multiple pieces, or call the supplier), so don't silently
+      // price it as 16' and eat the difference.
+      return {
+        isVGResaw, vgWarning:false, noStock:true, noStockReason:'length', stockUsed:null, isTG,
+        stockIn:null, stockFt:null, piecesPerLen:0,
+        roughT:0, widthWaste:null, pcsWide:0,
+        boardsNeeded:0, bfPerBoard:0, pcsPerBoard:0, actualPieces:0, actualLF:0,
+        bfPerSlat:0, rawBFTotal:0, defectPct:0, totalSlatsUsed: totalSlats,
+      };
+    }
     const stockFt = stockIn / 12;
 
     let piecesPerLen;
@@ -576,7 +594,7 @@ function createCalcEngine(pricing){
       const picked = chooseResawStock(width);
       if(!picked){
         return {
-          isVGResaw, vgWarning:false, noStock:true, stockUsed:null, isTG,
+          isVGResaw, vgWarning:false, noStock:true, noStockReason:'width', stockUsed:null, isTG,
           stockIn, stockFt, piecesPerLen,
           roughT:2.0, widthWaste:null, pcsWide:0,
           boardsNeeded:0, bfPerBoard:0, pcsPerBoard:0, actualPieces:0, actualLF:0,
@@ -688,7 +706,9 @@ function createCalcEngine(pricing){
 
     const missingPrice = !isCustom && !m.noStock && !bfPrice;
     const tierTag = m.isVGResaw ? m.stockUsed : (tier ? tier.label : null);
-    const lumberLabel = m.noStock
+    const lumberLabel = m.noStockReason === 'length'
+      ? `Raw Lumber — exceeds 16' max stock length ⚠ Consider splicing lengths or call for quote`
+      : m.noStock
       ? `Raw Lumber — width exceeds 7.5" max ⚠ Call for pricing`
       : `Raw Lumber (${fmtN(rawBFTotal,0)} BF${tierTag ? ' · '+tierTag : ''})` + (missingPrice ? ' ⚠ Call for pricing' : '');
 
