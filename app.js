@@ -464,6 +464,9 @@ function lockBodyScroll(){
   document.body.style.left  = '0';
   document.body.style.right = '0';
   document.body.style.width = '100%';
+  // See the body.modal-open #app CSS rule for why — main app content (sticky header/tab
+  // bar, sometimes more) was rendering above the modal on iOS despite a much lower z-index.
+  document.body.classList.add('modal-open');
 }
 function unlockBodyScroll(){
   document.body.style.position = '';
@@ -471,6 +474,7 @@ function unlockBodyScroll(){
   document.body.style.left  = '';
   document.body.style.right = '';
   document.body.style.width = '';
+  document.body.classList.remove('modal-open');
   window.scrollTo(0, _scrollLockY);
 }
 

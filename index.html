@@ -88,6 +88,14 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--ink);min-heig
 /* ─── APP SHELL ─────────────────────────────────────────────────── */
 #app{display:none;flex-direction:column;min-height:100vh}
 #app.visible{display:flex}
+/* iOS Safari has a real bug (confirmed via frame-by-frame screen recording, 2026-08-13)
+   where the sticky header/tab-bar — and sometimes other main-page content — render ABOVE
+   a position:fixed modal overlay despite a much lower z-index, most visibly with the
+   keyboard open. Rather than keep fighting that stacking/compositing quirk, hide the main
+   app outright whenever any modal is open — nothing left to bleed through regardless of why
+   it was happening. Toggled by lockBodyScroll()/unlockBodyScroll() in app.js. Higher
+   specificity than #app.visible on purpose, so this always wins while a modal is open. */
+body.modal-open #app{display:none}
 
 header{
   background:var(--surf);border-bottom:1px solid var(--bdr);
@@ -277,12 +285,6 @@ select option{background:#1e2226}
   position:fixed;inset:0;height:100vh;height:100dvh;background:rgba(0,0,0,.7);z-index:500;
   display:block;padding:20px;box-sizing:border-box;
   overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
-  /* iOS Safari has a known compositing bug where a semi-transparent position:fixed
-     element with scrollable content can let the real page flash through underneath
-     during scroll — worse the longer/faster you scroll. Forcing this onto its own
-     GPU layer keeps it painted as a stable, independent layer instead. */
-  transform:translateZ(0);
-  will-change:transform;
 }
 .modal-overlay.hidden{display:none}
 .modal-box{
@@ -1465,8 +1467,8 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="calc-engine.js?v=20260813b"></script>
-<script src="app.js?v=20260813b"></script>
+<script src="calc-engine.js?v=20260813c"></script>
+<script src="app.js?v=20260813c"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });
