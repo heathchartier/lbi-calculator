@@ -255,5 +255,40 @@
     "productCart": {},
     "savedAt": "2026-08-12T20:25:39.740Z",
     "id": 1786566340037
+  },
+  {
+    "sourceId": "aps-quote-25",
+    "name": "Heartland ATX Office",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-08-13",
+    "notes": "Synced from APS quoting tool",
+    "veneerConfigs": [],
+    "lumberConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "species": "Therm Poplar",
+        "thickness": 0.75,
+        "slatW": 3.895,
+        "panelW": 3.895,
+        "panelL": 144,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "calcMode": "count",
+        "manualQty": 31,
+        "slatL": 144,
+        "assembly": false,
+        "lumberType": "linear",
+        "orientation": "Horizontal",
+        "safetyBuffer": 10,
+        "sanding": true,
+        "cutToLength": true
+      }
+    ],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-08-13T14:29:38.779Z",
+    "id": 1786631379041
   }
 ]
