@@ -478,43 +478,17 @@ function unlockBodyScroll(){
   window.scrollTo(0, _scrollLockY);
 }
 
-// iOS Safari (browser + home-screen PWA) positions position:fixed elements against the
-// LAYOUT viewport, not the VISUAL one. The moment the on-screen keyboard opens (tapping
-// any of the admin form's many text inputs), the visual viewport shrinks but a plain
-// `inset:0` fixed overlay doesn't — so it can extend past what's actually visible.
-// Height-only sync handles that. Deliberately NOT setting top/left from
-// visualViewport.offsetTop/offsetLeft: those can read non-zero the instant the modal
-// opens (status bar / safe-area quirks in standalone PWA mode), which shifted the whole
-// overlay off position from the very first frame — worse than the problem it was meant
-// to solve. inset:0 already anchors top:0/left:0 correctly on its own.
-//
-// 2026-08-11: briefly tried making this conditional on whether the browser's own
-// `interactive-widget=resizes-content` handling already matched window.innerHeight to
-// visualViewport.height, to avoid "double-shrinking" the overlay. That made things worse
-// in the field (reported: overlay drifts further off the further you scroll) — almost
-// certainly because that equality check isn't stable in Heath's actual environment (the
-// installed home-screen PWA), so the condition was flip-flopping true/false as
-// visualViewport 'resize' fired repeatedly during scrolling, toggling the inline height
-// on and off and compounding a visible drift. Reverted to always applying it
-// unconditionally, which is the long-standing, known-working behavior.
-function syncModalViewport(){
-  const vv = window.visualViewport;
-  if(!vv) return;
-  document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(o => {
-    o.style.height = vv.height + 'px';
-  });
-}
-// Only listen for 'resize', not 'scroll'. In portrait, iOS Safari's address bar collapses
-// and reappears continuously AS you scroll — that alone fires visualViewport 'scroll' (and
-// sometimes 'resize') events constantly. Reacting to every one of those mid-scroll meant the
-// modal's height was being live-resized while the user's finger was still moving, which reads
-// as the modal "floating"/jittering. Landscape mode's browser chrome is mostly static (no
-// collapse/expand cycle), so the same code never got a chance to jitter there — that's the
-// "rotating the phone fixes it" symptom. 'resize' alone still catches the case that actually
-// matters (the on-screen keyboard opening/closing), without firing on every scroll tick.
-if(window.visualViewport){
-  window.visualViewport.addEventListener('resize', syncModalViewport);
-}
+// 2026-08-11 through 2026-08-13: this used to be a function that manually resized the modal
+// overlay to window.visualViewport.height on every resize event, working around iOS
+// positioning position:fixed elements against the LAYOUT viewport rather than the VISUAL
+// one when the keyboard opens. Every version of that fix (double-shrink, conditional,
+// always-on) caused a different variant of the same class of bug in the field — a gap in
+// the overlay that let something show through underneath it, worse the more you scrolled.
+// Removed entirely 2026-08-13: `interactive-widget=resizes-content` on the viewport meta
+// tag plus 100dvh on .modal-overlay in CSS should be sufficient on its own now, and every
+// custom-JS attempt at this made things worse rather than better. If iOS positioning issues
+// come back on older devices without interactive-widget support, reintroduce this as a
+// feature-detected fallback rather than an always-on override.
 
 // Belt-and-suspenders: .modal-overlay (position:fixed, inset:0) is the ONLY scroll
 // container while a modal is open — .modal-box is a plain flowing block inside it, not
@@ -546,7 +520,6 @@ function openHelp(){
   if(adminSection) adminSection.style.display = sessionIsAdmin ? '' : 'none';
   document.getElementById('helpModal').classList.remove('hidden');
   lockBodyScroll();
-  syncModalViewport();
 }
 function closeHelp(){
   const m = document.getElementById('helpModal');
@@ -565,7 +538,6 @@ function openChangePw(){
   document.getElementById('changePwError').textContent = '';
   document.getElementById('changePwModal').classList.remove('hidden');
   lockBodyScroll();
-  syncModalViewport();
 }
 function closeChangePw(){
   const m = document.getElementById('changePwModal');
@@ -601,7 +573,6 @@ function openAdmin(){
   renderEmployeesAdmin();
   document.getElementById('adminModal').classList.remove('hidden');
   lockBodyScroll();
-  syncModalViewport();
 }
 function closeAdmin(){
   const m = document.getElementById('adminModal');
@@ -1550,7 +1521,6 @@ function loadJob(job){
 async function openSavedJobs(){
   document.getElementById('savedModal').classList.remove('hidden');
   lockBodyScroll();
-  syncModalViewport();
   const list = document.getElementById('savedJobsList');
   list.innerHTML = '<p style="color:var(--mid);font-size:14px">Loading…</p>';
   // Always fetch from GitHub — reading jobs.json is public, no token required
