@@ -7917,6 +7917,15 @@
       "price6_4": 0,
       "price8_4": 0,
       "price2x6": 5.28
+    },
+    "Red Oak": {
+      "price": 2.22,
+      "resaw": false,
+      "price5_4": 2.27,
+      "price6_4": 2.93,
+      "price8_4": 2.81,
+      "price2x6": 0,
+      "price2x8": 0
     }
   },
   "services": {
