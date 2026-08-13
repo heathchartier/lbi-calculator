@@ -268,16 +268,16 @@
       {
         "id": 1,
         "notes": "",
-        "species": "Therm Ash",
+        "species": "Therm Clear Pine",
         "thickness": 0.75,
         "slatW": 3.895,
         "panelW": 3.895,
-        "panelL": 25,
+        "panelL": 80,
         "slatsPerPanel": 1,
         "bracketsPerPanel": 0,
         "calcMode": "count",
-        "manualQty": 179,
-        "slatL": 25,
+        "manualQty": 56,
+        "slatL": 80,
         "assembly": false,
         "lumberType": "linear",
         "orientation": "Horizontal",
@@ -288,7 +288,7 @@
     ],
     "laminationConfigs": [],
     "productCart": {},
-    "savedAt": "2026-08-13T14:47:01.907Z",
+    "savedAt": "2026-08-13T14:52:53.392Z",
     "id": 1786631379041
   }
 ]
