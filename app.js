@@ -61,35 +61,33 @@ function wasteToggleHTML(idPrefix, onchangeCall, pct){
 
 // Edge banding: 2 long sides + 2 short sides, each independently 0/1/2 banded — 9 real
 // combinations (added 2026-08-12, replacing the old single ebSides 0-4 field which could
-// only express 5 of them). One dropdown, each option's value is "long,short" — parsed back
-// into cfg.ebLongSides/ebShortSides on change. Calc.edgeBandSides(cfg) (shared with the
-// Worker) reads whichever of the two representations a config actually has, so old saved
-// jobs with only the legacy ebSides field still show/calculate correctly here too.
-const EDGE_BAND_OPTIONS = [
-  [0,0,'No edge banding'],
-  [1,0,'1 long side'],
-  [2,0,'2 long sides'],
-  [0,1,'1 short side'],
-  [1,1,'1 long + 1 short'],
-  [2,1,'2 long + 1 short'],
-  [0,2,'2 short sides (ends only)'],
-  [1,2,'1 long + 2 short'],
-  [2,2,'4 sides (all)'],
-];
-function edgeBandSidesSelectHTML(id, onchangeCall, cfg){
+// only express 5 of them). Two small pickers — long sides banded, short sides banded —
+// each writing directly to cfg.ebLongSides/ebShortSides. (Briefly tried one dropdown with
+// all 9 combos pre-labeled; two pickers reads more clearly, changed 2026-08-12.)
+// Calc.edgeBandSides(cfg) (shared with the Worker) reads whichever of the two
+// representations a config actually has, so old saved jobs with only the legacy ebSides
+// field still show/calculate correctly here too.
+const EDGE_BAND_SIDE_LABELS = ['0 (none)', '1', '2 (both)'];
+function edgeBandSidesPickerHTML(idPrefix, onchangeCall, cfg){
   const { longSides, shortSides } = Calc.edgeBandSides(cfg);
-  const opts = EDGE_BAND_OPTIONS.map(([l,s,label]) => {
-    const selected = (l===longSides && s===shortSides) ? 'selected' : '';
-    return `<option value="${l},${s}" ${selected}>${label}</option>`;
-  }).join('');
-  return `<select id="${id}" onchange="${onchangeCall}">${opts}</select>`;
+  const pickerHTML = (kind, id, value) => `<select id="${id}" onchange="${onchangeCall}">
+    ${EDGE_BAND_SIDE_LABELS.map((label,n) => `<option value="${n}" ${n===value?'selected':''}>${label}</option>`).join('')}
+  </select>`;
+  return `
+    <div>
+      <label class="field-label">Long Sides Banded</label>
+      ${pickerHTML('long', idPrefix+'long', longSides)}
+    </div>
+    <div>
+      <label class="field-label">Short Sides Banded</label>
+      ${pickerHTML('short', idPrefix+'short', shortSides)}
+    </div>`;
 }
-function readEdgeBandSides(id, cfg){
-  const el = document.getElementById(id);
-  if(!el) return;
-  const [l,s] = el.value.split(',').map(Number);
-  cfg.ebLongSides = l;
-  cfg.ebShortSides = s;
+function readEdgeBandSides(idPrefix, cfg){
+  const longEl = document.getElementById(idPrefix+'long');
+  const shortEl = document.getElementById(idPrefix+'short');
+  if(longEl)  cfg.ebLongSides  = parseInt(longEl.value);
+  if(shortEl) cfg.ebShortSides = parseInt(shortEl.value);
 }
 const STOCK_LENGTHS      = [96, 120, 144, 168, 192]; // all lengths (long-stock species)
 const STOCK_LENGTHS_STD  = [96, 120, 144];            // max 12' — most species
@@ -807,10 +805,7 @@ function renderVeneerConfigs(){
             <input type="number" id="v-brackets-${cfg.id}" value="${cfg.bracketsPerPanel||''}" step="1" min="0" placeholder="e.g. 8" oninput="vUpdate(${cfg.id})">
           </div>
           `}
-          <div>
-            <label class="field-label">Edge Band Sides</label>
-            ${edgeBandSidesSelectHTML(`v-ebsides-${cfg.id}`, `vUpdate(${cfg.id})`, cfg)}
-          </div>
+          ${edgeBandSidesPickerHTML(`v-ebsides-${cfg.id}-`, `vUpdate(${cfg.id})`, cfg)}
         </div>
         <hr class="config-divider">
         <div style="display:flex;gap:24px;flex-wrap:wrap">
@@ -854,7 +849,7 @@ function vUpdate(id){
     cfg.slatsPerPanel  = parseInt(document.getElementById('v-slats-'+id)?.value) || cfg.slatsPerPanel;
     cfg.bracketsPerPanel = parseInt(document.getElementById('v-brackets-'+id)?.value) || 0;
   }
-  readEdgeBandSides('v-ebsides-'+id, cfg);
+  readEdgeBandSides('v-ebsides-'+id+'-', cfg);
   const orientationChanged = cfg.orientation !== prevOrientation;
   cfg.assembly       = document.getElementById('v-assembly-'+id)?.checked ?? true;
   cfg.satinFinish    = document.getElementById('v-satin-'+id)?.value === 'satin';
@@ -2094,10 +2089,7 @@ function renderLaminationConfigs(){
             <label class="field-label">Brackets / Panel</label>
             <input type="number" id="l2-brackets-${cfg.id}" value="${cfg.bracketsPerPanel||''}" step="1" min="0" placeholder="e.g. 8" oninput="lamUpdate(${cfg.id})">
           </div>
-          <div>
-            <label class="field-label">Edge Band Sides</label>
-            ${edgeBandSidesSelectHTML(`l2-ebsides-${cfg.id}`, `lamUpdate(${cfg.id})`, cfg)}
-          </div>
+          ${edgeBandSidesPickerHTML(`l2-ebsides-${cfg.id}-`, `lamUpdate(${cfg.id})`, cfg)}
         </div>
         <hr class="config-divider">
         <div style="display:flex;gap:24px;flex-wrap:wrap">
@@ -2128,7 +2120,7 @@ function lamUpdate(id){
   cfg.slatL   = parseFraction(document.getElementById('l2-slatL-'+id)?.value) || 0;
   cfg.slatsPerPanel   = parseInt(document.getElementById('l2-slats-'+id)?.value) || 0;
   cfg.bracketsPerPanel= parseInt(document.getElementById('l2-brackets-'+id)?.value) || 0;
-  readEdgeBandSides('l2-ebsides-'+id, cfg);
+  readEdgeBandSides('l2-ebsides-'+id+'-', cfg);
   cfg.assembly = document.getElementById('l2-assembly-'+id)?.checked ?? false;
   cfg.wasteOn  = readWastePct(`l2-waste-${id}-10`, `l2-waste-${id}-15`);
   const prevMode = cfg.calcMode;
