@@ -58,6 +58,39 @@ function wasteToggleHTML(idPrefix, onchangeCall, pct){
       <span class="toggle-label">+15% waste</span>
     </div>`;
 }
+
+// Edge banding: 2 long sides + 2 short sides, each independently 0/1/2 banded — 9 real
+// combinations (added 2026-08-12, replacing the old single ebSides 0-4 field which could
+// only express 5 of them). One dropdown, each option's value is "long,short" — parsed back
+// into cfg.ebLongSides/ebShortSides on change. Calc.edgeBandSides(cfg) (shared with the
+// Worker) reads whichever of the two representations a config actually has, so old saved
+// jobs with only the legacy ebSides field still show/calculate correctly here too.
+const EDGE_BAND_OPTIONS = [
+  [0,0,'No edge banding'],
+  [1,0,'1 long side'],
+  [2,0,'2 long sides'],
+  [0,1,'1 short side'],
+  [1,1,'1 long + 1 short'],
+  [2,1,'2 long + 1 short'],
+  [0,2,'2 short sides (ends only)'],
+  [1,2,'1 long + 2 short'],
+  [2,2,'4 sides (all)'],
+];
+function edgeBandSidesSelectHTML(id, onchangeCall, cfg){
+  const { longSides, shortSides } = Calc.edgeBandSides(cfg);
+  const opts = EDGE_BAND_OPTIONS.map(([l,s,label]) => {
+    const selected = (l===longSides && s===shortSides) ? 'selected' : '';
+    return `<option value="${l},${s}" ${selected}>${label}</option>`;
+  }).join('');
+  return `<select id="${id}" onchange="${onchangeCall}">${opts}</select>`;
+}
+function readEdgeBandSides(id, cfg){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const [l,s] = el.value.split(',').map(Number);
+  cfg.ebLongSides = l;
+  cfg.ebShortSides = s;
+}
 const STOCK_LENGTHS      = [96, 120, 144, 168, 192]; // all lengths (long-stock species)
 const STOCK_LENGTHS_STD  = [96, 120, 144];            // max 12' — most species
 // Species that come in longer stock (can use 14' or 16' for estimating)
@@ -621,7 +654,7 @@ function addVeneerConfig(){
     grade:        last?.grade        || 'talbert',
     satinFinish:  last?.satinFinish  || false,
     panelW:0, panelL:0, slatW:0, slatL:0, slatsPerPanel:0,
-    bracketsPerPanel:0, ebSides:4, assembly:false, wasteOn:10, notes:'',
+    bracketsPerPanel:0, ebLongSides:2, ebShortSides:2, assembly:false, wasteOn:10, notes:'',
     calcMode:'sqft', manualQty:0, sqft:0, customPricePerPanel:0, nominalSqFt:0,
   };
   veneerConfigs.push(cfg);
@@ -776,13 +809,7 @@ function renderVeneerConfigs(){
           `}
           <div>
             <label class="field-label">Edge Band Sides</label>
-            <select id="v-ebsides-${cfg.id}" onchange="vUpdate(${cfg.id})">
-              <option value="4" ${cfg.ebSides===4?'selected':''}>4 sides</option>
-              <option value="3" ${cfg.ebSides===3?'selected':''}>3 sides</option>
-              <option value="2" ${cfg.ebSides===2?'selected':''}>2 long sides</option>
-              <option value="1" ${cfg.ebSides===1?'selected':''}>1 long side</option>
-              <option value="0" ${cfg.ebSides===0?'selected':''}>No edge banding</option>
-            </select>
+            ${edgeBandSidesSelectHTML(`v-ebsides-${cfg.id}`, `vUpdate(${cfg.id})`, cfg)}
           </div>
         </div>
         <hr class="config-divider">
@@ -827,8 +854,7 @@ function vUpdate(id){
     cfg.slatsPerPanel  = parseInt(document.getElementById('v-slats-'+id)?.value) || cfg.slatsPerPanel;
     cfg.bracketsPerPanel = parseInt(document.getElementById('v-brackets-'+id)?.value) || 0;
   }
-  const ebSidesEl = document.getElementById('v-ebsides-'+id);
-  cfg.ebSides        = ebSidesEl ? parseInt(ebSidesEl.value) : cfg.ebSides;
+  readEdgeBandSides('v-ebsides-'+id, cfg);
   const orientationChanged = cfg.orientation !== prevOrientation;
   cfg.assembly       = document.getElementById('v-assembly-'+id)?.checked ?? true;
   cfg.satinFinish    = document.getElementById('v-satin-'+id)?.value === 'satin';
@@ -900,8 +926,7 @@ function calcVeneerPreview(cfg){
   const { size, slatsPerSheet, sheetPrice: previewSheetPrice } = opt;
   const wasteMult   = wasteMultFromPct(cfg.wasteOn);
   const sheetsNeeded = Math.ceil(totalSlats / slatsPerSheet * wasteMult);
-  const longSides  = (cfg.ebSides===4||cfg.ebSides===2)?2:(cfg.ebSides===3||cfg.ebSides===1)?1:0;
-  const shortSides = (cfg.ebSides===4||cfg.ebSides===3)?2:0;
+  const { longSides, shortSides } = Calc.edgeBandSides(cfg);
   const ebLong  = (cfg.slatL / 12) * totalSlats * longSides;
   const ebShort = (cfg.slatW / 12) * totalSlats * shortSides;
   const ebFt    = ebLong + ebShort;
@@ -1939,7 +1964,8 @@ function addLaminationConfig(){
     back:      last?.back      || faceKeys[0] || '',
     core:      last?.core      || coreKeys[0] || '',
     thickness: last?.thickness || 0.75,
-    ebSides:   last?.ebSides   ?? 4,
+    ebLongSides:  last ? Calc.edgeBandSides(last).longSides  : 2,
+    ebShortSides: last ? Calc.edgeBandSides(last).shortSides : 2,
     calcMode:  last?.calcMode  || 'sqft',
     panelW:0, panelL:0, slatW:0, slatL:0,
     slatsPerPanel:0, bracketsPerPanel:0,
@@ -2070,13 +2096,7 @@ function renderLaminationConfigs(){
           </div>
           <div>
             <label class="field-label">Edge Band Sides</label>
-            <select id="l2-ebsides-${cfg.id}" onchange="lamUpdate(${cfg.id})">
-              <option value="4" ${cfg.ebSides===4?'selected':''}>4 sides</option>
-              <option value="3" ${cfg.ebSides===3?'selected':''}>3 sides</option>
-              <option value="2" ${cfg.ebSides===2?'selected':''}>2 long sides</option>
-              <option value="1" ${cfg.ebSides===1?'selected':''}>1 long side</option>
-              <option value="0" ${cfg.ebSides===0?'selected':''}>No edge banding</option>
-            </select>
+            ${edgeBandSidesSelectHTML(`l2-ebsides-${cfg.id}`, `lamUpdate(${cfg.id})`, cfg)}
           </div>
         </div>
         <hr class="config-divider">
@@ -2108,7 +2128,7 @@ function lamUpdate(id){
   cfg.slatL   = parseFraction(document.getElementById('l2-slatL-'+id)?.value) || 0;
   cfg.slatsPerPanel   = parseInt(document.getElementById('l2-slats-'+id)?.value) || 0;
   cfg.bracketsPerPanel= parseInt(document.getElementById('l2-brackets-'+id)?.value) || 0;
-  cfg.ebSides  = parseInt(document.getElementById('l2-ebsides-'+id)?.value) || 0;
+  readEdgeBandSides('l2-ebsides-'+id, cfg);
   cfg.assembly = document.getElementById('l2-assembly-'+id)?.checked ?? false;
   cfg.wasteOn  = readWastePct(`l2-waste-${id}-10`, `l2-waste-${id}-15`);
   const prevMode = cfg.calcMode;
@@ -2147,11 +2167,10 @@ function calcLaminationPreview(cfg){
   const combo = Calc.chooseLamSizes(cfg.slatW, cfg.slatL, faceAvail, coreAvail, backAvail, coreIsNet);
   const sheetsNeeded = combo ? Math.ceil(totalSlats/combo.yieldPerSheet*wasteMult) : 0;
 
-  const longSides  = (cfg.ebSides===4||cfg.ebSides===2)?2:(cfg.ebSides===3||cfg.ebSides===1)?1:0;
-  const shortSides = (cfg.ebSides===4||cfg.ebSides===3)?2:0;
+  const { longSides, shortSides } = Calc.edgeBandSides(cfg);
   const ebLong    = (cfg.slatL/12)*totalSlats*longSides;
   const ebShort   = (cfg.slatW/12)*totalSlats*shortSides;
-  const ebRolls   = cfg.ebSides>0?Math.ceil((ebLong+ebShort)*EB_WASTE_FACTOR/EB_ROLL_FEET):0;
+  const ebRolls   = (longSides>0||shortSides>0)?Math.ceil((ebLong+ebShort)*EB_WASTE_FACTOR/EB_ROLL_FEET):0;
   let rows = `<div class="preview-row"><span>${fmtN(totalSlats)} slats · ${fmtN(effectiveSqft,1)} sqft · ${fmtN(panelQty)} panels</span></div>`;
   if(!combo){
     rows += `<div class="preview-row" style="color:var(--warn,#f59e0b)"><span>⚠ No sheet size fits these dimensions, or face/core pricing is missing</span></div>`;

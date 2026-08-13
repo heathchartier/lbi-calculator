@@ -26,6 +26,22 @@ function createCalcEngine(pricing){
 
   function wasteMultFromPct(pct){ return pct > 0 ? 1 + pct / 100 : 1; }
 
+  // Edge banding: a panel has 2 long sides and 2 short sides, each independently 0/1/2
+  // banded — 9 real combinations. cfg.ebLongSides/ebShortSides (0-2 each) is the current,
+  // explicit representation (added 2026-08-12). Configs saved before that date only have
+  // the old single ebSides number (0-4), which could only express 5 of the 9 combos — kept
+  // here purely as a fallback so old saved jobs still calculate correctly without the user
+  // having to re-pick their edge-band option.
+  function edgeBandSides(cfg){
+    if(cfg.ebLongSides != null || cfg.ebShortSides != null){
+      return { longSides: cfg.ebLongSides || 0, shortSides: cfg.ebShortSides || 0 };
+    }
+    const s = cfg.ebSides;
+    const longSides  = (s===4||s===2) ? 2 : (s===3||s===1) ? 1 : 0;
+    const shortSides = (s===4||s===3) ? 2 : 0;
+    return { longSides, shortSides };
+  }
+
   const THICK_KEY_MAP = { '1/4"':'025','1/2"':'050','3/4"':'075','1"':'100' };
   function thickToKey(t){ return THICK_KEY_MAP[t] || '075'; }
 
@@ -275,8 +291,7 @@ function createCalcEngine(pricing){
       sheetLineLabel = `Sheet Material (${fmtN(sheetsNeeded)} x ${opt.size})` + (opt.sheetPrice ? '' : ' ⚠ Call for pricing');
     }
 
-    const longSides  = (cfg.ebSides===4||cfg.ebSides===2)?2:(cfg.ebSides===3||cfg.ebSides===1)?1:0;
-    const shortSides = (cfg.ebSides===4||cfg.ebSides===3)?2:0;
+    const { longSides, shortSides } = edgeBandSides(cfg);
     const ebLong  = (cfg.slatL/12) * totalSlats * longSides;
     const ebShort = (cfg.slatW/12) * totalSlats * shortSides;
     const ebFt    = ebLong + ebShort;
@@ -882,12 +897,11 @@ function createCalcEngine(pricing){
     const glueCost = effectiveSqft * (pricing.services.glueLine || 0);
 
     // EB
-    const longSides  = (cfg.ebSides===4||cfg.ebSides===2)?2:(cfg.ebSides===3||cfg.ebSides===1)?1:0;
-    const shortSides = (cfg.ebSides===4||cfg.ebSides===3)?2:0;
+    const { longSides, shortSides } = edgeBandSides(cfg);
     const ebLong  = (cfg.slatL / 12) * totalSlats * longSides;
     const ebShort = (cfg.slatW / 12) * totalSlats * shortSides;
     const ebFt    = ebLong + ebShort;
-    const ebRolls = cfg.ebSides > 0 ? Math.ceil(ebFt * EB_WASTE_FACTOR / EB_ROLL_FEET) : 0;
+    const ebRolls = (longSides > 0 || shortSides > 0) ? Math.ceil(ebFt * EB_WASTE_FACTOR / EB_ROLL_FEET) : 0;
     const ebRollPrice   = isCustomer ? 0 : (faceData?.ebRoll || 0);
     const ebMaterialCost= ebRolls * ebRollPrice;
     const ebServiceCost = ebFt * (pricing.services.ebServicePerFt || 0);
@@ -922,7 +936,7 @@ function createCalcEngine(pricing){
       if(coreMat > 0)  lines[`Core Sheets (${fmtN(sheetsNeeded)} × ${cfg.core} ${combo.coreSz})`]  = coreMatLine;
     }
     if(glueCost > 0) lines['Glue Line']      = glueLineAmt;
-    if(cfg.ebSides > 0){
+    if(longSides > 0 || shortSides > 0){
       if(ebMaterialCost > 0) lines[`Edge Band Material (${fmtN(ebRolls)} rolls)`] = ebMatLine;
       if(ebServiceCost  > 0) lines[`Edge Band Service (${fmtN(ebFt,0)} ft)`]      = ebSvcLine;
     }
@@ -1082,7 +1096,7 @@ function createCalcEngine(pricing){
   }
 
   return {
-    withMarkup, coreToKey, thickToKey,
+    withMarkup, coreToKey, thickToKey, edgeBandSides,
     resolveVeneerQty, chooseVeneerSheet, packVeneerSheets,
     veneerPoolKey, computeVeneerPools, calcVeneerCost,
     getStockInfo, getWidthWasteFactor, getSuggestedRoughThick, tierPriceInfo,
