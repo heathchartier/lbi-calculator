@@ -268,20 +268,22 @@ function createCalcEngine(pricing){
     // Sheet material cost comes from the pooled cut list (shared across every config with the
     // same species/grade/core/thickness/finish/orientation) rather than being rounded up per
     // config on its own — see computeVeneerPools()/packVeneerSheets().
-    let sheetCost, sheetLineLabel, sheetsNeeded = 0;
+    let sheetCost, sheetLineLabel, sheetsNeeded = 0, hasMaterialPricing;
     if(poolInfo){
       if(poolInfo.isRep){
         const pk = poolInfo.pack;
         const sizesDesc = pk.sheets.map(s => `${s.count} × ${grade} ${s.key}`).join(' + ') || 'no sheet fits';
         sheetCost = pk.totalCost;
         sheetsNeeded = pk.totalSheets;
-        const warn = (poolInfo.noPricing || pk.unfitCount > 0) ? ' ⚠ Call for pricing' : '';
+        const noPricing = poolInfo.noPricing || pk.unfitCount > 0;
         sheetLineLabel = (poolInfo.memberCount > 1
           ? `Sheet Material — pooled across ${poolInfo.memberCount} configs (${sizesDesc})`
-          : `Sheet Material (${sizesDesc})`) + warn;
+          : `Sheet Material (${sizesDesc})`) + (noPricing ? ' ⚠ Call for pricing' : '');
+        hasMaterialPricing = !noPricing;
       } else {
         sheetCost = 0;
         sheetLineLabel = `Sheet Material — pooled with Panel Config ${poolInfo.repLabel}`;
+        hasMaterialPricing = true; // real cost is carried by the representative config, not missing
       }
     } else {
       // Fallback (shouldn't normally happen — renderResults always supplies poolInfo)
@@ -294,6 +296,7 @@ function createCalcEngine(pricing){
         ? sheetsNeeded * cfg.customPricePerPanel
         : sheetsNeeded * opt.sheetPrice;
       sheetLineLabel = `Sheet Material (${fmtN(sheetsNeeded)} x ${opt.size})` + (opt.sheetPrice ? '' : ' ⚠ Call for pricing');
+      hasMaterialPricing = cfg.species === 'Custom' ? !!cfg.customPricePerPanel : !!opt.sheetPrice;
     }
 
     const { longSides, shortSides } = edgeBandSides(cfg);
@@ -335,7 +338,7 @@ function createCalcEngine(pricing){
     return {
       species:cfg.species, orientation:cfg.orientation, grade, supplier:sup, cfgGrade:sup,
       sqftPerPanel:qty.sqftPerPanel, panelQty, totalSlats, sheetsNeeded,
-      ebFt, ebRolls, ebRollPrice, bracketCount, effectiveSqft,
+      ebFt, ebRolls, ebRollPrice, bracketCount, effectiveSqft, hasMaterialPricing,
       lines:{
         [sheetLineLabel]: panelLine,
         ['Edge Band Material ('+fmtN(ebRolls)+' rolls)']: ebMatLine,
@@ -697,6 +700,7 @@ function createCalcEngine(pricing){
     return {
       species:cfg.species, isVGResaw:m.isVGResaw, rawBFTotal,
       panelQty, totalSlats, effectiveSqft, lf,
+      hasMaterialPricing: !m.noStock && (isCustom ? !!cfg.customPricePerBF : !!bfPrice),
       lines:{
         [lumberLabel]: lumberLine,
         ...(cfg.assembly ? {'Assembly / Packing': asmLine} : {}),
@@ -954,6 +958,7 @@ function createCalcEngine(pricing){
       face:cfg.face, back:cfg.back||cfg.face, core:cfg.core,
       effectiveSqft, panelQty, totalSlats,
       sheetsNeeded, ebFt, ebRolls, bracketCount,
+      hasMaterialPricing: !noPricing,
       lines, subtotal,
       sqftCost: effectiveSqft > 0 && subtotal > 0 ? subtotal/effectiveSqft : null,
     };
@@ -1441,7 +1446,12 @@ export default {
         let result;
         try { result = calcFn({ ...config, [varyField]: candidate }); }
         catch { continue; }
-        if (!result || !(result.subtotal > 0)) continue;
+        // hasMaterialPricing is required, not just subtotal > 0 — a candidate with no real
+        // material price but real service-line costs (edge band, cut, brackets) can otherwise
+        // look artificially cheapest against a genuinely-priced candidate. Found via a live
+        // repro from Ryan's team (2026-08-13): an unpriced core recommended over a real
+        // $689 one because its $0 material line made its total look lower.
+        if (!result || !(result.subtotal > 0) || !result.hasMaterialPricing) continue;
         if (!cheapest || result.subtotal < cheapest.subtotal) {
           cheapest = { value: candidate, subtotal: result.subtotal, sqftCost: result.sqftCost ?? null };
         }

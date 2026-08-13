@@ -322,7 +322,12 @@ export default {
         let result;
         try { result = calcFn({ ...config, [varyField]: candidate }); }
         catch { continue; }
-        if (!result || !(result.subtotal > 0)) continue;
+        // hasMaterialPricing is required, not just subtotal > 0 — a candidate with no real
+        // material price but real service-line costs (edge band, cut, brackets) can otherwise
+        // look artificially cheapest against a genuinely-priced candidate. Found via a live
+        // repro from Ryan's team (2026-08-13): an unpriced core recommended over a real
+        // $689 one because its $0 material line made its total look lower.
+        if (!result || !(result.subtotal > 0) || !result.hasMaterialPricing) continue;
         if (!cheapest || result.subtotal < cheapest.subtotal) {
           cheapest = { value: candidate, subtotal: result.subtotal, sqftCost: result.sqftCost ?? null };
         }
