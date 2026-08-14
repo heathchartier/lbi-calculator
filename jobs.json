@@ -476,5 +476,42 @@
     "productCart": {},
     "savedAt": "2026-08-14T16:04:13.383Z",
     "id": 1786723453781
+  },
+  {
+    "sourceId": "aps-quote-23",
+    "name": "Sato Bento",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-08-14",
+    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
+    "veneerConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "orientation": "Horizontal",
+        "grade": "talbert",
+        "thickness": "3/4\"",
+        "slatW": 24,
+        "slatL": 24,
+        "panelW": 24,
+        "panelL": 24,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "ebLongSides": 0,
+        "ebShortSides": 0,
+        "wasteOn": 10,
+        "ceilingType": "grille",
+        "calcMode": "count",
+        "manualQty": 76,
+        "satinFinish": false,
+        "species": "Qtr Walnut",
+        "core": "Fire Rated MDF"
+      }
+    ],
+    "lumberConfigs": [],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-08-14T19:17:54.568Z",
+    "id": 1786735074991
   }
 ]
