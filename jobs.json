@@ -753,12 +753,12 @@
         "thickness": 0.75,
         "slatW": 2,
         "panelW": 2,
-        "panelL": 96,
+        "panelL": 119,
         "slatsPerPanel": 1,
         "bracketsPerPanel": 0,
         "calcMode": "count",
         "manualQty": 115,
-        "slatL": 96,
+        "slatL": 119,
         "assembly": false,
         "lumberType": "linear",
         "orientation": "Horizontal",
@@ -769,7 +769,7 @@
     ],
     "laminationConfigs": [],
     "productCart": {},
-    "savedAt": "2026-08-18T00:17:09.441Z",
+    "savedAt": "2026-08-18T20:07:25.283Z",
     "id": 1787012229761
   }
 ]
