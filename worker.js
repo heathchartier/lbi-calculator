@@ -808,8 +808,15 @@ function createCalcEngine(pricing){
   const LAM_SIZES = ['4x8','4x10','5x10','5x12'];
   const LAM_FACE_SIZES = ['4x8','4x10','5x12'];
   // Baltic Birch (or any "net size" flagged core) ships as true net dimensions, not oversize —
-  // and only in 48x96 / 60x120. Trimmed 1/4" per edge for squaring before cutting slats.
-  const LAM_NET_DIMS = { '4x8': {w:47.5, l:95.5}, '5x10': {w:59.5, l:119.5} };
+  // and only in 48x96 / 60x120. Still gets squared the same as every other sheet (both edges
+  // trimmed before cutting slats) — computed from the true dims rather than hardcoded, so this
+  // can never drift out of sync with SQUARING the way two independently-maintained numbers
+  // that happened to already agree could have (Heath confirmed 2026-08-13, no numeric bug,
+  // just switched off the hardcoded 47.5/95.5/59.5/119.5 for a single source of truth).
+  const LAM_TRUE_NET_DIMS = { '4x8': {w:48, l:96}, '5x10': {w:60, l:120} };
+  const LAM_NET_DIMS = Object.fromEntries(
+    Object.entries(LAM_TRUE_NET_DIMS).map(([k, d]) => [k, { w: d.w - SQUARING*2, l: d.l - SQUARING*2 }])
+  );
   const LAM_NET_SIZES = ['4x8','5x10'];
 
   // For a chosen thickness value, get a {size: price} map across all LAM_SIZES. 3/4 tries 11/16 first.
