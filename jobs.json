@@ -736,5 +736,40 @@
     "productCart": {},
     "savedAt": "2026-08-14T19:17:54.568Z",
     "id": 1786735074991
+  },
+  {
+    "sourceId": "aps-quote-32",
+    "name": "Smith Theater",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-08-18",
+    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
+    "veneerConfigs": [],
+    "lumberConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "species": "Stain Grade Poplar",
+        "thickness": 0.75,
+        "slatW": 2,
+        "panelW": 2,
+        "panelL": 96,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "calcMode": "count",
+        "manualQty": 115,
+        "slatL": 96,
+        "assembly": false,
+        "lumberType": "linear",
+        "orientation": "Horizontal",
+        "safetyBuffer": 10,
+        "sanding": true,
+        "cutToLength": true
+      }
+    ],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-08-18T00:17:09.441Z",
+    "id": 1787012229761
   }
 ]
