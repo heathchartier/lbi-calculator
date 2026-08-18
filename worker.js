@@ -57,6 +57,12 @@ function createCalcEngine(pricing){
     return CORE_KEY_FALLBACK[core] || 'frmdf';
   }
 
+  // .25" trimmed off EACH edge to true up a rough/oversize sheet before cutting — so a
+  // dimension loses 2x this (both edges), not 1x. Found as a real bug 2026-08-13: every one
+  // of the four usable-dimension calculations below was only subtracting it once per
+  // dimension, overcounting yield (a real 350pc/5.25"x120" job came out to 39 sheets instead
+  // of the correct 44). Net-size sheets (Baltic Birch etc, LAM_NET_DIMS) are unaffected —
+  // those come pre-trimmed and never went through this subtraction to begin with.
   const SQUARING = 0.25;
   const KERF = 0.1875;
   const SHEET_WIDTHS  = { '4x8': 49, '4x10': 49, '5x10': 61, '5x12': 61 };
@@ -90,8 +96,8 @@ function createCalcEngine(pricing){
   // (or by yield if prices are 0). Tries both normal and rotated orientation.
   function chooseVeneerSheet(slatW, slatL, price4x8, price4x10){
     function yieldFor(sheetW, sheetL){
-      const cols = Math.floor((sheetW - SQUARING + KERF) / (slatW + KERF));
-      const rows = Math.floor((sheetL - SQUARING + KERF) / (slatL + KERF));
+      const cols = Math.floor((sheetW - SQUARING*2 + KERF) / (slatW + KERF));
+      const rows = Math.floor((sheetL - SQUARING*2 + KERF) / (slatL + KERF));
       return Math.max(1, cols * rows);
     }
     const sw8 = SHEET_WIDTHS['4x8'], sl8 = SHEET_LENGTHS['4x8'];
@@ -120,7 +126,7 @@ function createCalcEngine(pricing){
   // pass instead of rounding each size up to its own whole sheet independently.
   function packVeneerSheets(pieces, sheetOptions){
     const usable = sheetOptions
-      .map(s => ({ ...s, uw: s.w - SQUARING, ul: s.l - SQUARING }))
+      .map(s => ({ ...s, uw: s.w - SQUARING*2, ul: s.l - SQUARING*2 }))
       .filter(s => s.price > 0 && s.uw > 0 && s.ul > 0);
     if(!usable.length){
       const unfitCount = pieces.reduce((s,p) => s + (p.qty||0), 0);
@@ -837,7 +843,7 @@ function createCalcEngine(pricing){
       return d ? { w: d.w, l: d.l } : null;
     }
     const w = SHEET_WIDTHS[sizeKey], l = SHEET_LENGTHS[sizeKey];
-    return (w && l) ? { w: w - SQUARING, l: l - SQUARING } : null;
+    return (w && l) ? { w: w - SQUARING*2, l: l - SQUARING*2 } : null;
   }
   // Brute-force search over every valid (core size × face size × back size) combo, picking the
   // cheapest cost-per-slat. Yield for a combo is capped by whichever item (core/face/back) is

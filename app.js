@@ -12,6 +12,8 @@ const THICK_OPTIONS = [
 ];
 function thickToKey(t){ return { '1/4"':'025','1/2"':'050','3/4"':'075','1"':'100' }[t] || '075'; }
 const KERF = 0.1875;
+// .25" trimmed off EACH edge — see calc-engine.js's SQUARING comment (2026-08-13 bug fix,
+// same fix applies here since this standalone Tile Calculator duplicates that math).
 const SQUARING = 0.25;
 const RESAW_KERF = 0.0625;   // thin-kerf blade for resaw/rip operations on 2x6/2x8
 const TWO_X_SIX_T = 1.5;    // 2x6/2x8 shared actual thickness for resaw slabs (inches)
@@ -3399,8 +3401,8 @@ function calcTile(){
   if(!totalTiles){ res.innerHTML = '<span style="color:var(--mid)">Enter a quantity to see results.</span>'; return; }
 
   function yieldFor(sheetW, sheetL){
-    const cols = Math.floor((sheetW - SQUARING + KERF) / (tileW + KERF));
-    const rows = Math.floor((sheetL - SQUARING + KERF) / (tileL + KERF));
+    const cols = Math.floor((sheetW - SQUARING*2 + KERF) / (tileW + KERF));
+    const rows = Math.floor((sheetL - SQUARING*2 + KERF) / (tileL + KERF));
     return Math.max(1, cols * rows);
   }
   const fits8  = tileW <= SHEET_WIDTHS['4x8']  && tileL <= SHEET_LENGTHS['4x8'];
