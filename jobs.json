@@ -1246,5 +1246,42 @@
     "productCart": {},
     "savedAt": "2026-08-18T20:07:25.283Z",
     "id": 1787012229761
+  },
+  {
+    "sourceId": "aps-quote-34",
+    "name": "SA Marriot",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-08-19",
+    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
+    "veneerConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "orientation": "Horizontal",
+        "grade": "talbert",
+        "thickness": "3/4\"",
+        "slatW": 7.25,
+        "slatL": 96,
+        "panelW": 7.25,
+        "panelL": 96,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "ebLongSides": 0,
+        "ebShortSides": 0,
+        "wasteOn": 10,
+        "ceilingType": "grille",
+        "calcMode": "count",
+        "manualQty": 770,
+        "satinFinish": false,
+        "species": "Walnut",
+        "core": "Fire Rated MDF"
+      }
+    ],
+    "lumberConfigs": [],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-08-19T23:26:41.712Z",
+    "id": 1787182002086
   }
 ]
