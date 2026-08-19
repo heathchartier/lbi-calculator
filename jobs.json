@@ -28,7 +28,7 @@
         "wasteOn": 10,
         "notes": "",
         "calcMode": "slats",
-        "manualQty": 211,
+        "manualQty": 265,
         "sqft": 0,
         "customPricePerPanel": 878,
         "nominalSqFt": 0,
@@ -85,7 +85,7 @@
       }
     ],
     "productCart": {},
-    "savedAt": "2026-08-19T02:47:55.513Z"
+    "savedAt": "2026-08-19T02:49:46.701Z"
   },
   {
     "id": 1786999964655,
