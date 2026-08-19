@@ -327,8 +327,10 @@
         "sqft": 0
       }
     ],
-    "productCart": {},
-    "savedAt": "2026-08-19T03:56:27.391Z"
+    "productCart": {
+      "6/4 FC White Oak": 10
+    },
+    "savedAt": "2026-08-19T03:57:09.683Z"
   },
   {
     "id": 1787107675511,
