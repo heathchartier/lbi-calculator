@@ -1283,5 +1283,40 @@
     "productCart": {},
     "savedAt": "2026-08-19T23:26:41.712Z",
     "id": 1787182002086
+  },
+  {
+    "sourceId": "aps-quote-35",
+    "name": "U of M Advanced Imaging",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-08-20",
+    "notes": "Synced from APS quoting tool — Brandon synced from APS quoting tool",
+    "veneerConfigs": [],
+    "lumberConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "species": "Stain Grade Poplar",
+        "thickness": 0.75,
+        "slatW": 2.5,
+        "panelW": 12,
+        "panelL": 96,
+        "slatsPerPanel": 6,
+        "bracketsPerPanel": 8,
+        "calcMode": "count",
+        "manualQty": 20,
+        "slatL": 96,
+        "assembly": false,
+        "lumberType": "grille",
+        "orientation": "Horizontal",
+        "safetyBuffer": 10,
+        "sanding": true,
+        "cutToLength": true
+      }
+    ],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-08-20T16:31:41.285Z",
+    "id": 1787243501705
   }
 ]
