@@ -1078,43 +1078,6 @@
     "id": 1786649835923
   },
   {
-    "sourceId": "aps-quote-27",
-    "name": "Override Test Quote",
-    "customer": "LBI",
-    "po": "",
-    "date": "2026-08-13",
-    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
-    "veneerConfigs": [
-      {
-        "id": 1,
-        "notes": "",
-        "orientation": "Horizontal",
-        "grade": "talbert",
-        "thickness": "3/4\"",
-        "slatW": 1.5,
-        "slatL": 48,
-        "panelW": 24,
-        "panelL": 48,
-        "slatsPerPanel": 12,
-        "bracketsPerPanel": 4,
-        "ebLongSides": 2,
-        "ebShortSides": 2,
-        "wasteOn": 10,
-        "ceilingType": "grille",
-        "calcMode": "count",
-        "manualQty": 100,
-        "satinFinish": false,
-        "species": "Red Oak",
-        "core": "Fire Rated MDF"
-      }
-    ],
-    "lumberConfigs": [],
-    "laminationConfigs": [],
-    "productCart": {},
-    "savedAt": "2026-08-13T21:37:59.003Z",
-    "id": 1786657079388
-  },
-  {
     "sourceId": "aps-quote-28",
     "name": "QA Delete Test",
     "customer": "LBI",
