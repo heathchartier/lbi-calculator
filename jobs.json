@@ -1078,43 +1078,6 @@
     "id": 1786649835923
   },
   {
-    "sourceId": "aps-quote-29",
-    "name": "CSRF Verify Test",
-    "customer": "LBI",
-    "po": "",
-    "date": "2026-08-14",
-    "notes": "Synced from APS quoting tool — QA Verify synced from APS quoting tool",
-    "veneerConfigs": [
-      {
-        "id": 1,
-        "notes": "",
-        "orientation": "Horizontal",
-        "grade": "talbert",
-        "thickness": "3/4\"",
-        "slatW": 1.5,
-        "slatL": 48,
-        "panelW": 24,
-        "panelL": 48,
-        "slatsPerPanel": 12,
-        "bracketsPerPanel": 4,
-        "ebLongSides": 2,
-        "ebShortSides": 2,
-        "wasteOn": 10,
-        "ceilingType": "grille",
-        "calcMode": "count",
-        "manualQty": 10,
-        "satinFinish": false,
-        "species": "Red Oak",
-        "core": "Fire Rated MDF"
-      }
-    ],
-    "lumberConfigs": [],
-    "laminationConfigs": [],
-    "productCart": {},
-    "savedAt": "2026-08-14T14:53:46.065Z",
-    "id": 1786719226431
-  },
-  {
     "sourceId": "aps-quote-31",
     "name": "ABC Grilles - Dustin Request",
     "customer": "LBI",
