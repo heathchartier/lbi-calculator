@@ -1598,10 +1598,25 @@ export default {
       return new Response(text, { headers: corsHeaders });
     }
 
-    // PUT — requires worker key
+    // PUT — requires either the legacy worker key (old admin devices that already have it
+    // configured, kept working unchanged) OR a valid logged-in session of any role. The
+    // session-token path is what actually lets a rep on the shared/company login save jobs —
+    // this endpoint predates the 2026-08 login rebuild and was accidentally left needing a
+    // separately-distributed secret that only admin devices ever got configured with, so any
+    // rep never manually set up by Heath (or whose stale pre-rotation key went bad) got
+    // "cloud sync failed: Unauthorized" on every save. Real bug, reported by a rep on the
+    // shared login and root-caused the same day.
     if (request.method === 'PUT') {
       const key = request.headers.get('X-Worker-Key');
-      if (!key || key !== env.WORKER_KEY) {
+      const keyValid = !!(key && key === env.WORKER_KEY);
+      let tokenValid = false;
+      if (!keyValid) {
+        const authHeader = request.headers.get('Authorization') || '';
+        const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+        const claims = await verifyToken(bearerToken, env.SESSION_SECRET);
+        tokenValid = !!claims;
+      }
+      if (!keyValid && !tokenValid) {
         return new Response(JSON.stringify({ ok: false, msg: 'Unauthorized' }), {
           status: 401, headers: corsHeaders,
         });

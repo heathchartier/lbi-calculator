@@ -1471,7 +1471,7 @@ function saveJob(){
   localStorage.setItem('lbiq_jobs', JSON.stringify(jobs));
   isDirty = false;
   updateJobEditStatus();
-  if(localStorage.getItem('lbiq_worker_key')){
+  if(getSessionToken() || localStorage.getItem('lbiq_worker_key')){
     showToast(isNew ? 'Saving job to cloud…' : 'Updating job on cloud…');
     pushJobsToCloud(jobs).then(r => showToast(r.ok
       ? (isNew ? '✓ Job saved — visible on all devices' : '✓ Job updated — visible on all devices')
@@ -1605,7 +1605,7 @@ async function deleteJob(id){
   jobs = jobs.filter(j => j.id !== id);
   localStorage.setItem('lbiq_jobs', JSON.stringify(jobs));
   renderSavedJobsList(); // reflect the local delete immediately — don't let a stale cloud re-fetch undo it
-  if(localStorage.getItem('lbiq_worker_key')){
+  if(getSessionToken() || localStorage.getItem('lbiq_worker_key')){
     showToast('Deleting…');
     const r = await pushJobsToCloud(jobs);
     if(!r.ok) showToast('⚠ Deleted locally. Cloud sync failed: '+r.msg+' — will retry next successful sync.');
@@ -1898,15 +1898,18 @@ function saveAdmin(){
 
 // --- CLOUD JOB SYNC ---------------------------------------------------
 async function pushJobsToCloud(jobs){
-  const workerUrl = localStorage.getItem('lbiq_worker_url');
+  // Session token first — any logged-in role (admin/company/employee) can save without any
+  // per-device setup. lbiq_worker_key is only a fallback for admin devices that already had
+  // it configured from before the 2026-08 login rebuild; new/other devices never need it.
+  const token = getSessionToken();
   const workerKey = localStorage.getItem('lbiq_worker_key');
-  if(!workerUrl || !workerKey) return { ok:false, msg:'Cloud sync not configured' };
+  if(!token && !workerKey) return { ok:false, msg:'Not logged in' };
+  const workerUrl = localStorage.getItem('lbiq_worker_url') || WORKER_AUTH_BASE;
+  const headers = { 'Content-Type': 'application/json' };
+  if(token) headers['Authorization'] = `Bearer ${token}`;
+  else headers['X-Worker-Key'] = workerKey;
   try {
-    const resp = await fetch(workerUrl, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'X-Worker-Key': workerKey },
-      body: JSON.stringify(jobs),
-    });
+    const resp = await fetch(workerUrl, { method: 'PUT', headers, body: JSON.stringify(jobs) });
     return await resp.json();
   } catch(e){ return { ok:false, msg:e.message }; }
 }
