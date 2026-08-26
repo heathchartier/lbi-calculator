@@ -1295,5 +1295,40 @@
     "productCart": {},
     "savedAt": "2026-08-20T16:31:41.285Z",
     "id": 1787243501705
+  },
+  {
+    "sourceId": "aps-quote-38",
+    "name": "Isleta",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-08-26",
+    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
+    "veneerConfigs": [],
+    "lumberConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "species": "Flat Cut White Oak",
+        "thickness": 0.75,
+        "slatW": 7.5,
+        "panelW": 7.5,
+        "panelL": 96,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "calcMode": "count",
+        "manualQty": 2118,
+        "slatL": 96,
+        "assembly": false,
+        "lumberType": "linear",
+        "orientation": "Horizontal",
+        "safetyBuffer": 10,
+        "sanding": true,
+        "cutToLength": true
+      }
+    ],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-08-26T18:15:29.543Z",
+    "id": 1787768129960
   }
 ]
