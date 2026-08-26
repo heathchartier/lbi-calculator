@@ -1367,5 +1367,60 @@
     "productCart": {},
     "savedAt": "2026-08-26T22:46:44.737Z",
     "id": 1787784184231
+  },
+  {
+    "sourceId": "aps-quote-41",
+    "name": "Medina Valley ISD ES 7",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-08-26",
+    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
+    "veneerConfigs": [],
+    "lumberConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "species": "V.G. Hemlock",
+        "thickness": 0.6875,
+        "slatW": 1.375,
+        "panelW": 12,
+        "panelL": 96,
+        "slatsPerPanel": 4,
+        "bracketsPerPanel": 8,
+        "calcMode": "count",
+        "manualQty": 85,
+        "slatL": 96,
+        "assembly": false,
+        "lumberType": "grille",
+        "orientation": "Horizontal",
+        "safetyBuffer": 10,
+        "sanding": true,
+        "cutToLength": true
+      },
+      {
+        "id": 2,
+        "notes": "",
+        "species": "V.G. Hemlock",
+        "thickness": 0.6875,
+        "slatW": 2.25,
+        "panelW": 12,
+        "panelL": 96,
+        "slatsPerPanel": 2,
+        "bracketsPerPanel": 0,
+        "calcMode": "count",
+        "manualQty": 85,
+        "slatL": 96,
+        "assembly": false,
+        "lumberType": "grille",
+        "orientation": "Horizontal",
+        "safetyBuffer": 10,
+        "sanding": true,
+        "cutToLength": true
+      }
+    ],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-08-26T23:33:01.940Z",
+    "id": 1787787182311
   }
 ]
