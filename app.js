@@ -2636,7 +2636,7 @@ function renderAdminProducts(){
       style="display:flex;align-items:center;gap:10px;padding:9px 0 9px 4px;border-bottom:1px solid var(--bdr)">
       <span class="drag-handle">⠿</span>
       <div style="flex:1;min-width:0">
-        <div style="font-weight:600;font-size:14px">${p.name}</div>
+        <div style="font-weight:600;font-size:14px">${p.name}${p.productCode ? ` <span style="font-weight:400;color:var(--mid);font-size:12px">(${p.productCode})</span>` : ''}</div>
         <div style="font-size:12px;color:var(--mid)">${p.type==='panel'?'Panel':'Lumber'} · ${price}</div>
       </div>
       <button class="btn-ghost" style="padding:5px 10px;font-size:12px;flex-shrink:0" onclick="editStandardProduct(${p.id})">Edit</button>
@@ -2766,6 +2766,7 @@ function showProductForm(type, p){
   document.getElementById('apf-type').value = type;
   document.getElementById('apf-id').value = p ? p.id : '';
   document.getElementById('apf-name').value = p ? p.name : '';
+  document.getElementById('apf-code').value = p ? (p.productCode||'') : '';
   document.getElementById('apf-markup').value = p ? (p.markup||0) : 0;
   document.getElementById('apf-category').value = p ? (p.category||0) : 0;
   document.getElementById('apf-form-title').textContent = (p ? 'Edit' : 'New') + (type==='panel' ? ' Panel' : ' Lumber') + ' Product';
@@ -2786,10 +2787,11 @@ function saveProductForm(){
   const existingId = parseInt(document.getElementById('apf-id').value)||0;
   const name = document.getElementById('apf-name').value.trim();
   if(!name){ showToast('Enter a product name'); return; }
+  const productCode = document.getElementById('apf-code').value.trim();
   const cost     = parseFloat(document.getElementById('apf-cost').value)||0;
   const markup   = parseFloat(document.getElementById('apf-markup').value)||0;
   const category = parseInt(document.getElementById('apf-category').value)||0;
-  const product  = { id: existingId||++productCounter, type, name, cost, markup, category };
+  const product  = { id: existingId||++productCounter, type, name, productCode, cost, markup, category };
   if(!pricing.standardProducts) pricing.standardProducts=[];
   const idx = pricing.standardProducts.findIndex(p => p.id===existingId);
   if(idx>=0) pricing.standardProducts[idx]=product;
@@ -2799,6 +2801,75 @@ function saveProductForm(){
   renderAdminProducts();
   renderProductsTab();
   showToast('Product saved!');
+}
+
+// "Update Costs from PDF" — matches pricing.standardProducts by productCode against a
+// supplier PDF (extraction in pdf-price-import.js, an ES module since pdf.js 4.x requires
+// one). Only updates .cost on a match, in memory; nothing is pushed live until the admin
+// hits the normal Save button, same as any manual price edit — this never saves on its own.
+async function handlePdfPriceUpload(inputEl){
+  const file = inputEl.files[0];
+  if(!file) return;
+  const panel = document.getElementById('pdf-price-results');
+  panel.style.display = '';
+  panel.innerHTML = '<div style="color:var(--mid);font-size:14px">Reading PDF…</div>';
+
+  let extracted;
+  try {
+    const { extractPdfPriceList } = await import('./pdf-price-import.js');
+    extracted = await extractPdfPriceList(file);
+  } catch(e){
+    panel.innerHTML = `<div style="color:var(--red)">⚠ Could not read this PDF: ${e.message}</div>`;
+    inputEl.value = '';
+    return;
+  }
+  inputEl.value = '';
+  if(!extracted || !extracted.length){
+    panel.innerHTML = '<div style="color:var(--red)">⚠ No product codes/prices found in this PDF — check that it\'s the expected quote format.</div>';
+    return;
+  }
+
+  const lookup = new Map();
+  extracted.forEach(r => lookup.set(r.code.trim().toUpperCase(), r.price));
+
+  const products = pricing.standardProducts || [];
+  const updates = [];
+  let unchanged = 0;
+  products.forEach(p => {
+    if(!p.productCode) return;
+    const price = lookup.get(p.productCode.trim().toUpperCase());
+    if(price == null) return;
+    const oldCost = p.cost || 0;
+    if(Math.abs(price - oldCost) < 0.005){ unchanged++; return; }
+    updates.push({ name: p.name, code: p.productCode, oldCost, newCost: price });
+    p.cost = price;
+  });
+
+  const withCode = products.filter(p => p.productCode).length;
+  const notFound = withCode - updates.length - unchanged;
+
+  if(updates.length){
+    localStorage.setItem('lbiq_pricing', JSON.stringify(pricing));
+    renderAdminProducts();
+    renderProductsTab();
+  }
+
+  const rows = updates.map(u => `<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid var(--bdr);font-size:13px">
+    <span>${u.name} <span style="color:var(--mid)">(${u.code})</span></span>
+    <span>${fmt(u.oldCost)} → <strong style="color:var(--teal)">${fmt(u.newCost)}</strong></span>
+  </div>`).join('');
+
+  panel.innerHTML = `
+    <div style="font-weight:700;margin-bottom:8px">${updates.length ? '✓' : '—'} PDF processed — ${updates.length} cost${updates.length===1?'':'s'} updated</div>
+    ${rows || '<div style="color:var(--mid);font-size:13px">No cost changes.</div>'}
+    <div style="margin-top:10px;font-size:12px;color:var(--mid)">
+      ${extracted.length} line items read from PDF · ${unchanged} already matched · ${notFound} product${notFound===1?'':'s'} with a code not found in this PDF
+    </div>
+    ${updates.length ? '<div style="margin-top:8px;color:var(--gold);font-size:13px;font-weight:600">⚠ Not saved yet — review above, then hit Save below.</div>' : ''}
+  `;
+  showToast(updates.length
+    ? `✓ Updated ${updates.length} cost${updates.length===1?'':'s'} from PDF — review and save`
+    : 'PDF read — no cost changes needed');
 }
 
 function removeStandardProduct(id){

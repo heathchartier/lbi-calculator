@@ -1112,6 +1112,10 @@ select option{background:#1e2226}
             <input type="text" id="apf-name" placeholder="e.g. Walnut 4x8 Panel" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
           </div>
           <div>
+            <label class="field-label">Product Code</label>
+            <input type="text" id="apf-code" placeholder="e.g. MLUX34SMW1SM" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
+          </div>
+          <div>
             <label class="field-label">Cost ($)</label>
             <input type="number" id="apf-cost" value="0" step="0.01" min="0" style="background:var(--surf3);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--ink);padding:8px 10px;width:100%">
           </div>
@@ -1130,10 +1134,13 @@ select option{background:#1e2226}
         </div>
       </div>
 
-      <div style="display:flex;gap:10px;margin-top:14px">
+      <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
         <button class="btn-ghost" onclick="addStandardProduct('panel')">+ Panel Product</button>
         <button class="btn-ghost" onclick="addStandardProduct('lumber')">+ Lumber Product</button>
+        <button class="btn-ghost" onclick="document.getElementById('pdf-price-input').click()">📄 Update Costs from PDF</button>
+        <input type="file" id="pdf-price-input" accept="application/pdf" style="display:none" onchange="handlePdfPriceUpload(this)">
       </div>
+      <div id="pdf-price-results" style="display:none;margin-top:14px;background:var(--surf2);border:1px solid var(--bdr2);border-radius:var(--r2);padding:16px"></div>
     </div>
 
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;flex-wrap:wrap">
@@ -1467,8 +1474,8 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="calc-engine.js?v=20260818a"></script>
-<script src="app.js?v=20260818a"></script>
+<script src="calc-engine.js?v=20260826a"></script>
+<script src="app.js?v=20260826a"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });
