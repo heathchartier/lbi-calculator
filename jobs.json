@@ -1330,5 +1330,42 @@
     "productCart": {},
     "savedAt": "2026-08-26T18:28:16.789Z",
     "id": 1787768129960
+  },
+  {
+    "sourceId": "aps-quote-39",
+    "name": "Memorial Hermann Cypress",
+    "customer": "LBI",
+    "po": "36888",
+    "date": "2026-08-26",
+    "notes": "Synced from APS quoting tool — Michelle synced from APS quoting tool",
+    "veneerConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "orientation": "Horizontal",
+        "grade": "timber",
+        "thickness": "3/4\"",
+        "slatW": 12,
+        "slatL": 96,
+        "panelW": 12,
+        "panelL": 96,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "ebLongSides": 2,
+        "ebShortSides": 2,
+        "wasteOn": 10,
+        "ceilingType": "grille",
+        "calcMode": "count",
+        "manualQty": 108,
+        "satinFinish": false,
+        "species": "Cherry",
+        "core": "Fire Rated MDF"
+      }
+    ],
+    "lumberConfigs": [],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-08-26T22:43:03.867Z",
+    "id": 1787784184231
   }
 ]
