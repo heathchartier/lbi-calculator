@@ -1343,7 +1343,7 @@
         "id": 1,
         "notes": "",
         "orientation": "Horizontal",
-        "grade": "timber",
+        "grade": "talbert",
         "thickness": "3/4\"",
         "slatW": 12,
         "slatL": 96,
@@ -1365,7 +1365,7 @@
     "lumberConfigs": [],
     "laminationConfigs": [],
     "productCart": {},
-    "savedAt": "2026-08-26T22:45:24.072Z",
+    "savedAt": "2026-08-26T22:46:44.737Z",
     "id": 1787784184231
   }
 ]
