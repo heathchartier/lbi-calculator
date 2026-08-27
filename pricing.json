@@ -7949,9 +7949,9 @@
     "resawFlat": 745,
     "resawThreshold": 3000,
     "resawPerLF": 0.24,
-    "dadoServicePerSqft": 3.5,
-    "dadoFlatCharge": 500,
-    "dadoThreshold": 40
+    "dadoServicePerSqft": 1.0625,
+    "dadoFlatCharge": 255,
+    "dadoThreshold": 60
   },
   "markup": {
     "panels": 15,
