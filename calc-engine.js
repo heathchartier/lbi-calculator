@@ -345,7 +345,7 @@ function createCalcEngine(pricing){
         ['Edge Band Material ('+fmtN(ebRolls)+' rolls)']: ebMatLine,
         ['Edge Band Service ('+fmtN(ebFt,0)+' ft)']: ebSvcLine,
         [cutCostOverride !== undefined ? 'Cut Service (flat)' : 'Cut Service']: cutLine,
-        ...(cfg.assembly ? {[isTile ? (dadoCostOverride !== undefined ? 'Dado / Groove (flat)' : 'Dado / Groove') : 'Assembly / Packing']: asmLine} : {}),
+        ...(cfg.assembly ? {[isTile ? (dadoCostOverride !== undefined ? 'Rabbet / Groove (flat)' : 'Rabbet / Groove') : 'Assembly / Packing']: asmLine} : {}),
         ...(isTile ? {} : {['Black Brackets ('+fmtN(bracketCount)+')']: bktLine}),
       },
       subtotal,

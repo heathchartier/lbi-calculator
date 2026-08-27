@@ -780,7 +780,7 @@ select option{background:#1e2226}
         <!-- Tile Calculator -->
         <div class="calc-card" style="grid-column:1/-1">
           <div class="calc-title">Tile Calculator</div>
-          <div class="calc-subtitle">Sheet yield for ceiling tile jobs — net tile size drives cutting, nominal sq ft is separate (dado/groove reference only)</div>
+          <div class="calc-subtitle">Sheet yield for ceiling tile jobs — net tile size drives cutting, nominal sq ft is separate (rabbet/groove reference only)</div>
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:12px">
             <div>
               <label class="field-label">Calculate By</label>
@@ -1264,8 +1264,8 @@ select option{background:#1e2226}
           Width/Length and Slat Width/Length, how many Slats per Panel, and Brackets per Panel.</li>
         <li><strong>Ceiling Tile</strong> — no orientation or slats. Enter the tile's real <strong>Tile Width/Length</strong>
           (this drives sheet cutting and material cost) and a separate <strong>Nominal Sq Ft / Tile</strong> — this is
-          only used to size the Dado/Groove service (e.g. a 23.75"×23.75" tile is billed nominally as 4 sq ft for
-          dado work, from a 24"×24" grid). The "Assembly" toggle is relabeled <strong>Dado / Groove</strong> for tiles.</li>
+          only used to size the Rabbet/Groove service (e.g. a 23.75"×23.75" tile is billed nominally as 4 sq ft for
+          rabbet work, from a 24"×24" grid). The "Assembly" toggle is relabeled <strong>Rabbet / Groove</strong> for tiles.</li>
       </ul>
       <p style="font-size:13px;color:var(--mid);line-height:1.6">
         <strong>Calculate By</strong> lets you enter a total Ceiling Sq Ft and let the tool work out panel/tile count,
@@ -1350,7 +1350,7 @@ select option{background:#1e2226}
       <h3>Reading Your Quote &amp; Printing</h3>
       <p style="font-size:13px;color:var(--mid);line-height:1.6">
         The <strong>Quote Summary</strong> at the bottom breaks every config down into its own line items (material,
-        edge banding, cut service, assembly/dado, brackets, etc.), then totals everything into one
+        edge banding, cut service, assembly/rabbet, brackets, etc.), then totals everything into one
         <strong>TOTAL ESTIMATE</strong>. Use the <strong>Print</strong> icon (top right) to get a clean, printable
         version of the quote.
       </p>
@@ -1399,7 +1399,7 @@ select option{background:#1e2226}
       <div class="modal-section">
         <h3>Markup / Margin</h3>
         <p style="font-size:13px;color:var(--mid);line-height:1.6">
-          Every category (Panels, Edge Band, Lumber, Milling, Assembly, EB Service, Cut Service, Brackets, and Dado/
+          Every category (Panels, Edge Band, Lumber, Milling, Assembly, EB Service, Cut Service, Brackets, and Rabbet/
           Groove) has its own margin % field. These are true <strong>gross margin</strong> percentages, not markup —
           entering 15 means the sell price is <code>cost ÷ (1 − 0.15)</code>, i.e. cost is 85% of the sell price, not
           cost + 15%.
@@ -1433,7 +1433,7 @@ select option{background:#1e2226}
           Grouped by service: Standard Milling, Resaw Milling, Sanding, and Cut to Length each have a flat fee under
           a threshold (measured in linear feet) and a per-LF rate above it. Labor/Assembly holds the shared Assembly
           $/sqft and Bracket $/ea rates. Veneer Services holds EB Service $/ft, Cut Service $/sqft (with its own
-          flat-charge/threshold pair, measured in sheets), and the Dado/Groove pair for Ceiling Tile (same
+          flat-charge/threshold pair, measured in sheets), and the Rabbet/Groove pair for Ceiling Tile (same
           flat/threshold pattern, measured in tiles instead of sheets). Lamination Services holds the Glue Line
           $/sqft rate.
         </p>
@@ -1474,8 +1474,8 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="calc-engine.js?v=20260826a"></script>
-<script src="app.js?v=20260826a"></script>
+<script src="calc-engine.js?v=20260826b"></script>
+<script src="app.js?v=20260826b"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });

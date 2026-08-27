@@ -788,7 +788,7 @@ function renderVeneerConfigs(){
         <div style="display:flex;gap:24px;flex-wrap:wrap">
           <div class="toggle-row">
             <label class="toggle"><input type="checkbox" id="v-assembly-${cfg.id}" ${cfg.assembly?'checked':''} onchange="vUpdate(${cfg.id})"><span class="toggle-slider"></span></label>
-            <span class="toggle-label">${isTile ? 'Dado / Groove' : 'Assembly included'}</span>
+            <span class="toggle-label">${isTile ? 'Rabbet / Groove' : 'Assembly included'}</span>
           </div>
           ${wasteToggleHTML(`v-waste-${cfg.id}-`, `vUpdate(${cfg.id})`, cfg.wasteOn)}
         </div>
@@ -1674,7 +1674,7 @@ function renderAdminModal(){
     panels:'Panel & Lam Sheets (Veneer + Lam Face/Back/Core)', edgeBand:'Edge Band Material', lumber:'Lumber Material',
     milling:'Milling / Sanding', assembly:'Assembly', ebService:'EB Service',
     cutService:'Cut Service (Veneer Cut + Lam Glue Line)', brackets:'Brackets',
-    dado:'Dado / Groove (Ceiling Tile)',
+    dado:'Rabbet / Groove (Ceiling Tile)',
   };
   mg.innerHTML = Object.entries(markupLabels).map(([k,lbl]) => `
     <div>
@@ -1757,9 +1757,9 @@ function renderAdminModal(){
     ${svcField('cutFlatVeneer',     'Cut Service Flat Charge ($) — ≤ threshold', '1')}
     ${svcField('cutVeneerThreshold','Flat Charge Threshold (sheets)', '1')}
 
-    ${svcHead('Dado / Groove (Ceiling Tile)', 'var(--gold)')}
-    ${svcField('dadoServicePerSqft', 'Dado Service ($/sqft) — over threshold', '0.01')}
-    ${svcField('dadoFlatCharge',     'Dado Flat Charge ($) — ≤ threshold', '1')}
+    ${svcHead('Rabbet / Groove (Ceiling Tile)', 'var(--gold)')}
+    ${svcField('dadoServicePerSqft', 'Rabbet Service ($/sqft) — over threshold', '0.01')}
+    ${svcField('dadoFlatCharge',     'Rabbet Flat Charge ($) — ≤ threshold', '1')}
     ${svcField('dadoThreshold',      'Flat Charge Threshold (tiles)', '1')}
 
     ${svcHead('Lamination Services', '#c084fc')}
@@ -3515,7 +3515,7 @@ function calcTile(){
       ${nominal ? `<div>
         <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Nominal Sq Ft Total</div>
         <div style="font-size:22px;font-weight:700;color:var(--ink)">${fmtN(nominalTotal,0)}</div>
-        <div style="font-size:11px;color:var(--dim)">dado/groove reference only</div>
+        <div style="font-size:11px;color:var(--dim)">rabbet/groove reference only</div>
       </div>` : ''}
       <div>
         <div style="font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Tiles / Sheet</div>
