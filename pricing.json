@@ -7985,6 +7985,7 @@
       "id": 3,
       "type": "panel",
       "name": "3/4 White Super Matte 1S 4x8 MDF",
+      "productCode": "MLUX34SMW1SM",
       "cost": 129.76,
       "markup": 15,
       "category": 7
@@ -7993,6 +7994,7 @@
       "id": 4,
       "type": "panel",
       "name": "3/4 White Super Matte 2S 4x8 MDF",
+      "productCode": "MLUX34SMW2SM",
       "cost": 173.94,
       "markup": 15,
       "category": 7
@@ -8001,6 +8003,7 @@
       "id": 5,
       "type": "panel",
       "name": "3/4 White Super Matte 1S 4x10 MDF",
+      "productCode": "MLUX34410SMW1SM",
       "cost": 165.08,
       "markup": 15,
       "category": 7
@@ -8009,6 +8012,7 @@
       "id": 6,
       "type": "panel",
       "name": "3/4 White High Gloss 2S 4x8 MDF",
+      "productCode": "MLUX34HGW1SM",
       "cost": 174.89,
       "markup": 15,
       "category": 7
@@ -8017,6 +8021,7 @@
       "id": 7,
       "type": "panel",
       "name": "3/4 White High Gloss 1S 4x8 MDF",
+      "productCode": "MLUX34HGW2SM",
       "cost": 129.09,
       "markup": 15,
       "category": 7
@@ -8025,6 +8030,7 @@
       "id": 8,
       "type": "panel",
       "name": "3/4 White High Gloss 1S 4x10 MDF",
+      "productCode": "MLUX34410HGW1SM",
       "cost": 165.49,
       "markup": 15,
       "category": 7
@@ -8033,6 +8039,7 @@
       "id": 9,
       "type": "panel",
       "name": "3/4 Warm White Super Matte 1S 4x8 MDF",
+      "productCode": "MLUX34SMWW1SM",
       "cost": 131.57,
       "markup": 15,
       "category": 7
@@ -8041,6 +8048,7 @@
       "id": 10,
       "type": "panel",
       "name": "3/4 Warm White Super Matte 1S 4x10 MDF",
+      "productCode": "MLUX34410SMWW1SM",
       "cost": 130.65,
       "markup": 15,
       "category": 7
@@ -8049,6 +8057,7 @@
       "id": 11,
       "type": "panel",
       "name": "3/4 Jade Green Super Matter 1S 4x8 MDF",
+      "productCode": "MLUX34SMJG1SM",
       "cost": 142.35,
       "markup": 15,
       "category": 7
@@ -8057,6 +8066,7 @@
       "id": 12,
       "type": "panel",
       "name": "3/4 Tan Super Matte 1S 4x8 MDF",
+      "productCode": "MLUX34SMT1SM",
       "cost": 142.79,
       "markup": 15,
       "category": 7
@@ -8065,6 +8075,7 @@
       "id": 13,
       "type": "panel",
       "name": "3/4 Tan Super Matte 2S 4x8 MDF",
+      "productCode": "MLUX34SMT2SM",
       "cost": 174.25,
       "markup": 15,
       "category": 7
@@ -8073,6 +8084,7 @@
       "id": 14,
       "type": "panel",
       "name": "3/4 Tan Super Matte 1S 4x10 MDF",
+      "productCode": "MLUX34410SMT1SM",
       "cost": 177.99,
       "markup": 15,
       "category": 7
@@ -8081,6 +8093,7 @@
       "id": 15,
       "type": "panel",
       "name": "3/4 Tan High Gloss 1S 4x8 MDF",
+      "productCode": "MLUX34HGT1SM",
       "cost": 141.74,
       "markup": 15,
       "category": 7
@@ -8089,6 +8102,7 @@
       "id": 16,
       "type": "panel",
       "name": "3/4 Tan High Gloss 1S 4x10 MDF",
+      "productCode": "MLUX34410HGT1SM",
       "cost": 177.08,
       "markup": 15,
       "category": 7
@@ -8097,6 +8111,7 @@
       "id": 17,
       "type": "panel",
       "name": "3/4 Willow Super Matte 1S 4x8 MDF",
+      "productCode": "MLUX34SMWI1SM",
       "cost": 142.39,
       "markup": 15,
       "category": 7
@@ -8105,6 +8120,7 @@
       "id": 18,
       "type": "panel",
       "name": "3/4 Willow Super Matte 2S 4x8 MDF",
+      "productCode": "MLUX34SMWI2SM",
       "cost": 174.89,
       "markup": 15,
       "category": 7
@@ -8113,6 +8129,7 @@
       "id": 19,
       "type": "panel",
       "name": "3/4 Willow Super Matte 1S 4x10 MDF",
+      "productCode": "MLUX34410SMWI1SM",
       "cost": 177.97,
       "markup": 15,
       "category": 7
@@ -8121,6 +8138,7 @@
       "id": 20,
       "type": "panel",
       "name": "3/4 Black Super Matte 1S 4x8 MDF",
+      "productCode": "MLUX34SMB1SM",
       "cost": 137.17,
       "markup": 15,
       "category": 7
@@ -8129,6 +8147,7 @@
       "id": 21,
       "type": "panel",
       "name": "3/4 Black Super Matte 1S 4x10 MDF",
+      "productCode": "MLUX34410SMB1SM",
       "cost": 170.31,
       "markup": 15,
       "category": 7
@@ -8137,6 +8156,7 @@
       "id": 22,
       "type": "panel",
       "name": "3/4 Black High Gloss 1S 4x8 MDF",
+      "productCode": "MLUX34HGB1SM",
       "cost": 137.29,
       "markup": 15,
       "category": 7
@@ -8145,6 +8165,7 @@
       "id": 23,
       "type": "panel",
       "name": "3/4 Black High Gloss 1S 4x10 MDF",
+      "productCode": "MLUX34410HGB1SM",
       "cost": 180.31,
       "markup": 15,
       "category": 7
@@ -8153,6 +8174,7 @@
       "id": 24,
       "type": "panel",
       "name": "3/4 Dark Grey Super Matte 1S 4x8 MDF",
+      "productCode": "MLUX34SMDG1SM",
       "cost": 142.49,
       "markup": 15,
       "category": 7
