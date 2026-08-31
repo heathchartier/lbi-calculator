@@ -1451,11 +1451,31 @@
         "safetyBuffer": 10,
         "sanding": true,
         "cutToLength": true
+      },
+      {
+        "id": 2,
+        "notes": "",
+        "species": "Hard Maple",
+        "thickness": 0.75,
+        "slatW": 6,
+        "panelW": 6,
+        "panelL": 144,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "calcMode": "count",
+        "manualQty": 70,
+        "slatL": 144,
+        "assembly": false,
+        "lumberType": "linear",
+        "orientation": "Horizontal",
+        "safetyBuffer": 10,
+        "sanding": true,
+        "cutToLength": true
       }
     ],
     "laminationConfigs": [],
     "productCart": {},
-    "savedAt": "2026-08-31T20:38:26.710Z",
+    "savedAt": "2026-08-31T20:40:26.355Z",
     "id": 1788208707056
   }
 ]
