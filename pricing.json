@@ -8183,6 +8183,7 @@
       "id": 25,
       "type": "panel",
       "name": "3/4 Dark Grey  Super Matte 2S 4x8 MDF",
+      "productCode": "MLUX34SMDG2SDM",
       "cost": 174.21,
       "markup": 15,
       "category": 7
@@ -8191,6 +8192,7 @@
       "id": 26,
       "type": "panel",
       "name": "3/4 Dark Grey High Gloss 1S 4x8 MDF",
+      "productCode": "MLUX34HGDG1SM",
       "cost": 147.08,
       "markup": 15,
       "category": 7
@@ -8199,6 +8201,7 @@
       "id": 27,
       "type": "panel",
       "name": "3/4 Dark Grey High GLoss 2S 4x8 MDF",
+      "productCode": "MLUX34HGDG2SM",
       "cost": 174.4,
       "markup": 15,
       "category": 7
@@ -8207,6 +8210,7 @@
       "id": 28,
       "type": "panel",
       "name": "3/4 Dark Grey High Gloss 1S 4x10 MDF",
+      "productCode": "MLUX34410HGDG1SM",
       "cost": 173.34,
       "markup": 15,
       "category": 7
