@@ -1422,5 +1422,40 @@
     "productCart": {},
     "savedAt": "2026-08-27T15:54:45.000Z",
     "id": 1787787182311
+  },
+  {
+    "sourceId": "aps-quote-42",
+    "name": "Port Aransas Rec Center",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-08-31",
+    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
+    "veneerConfigs": [],
+    "lumberConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "species": "Hard Maple",
+        "thickness": 0.75,
+        "slatW": 5.25,
+        "panelW": 5.25,
+        "panelL": 96,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "calcMode": "count",
+        "manualQty": 353,
+        "slatL": 96,
+        "assembly": false,
+        "lumberType": "linear",
+        "orientation": "Horizontal",
+        "safetyBuffer": 10,
+        "sanding": true,
+        "cutToLength": true
+      }
+    ],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-08-31T20:38:26.710Z",
+    "id": 1788208707056
   }
 ]
