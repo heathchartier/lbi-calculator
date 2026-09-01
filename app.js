@@ -102,8 +102,12 @@ const LONG_STOCK_SPECIES = new Set([
   'Therm Pine',
   'Grey Accoya',
 ]);
-const SHEET_WIDTHS  = { '4x8': 49, '4x10': 49, '5x10': 61, '5x12': 61 };
-const SHEET_LENGTHS = { '4x8': 97, '4x10': 121, '5x10': 121, '5x12': 145 };
+// Corrected 2026-08-26: the raw oversize sheet is 0.5" smaller in each dimension than
+// originally entered here — 48.5x96.5 for a "4x8", not 49x97, etc. (see calc-engine.js's
+// copy of these same constants for the full note — this is the standalone Tile
+// Calculator's own duplicate, nests from the same oversize veneer stock).
+const SHEET_WIDTHS  = { '4x8': 48.5, '4x10': 48.5, '5x10': 60.5, '5x12': 60.5 };
+const SHEET_LENGTHS = { '4x8': 96.5, '4x10': 120.5, '5x10': 120.5, '5x12': 144.5 };
 const EB_ROLL_FEET   = 500;
 const EB_WASTE_FACTOR = 1.1;
 // Lamination thickness definitions. user:false = admin-only (3/4 fallback)
@@ -119,9 +123,9 @@ const LAM_THICK_KEYS = [
 // Core sizes: 4x8, 4x10, 5x10, 5x12. Face/back sheets never come in 5x10 (Baltic Birch net-size only).
 const LAM_SIZES = ['4x8','4x10','5x10','5x12'];
 const LAM_FACE_SIZES = ['4x8','4x10','5x12'];
-// Baltic Birch (or any "net size" flagged core) ships as true net dimensions, not oversize —
-// and only in 48x96 / 60x120. Trimmed 1/4" per edge for squaring before cutting slats.
-const LAM_NET_DIMS = { '4x8': {w:47.5, l:95.5}, '5x10': {w:59.5, l:119.5} };
+// Which sizes a netSize-flagged core (Baltic Birch etc.) is actually sold in — a real
+// supply-chain fact, unrelated to sheet-dimension math (that lives in calc-engine.js only —
+// this file never had its own copy of LAM_NET_DIMS actually wired up to anything).
 const LAM_NET_SIZES = ['4x8','5x10'];
 const LAM_SIZE_AREA = { '4x8': 4608, '4x10': 5760, '5x10': 7200, '5x12': 8640 };
 function blankLamFace(){ return { price4x8:0, price4x10:0, price5x12:0, ebRoll:0 }; }

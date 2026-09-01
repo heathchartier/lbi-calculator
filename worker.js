@@ -61,12 +61,17 @@ function createCalcEngine(pricing){
   // dimension loses 2x this (both edges), not 1x. Found as a real bug 2026-08-13: every one
   // of the four usable-dimension calculations below was only subtracting it once per
   // dimension, overcounting yield (a real 350pc/5.25"x120" job came out to 39 sheets instead
-  // of the correct 44). Net-size sheets (Baltic Birch etc, LAM_NET_DIMS) are unaffected —
-  // those come pre-trimmed and never went through this subtraction to begin with.
+  // of the correct 44). Applies uniformly to every sheet-dimension source in this file,
+  // including LAM_NET_DIMS below (all lamination sheets are true net size, see its own
+  // comment) — nothing skips this subtraction.
   const SQUARING = 0.25;
   const KERF = 0.1875;
-  const SHEET_WIDTHS  = { '4x8': 49, '4x10': 49, '5x10': 61, '5x12': 61 };
-  const SHEET_LENGTHS = { '4x8': 97, '4x10': 121, '5x10': 121, '5x12': 145 };
+  // Corrected 2026-08-26: the raw oversize sheet Heath actually buys is 0.5" smaller in each
+  // dimension than originally entered here (a real mistake on his end, not a rounding
+  // choice) — 48.5x96.5 for a "4x8", not 49x97, etc. Confirmed against two real worked
+  // examples before shipping (see the verification note near SQUARING below).
+  const SHEET_WIDTHS  = { '4x8': 48.5, '4x10': 48.5, '5x10': 60.5, '5x12': 60.5 };
+  const SHEET_LENGTHS = { '4x8': 96.5, '4x10': 120.5, '5x10': 120.5, '5x12': 144.5 };
   const EB_ROLL_FEET   = 500;
   const EB_WASTE_FACTOR = 1.1;
 
@@ -807,16 +812,20 @@ function createCalcEngine(pricing){
   ];
   const LAM_SIZES = ['4x8','4x10','5x10','5x12'];
   const LAM_FACE_SIZES = ['4x8','4x10','5x12'];
-  // Baltic Birch (or any "net size" flagged core) ships as true net dimensions, not oversize —
-  // and only in 48x96 / 60x120. Still gets squared the same as every other sheet (both edges
-  // trimmed before cutting slats) — computed from the true dims rather than hardcoded, so this
-  // can never drift out of sync with SQUARING the way two independently-maintained numbers
-  // that happened to already agree could have (Heath confirmed 2026-08-13, no numeric bug,
-  // just switched off the hardcoded 47.5/95.5/59.5/119.5 for a single source of truth).
-  const LAM_TRUE_NET_DIMS = { '4x8': {w:48, l:96}, '5x10': {w:60, l:120} };
+  // ALL lamination sheets ship at true net dimensions, not oversize like veneer's SHEET_WIDTHS/
+  // SHEET_LENGTHS — corrected 2026-08-26 (Heath: previously only Baltic Birch/other netSize-
+  // flagged cores used this path; every other lamination face/core/back was wrongly computed
+  // from the oversize veneer dims instead, a real bug, not just Baltic Birch's own special
+  // case). Still gets squared the same as every other sheet (both edges trimmed before cutting
+  // slats) — computed from the true net dims rather than hardcoded, so this can never drift
+  // out of sync with SQUARING.
+  const LAM_TRUE_NET_DIMS = { '4x8': {w:48, l:96}, '4x10': {w:48, l:120}, '5x10': {w:60, l:120}, '5x12': {w:60, l:144} };
   const LAM_NET_DIMS = Object.fromEntries(
     Object.entries(LAM_TRUE_NET_DIMS).map(([k, d]) => [k, { w: d.w - SQUARING*2, l: d.l - SQUARING*2 }])
   );
+  // Which sizes a netSize-flagged core (Baltic Birch etc.) is actually sold in — unrelated to
+  // the dimension math above, a real supply-chain fact specific to that product line. Not
+  // touched by the 2026-08-26 fix.
   const LAM_NET_SIZES = ['4x8','5x10'];
 
   // For a chosen thickness value, get a {size: price} map across all LAM_SIZES. 3/4 tries 11/16 first.
@@ -843,14 +852,15 @@ function createCalcEngine(pricing){
     allowedSizes.forEach(sz => { if((prices[sz]||0) > 0) out[sz] = prices[sz]; });
     return out;
   }
-  // Usable cutting dims for a given sheet size — net sheets are already trimmed; oversize sheets get the standard squaring cut.
+  // Usable cutting dims for a lamination sheet size — always the true-net-minus-squaring
+  // numbers above, for every lamination face/core/back, not just netSize-flagged ones (see
+  // LAM_TRUE_NET_DIMS comment). The `isNet` parameter is kept only so callers don't all need
+  // updating; it no longer changes the math (both branches used to disagree — that was the
+  // bug) — the core's own `netSize` flag still separately controls which SIZES it's offered
+  // in via LAM_NET_SIZES, that part is unchanged.
   function lamUsableDims(sizeKey, isNet){
-    if(isNet){
-      const d = LAM_NET_DIMS[sizeKey];
-      return d ? { w: d.w, l: d.l } : null;
-    }
-    const w = SHEET_WIDTHS[sizeKey], l = SHEET_LENGTHS[sizeKey];
-    return (w && l) ? { w: w - SQUARING*2, l: l - SQUARING*2 } : null;
+    const d = LAM_NET_DIMS[sizeKey];
+    return d ? { w: d.w, l: d.l } : null;
   }
   // Brute-force search over every valid (core size × face size × back size) combo, picking the
   // cheapest cost-per-slat. Yield for a combo is capped by whichever item (core/face/back) is
