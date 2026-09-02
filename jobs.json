@@ -1477,5 +1477,40 @@
     "productCart": {},
     "savedAt": "2026-08-31T20:45:02.797Z",
     "id": 1788208707056
+  },
+  {
+    "sourceId": "aps-quote-43",
+    "name": "York Area Office",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-09-02",
+    "notes": "Synced from APS quoting tool — Brandon synced from APS quoting tool",
+    "veneerConfigs": [],
+    "lumberConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "species": "V.G. Hemlock",
+        "thickness": 0.625,
+        "slatW": 3.25,
+        "panelW": 12,
+        "panelL": 95,
+        "slatsPerPanel": 3,
+        "bracketsPerPanel": 8,
+        "calcMode": "count",
+        "manualQty": 43,
+        "slatL": 95,
+        "assembly": false,
+        "lumberType": "grille",
+        "orientation": "Horizontal",
+        "safetyBuffer": 10,
+        "sanding": true,
+        "cutToLength": true
+      }
+    ],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-09-02T21:44:49.599Z",
+    "id": 1788385489866
   }
 ]
