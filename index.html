@@ -1256,7 +1256,7 @@ select option{background:#1e2226}
     <div class="modal-section">
       <h3>Veneer Panels Tab</h3>
       <p style="font-size:13px;color:var(--mid);line-height:1.6">
-        <strong>Ceiling Type</strong> picks the calculation mode:
+        <strong>Ceiling/Wall Type</strong> picks the calculation mode:
       </p>
       <ul style="font-size:13px;color:var(--mid);line-height:1.8;padding-left:20px">
         <li><strong>Ceiling Grille</strong> — the classic slat-and-panel layout. Set Orientation (Horizontal/Vertical),
@@ -1266,6 +1266,9 @@ select option{background:#1e2226}
           (this drives sheet cutting and material cost) and a separate <strong>Nominal Sq Ft / Tile</strong> — this is
           only used to size the Rabbet/Groove service (e.g. a 23.75"×23.75" tile is billed nominally as 4 sq ft for
           rabbet work, from a 24"×24" grid). The "Assembly" toggle is relabeled <strong>Rabbet / Groove</strong> for tiles.</li>
+        <li><strong>Wall Panel</strong> (added 2026-09-02) — calculated identically to Ceiling Tile (same sheet
+          cutting, Nominal Sq Ft, and Rabbet/Groove billing), just labeled "Wall Panel" throughout instead of "Tile"
+          for wall-mounted panel jobs.</li>
       </ul>
       <p style="font-size:13px;color:var(--mid);line-height:1.6">
         <strong>Calculate By</strong> lets you enter a total Ceiling Sq Ft and let the tool work out panel/tile count,
@@ -1323,6 +1326,12 @@ select option{background:#1e2226}
         Veneer tab. The tool automatically finds the cheapest combination of sheet sizes across face, back, and core
         — including handling cores that only come in smaller "net size" sheets (like Baltic Birch) without you having
         to work that out by hand.
+      </p>
+      <p style="font-size:13px;color:var(--mid);line-height:1.6">
+        This tab has the same <strong>Ceiling/Wall Type</strong> picker as Veneer Panels (added 2026-09-02) —
+        Ceiling Grille (default, unchanged), Ceiling Tile, and Wall Panel — with the exact same tile/wall
+        simplification (Tile/Wall Panel Width/Length, Nominal Sq Ft, Rabbet/Groove billing) applied to your face/
+        core/back items instead of veneer species.
       </p>
     </div>
 
@@ -1474,8 +1483,8 @@ select option{background:#1e2226}
   </div>
 </div>
 
-<script src="calc-engine.js?v=20260826c"></script>
-<script src="app.js?v=20260826c"></script>
+<script src="calc-engine.js?v=20260902a"></script>
+<script src="app.js?v=20260902a"></script>
 <script>
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/lbi-calculator/sw.js', { scope: '/lbi-calculator/' });

@@ -322,7 +322,11 @@ function createCalcEngine(pricing){
     const ebMaterialCost = ebRolls * ebRollPrice;
     const ebServiceCost  = ebFt * pricing.services.ebServicePerFt;
 
-    const isTile = cfg.ceilingType === 'tile';
+    // 'wall' (Wall Panel) is the same simplified per-piece calc as 'tile' (Ceiling Tile) —
+    // added 2026-09-02 as a second Ceiling/Wall Type option, calculated identically to tiles,
+    // just labeled "Wall Panel" in the UI (see app.js). Nothing here needed to change beyond
+    // widening this check.
+    const isTile = cfg.ceilingType === 'tile' || cfg.ceilingType === 'wall';
     const dadoSqft = isTile ? panelQty * (cfg.nominalSqFt || 0) : effectiveSqft;
 
     const cutCost = cutCostOverride !== undefined ? cutCostOverride : effectiveSqft * pricing.services.cutServicePerSqft;
@@ -919,10 +923,17 @@ function createCalcEngine(pricing){
     }
   }
 
-  function calcLaminationCost(cfg, cutCostOverride){
+  function calcLaminationCost(cfg, cutCostOverride, dadoCostOverride){
     const qty = resolveLaminationQty(cfg);
     if(!qty) return null;
     const { panelQty, totalSlats, effectiveSqft } = qty;
+    // Ceiling/Wall Type added 2026-09-02 (mirrors the Veneer tab's 'tile'/'wall' modes,
+    // added directly to app.js's Ceiling Grille default) — same simplified per-piece
+    // Rabbet/Groove billing (nominalSqFt-based, own flat-charge/threshold pair) instead of
+    // the plain Assembly cost, using the same 'dado' pricing/margin category as veneer so
+    // admin only maintains one Rabbet/Groove rate regardless of which tab it's billed from.
+    const isTile = cfg.ceilingType === 'tile' || cfg.ceilingType === 'wall';
+    const dadoSqft = isTile ? panelQty * (cfg.nominalSqFt || 0) : effectiveSqft;
 
     const isCustomer = cfg.face === 'Customer Supplied';
     const isBackCustomer = (cfg.back || cfg.face) === 'Customer Supplied';
@@ -961,9 +972,18 @@ function createCalcEngine(pricing){
     // Cut service — flat charge under threshold, same settings as veneer's Cut Service
     const cutCost = cutCostOverride !== undefined ? cutCostOverride : effectiveSqft * (pricing.services.cutServicePerSqft || 0);
 
-    // Assembly + brackets
-    const assemblyCost = cfg.assembly ? effectiveSqft * (pricing.services.assembly || 0) : 0;
-    const bracketCount = panelQty * (cfg.bracketsPerPanel || 0);
+    // Assembly + brackets — Rabbet/Groove (tile/wall) uses dadoSqft/dadoCostOverride and the
+    // 'dado' margin category, same as veneer's tile/wall mode; Ceiling Grille lamination keeps
+    // the plain effectiveSqft-based Assembly cost, unchanged.
+    let assemblyCost = 0;
+    if(cfg.assembly){
+      if(isTile){
+        assemblyCost = dadoCostOverride !== undefined ? dadoCostOverride : dadoSqft * (pricing.services.dadoServicePerSqft || 0);
+      } else {
+        assemblyCost = effectiveSqft * (pricing.services.assembly || 0);
+      }
+    }
+    const bracketCount = isTile ? 0 : panelQty * (cfg.bracketsPerPanel || 0);
     const bracketCost  = bracketCount * (pricing.services.bracketPrice || 0);
 
     // Apply markup
@@ -974,7 +994,7 @@ function createCalcEngine(pricing){
     const ebMatLine   = withMarkup(ebMaterialCost,'edgeBand');
     const ebSvcLine   = withMarkup(ebServiceCost, 'ebService');
     const cutLine     = withMarkup(cutCost,       'cutService');
-    const asmLine     = withMarkup(assemblyCost,  'assembly');
+    const asmLine     = withMarkup(assemblyCost,  isTile ? 'dado' : 'assembly');
     const bktLine     = withMarkup(bracketCost,   'brackets');
 
     const lines = {};
@@ -993,7 +1013,7 @@ function createCalcEngine(pricing){
       if(ebServiceCost  > 0) lines[`Edge Band Service (${fmtN(ebFt,0)} ft)`]      = ebSvcLine;
     }
     if(cutCost > 0)      lines[cutCostOverride !== undefined ? 'Cut Service (flat)' : 'Cut Service'] = cutLine;
-    if(assemblyCost > 0) lines['Assembly / Packing']       = asmLine;
+    if(assemblyCost > 0) lines[isTile ? (dadoCostOverride !== undefined ? 'Rabbet / Groove (flat)' : 'Rabbet / Groove') : 'Assembly / Packing'] = asmLine;
     if(bracketCost  > 0) lines[`Black Brackets (${fmtN(bracketCount)})`] = bktLine;
 
     const subtotal = Object.values(lines).reduce((s,v)=>s+v, 0);
@@ -1053,7 +1073,8 @@ function createCalcEngine(pricing){
     // flat vs per-sqft dado charge, same flat/threshold pattern as the veneer cut service.
     let totalDadoTiles = 0, totalDadoSqft = 0;
     const dadoSqfts = veneerConfigs.map(cfg => {
-      if(cfg.ceilingType !== 'tile' || !cfg.assembly) return 0;
+      const isTileOrWall = cfg.ceilingType === 'tile' || cfg.ceilingType === 'wall';
+      if(!isTileOrWall || !cfg.assembly) return 0;
       const qty = resolveVeneerQty(cfg);
       if(!qty) return 0;
       const sqft = qty.panelQty * (cfg.nominalSqFt || 0);
@@ -1095,12 +1116,32 @@ function createCalcEngine(pricing){
     });
     const useLamFlat = flatCharge > 0 && totalLamSheets > 0 && totalLamSheets <= flatThresh;
 
+    // Lamination's own Ceiling/Wall Type tile/wall configs pool their Rabbet/Groove flat charge
+    // separately from veneer's (own total, same shared admin rate/threshold), mirroring how Cut
+    // Service flat-charge pooling above is also decided independently per tab.
+    let totalLamDadoTiles = 0, totalLamDadoSqft = 0;
+    const lamDadoSqfts = laminationConfigs.map(cfg => {
+      const isTileOrWall = cfg.ceilingType === 'tile' || cfg.ceilingType === 'wall';
+      if(!isTileOrWall || !cfg.assembly) return 0;
+      const qty = resolveLaminationQty(cfg);
+      if(!qty) return 0;
+      const sqft = qty.panelQty * (cfg.nominalSqFt || 0);
+      totalLamDadoTiles += qty.panelQty;
+      totalLamDadoSqft  += sqft;
+      return sqft;
+    });
+    const useLamDadoFlat = dadoFlatCharge > 0 && totalLamDadoTiles > 0 && totalLamDadoTiles <= dadoThresh;
+
     laminationConfigs.forEach((cfg,i) => {
       let cutOverride;
       if(useLamFlat && totalLamSqft > 0){
         cutOverride = flatCharge * ((lamSqfts[i] || 0) / totalLamSqft);
       }
-      const r = calcLaminationCost(cfg, cutOverride);
+      let dadoOverride;
+      if(useLamDadoFlat && totalLamDadoSqft > 0){
+        dadoOverride = dadoFlatCharge * ((lamDadoSqfts[i] || 0) / totalLamDadoSqft);
+      }
+      const r = calcLaminationCost(cfg, cutOverride, dadoOverride);
       if(r) allResults.push({...r, label:`Lam Config ${i+1} — ${cfg.face||'New Config'}`, isLam:true});
     });
 

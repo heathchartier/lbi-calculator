@@ -660,12 +660,13 @@ function renderVeneerConfigs(){
   veneerConfigs.forEach(cfg => {
     if(!cfg.grade) cfg.grade = 'talbert';
     cfg.wasteOn = normalizeWastePct(cfg.wasteOn, 10);
-    const isTile = cfg.ceilingType === 'tile';
+    const isTile = cfg.ceilingType === 'tile' || cfg.ceilingType === 'wall';
+    const modeNoun = cfg.ceilingType === 'wall' ? 'Wall Panel' : 'Tile';
     const species = visibleVeneerSpecies(cfg.orientation, cfg.grade, cfg.core, cfg.thickness);
     if(!cfg.species && species.length > 0) cfg.species = species[0];
 
     const qtyLabel = isTile
-      ? (cfg.calcMode === 'slats' ? 'Total Tiles' : '')
+      ? (cfg.calcMode === 'slats' ? `Total ${modeNoun}s` : '')
       : (cfg.calcMode === 'slats' ? 'Total Slats' : cfg.calcMode === 'panels' ? 'Number of Panels' : '');
 
     const div = document.createElement('div');
@@ -681,10 +682,11 @@ function renderVeneerConfigs(){
       <div class="config-body">
         <div class="config-grid">
           <div>
-            <label class="field-label">Ceiling Type</label>
+            <label class="field-label">Ceiling/Wall Type</label>
             <select id="v-ceilingtype-${cfg.id}" onchange="vUpdate(${cfg.id})">
-              <option value="grille" ${!isTile?'selected':''}>Ceiling Grille</option>
-              <option value="tile"   ${isTile?'selected':''}>Ceiling Tile</option>
+              <option value="grille" ${cfg.ceilingType!=='tile'&&cfg.ceilingType!=='wall'?'selected':''}>Ceiling Grille</option>
+              <option value="tile"   ${cfg.ceilingType==='tile'?'selected':''}>Ceiling Tile</option>
+              <option value="wall"   ${cfg.ceilingType==='wall'?'selected':''}>Wall Panel</option>
             </select>
           </div>
           ${isTile ? '' : `<div>
@@ -740,7 +742,7 @@ function renderVeneerConfigs(){
             <label class="field-label">Calculate By</label>
             <select id="v-mode-${cfg.id}" onchange="vUpdate(${cfg.id})">
               <option value="sqft"   ${cfg.calcMode==='sqft'?'selected':''}>By Sq Ft</option>
-              <option value="slats"  ${cfg.calcMode==='slats'?'selected':''}>By ${isTile?'Tile':'Slat'} Count</option>
+              <option value="slats"  ${cfg.calcMode==='slats'?'selected':''}>By ${isTile?modeNoun:'Slat'} Count</option>
               ${isTile ? '' : `<option value="panels" ${cfg.calcMode==='panels'?'selected':''}>By Panel Count</option>`}
             </select>
           </div>
@@ -753,19 +755,19 @@ function renderVeneerConfigs(){
           </div>`}
         </div>
         <hr class="config-divider">
-        <span class="section-label">${isTile ? 'Tile Dimensions (inches)' : 'Panel & Slat Dimensions (inches)'}</span>
+        <span class="section-label">${isTile ? `${modeNoun} Dimensions (inches)` : 'Panel & Slat Dimensions (inches)'}</span>
         <div class="config-grid">
           <div>
-            <label class="field-label">${isTile ? 'Tile Width (in)' : 'Panel Width (in)'}</label>
+            <label class="field-label">${isTile ? `${modeNoun} Width (in)` : 'Panel Width (in)'}</label>
             <input type="text" id="v-panelW-${cfg.id}" value="${cfg.panelW||''}" placeholder="e.g. 12" oninput="vUpdate(${cfg.id})">
           </div>
           <div>
-            <label class="field-label">${isTile ? 'Tile Length (in)' : 'Panel Length (in)'}</label>
+            <label class="field-label">${isTile ? `${modeNoun} Length (in)` : 'Panel Length (in)'}</label>
             <input type="text" id="v-panelL-${cfg.id}" value="${cfg.panelL||''}" placeholder="e.g. 96" oninput="vUpdate(${cfg.id})">
           </div>
           ${isTile ? `
           <div>
-            <label class="field-label">Nominal Sq Ft / Tile</label>
+            <label class="field-label">Nominal Sq Ft / ${modeNoun}</label>
             <input type="number" id="v-nominalsqft-${cfg.id}" value="${cfg.nominalSqFt||''}" step="0.01" min="0" placeholder="e.g. 4" oninput="vUpdate(${cfg.id})">
           </div>
           ` : `
@@ -809,7 +811,7 @@ function vUpdate(id){
   const prevCeilingType = cfg.ceilingType || 'grille';
   cfg.ceilingType    = document.getElementById('v-ceilingtype-'+id)?.value || cfg.ceilingType || 'grille';
   const ceilingTypeChanged = cfg.ceilingType !== prevCeilingType;
-  const isTile = cfg.ceilingType === 'tile';
+  const isTile = cfg.ceilingType === 'tile' || cfg.ceilingType === 'wall';
 
   const prevOrientation = cfg.orientation;
   cfg.orientation    = isTile ? 'Horizontal' : (document.getElementById('v-orient-'+id)?.value || cfg.orientation);
@@ -888,7 +890,8 @@ function calcVeneerPreview(cfg){
   const qty = Calc.resolveVeneerQty(cfg);
   if(!qty){ preview.innerHTML = ''; return; }
   const { panelQty, totalSlats } = qty;
-  const isTile = cfg.ceilingType === 'tile';
+  const isTile = cfg.ceilingType === 'tile' || cfg.ceilingType === 'wall';
+  const modeNoun = cfg.ceilingType === 'wall' ? 'Wall Panel' : 'Tile';
 
   const grade = cfg.orientation === 'Vertical' ? 'AA' : 'A3';
   const sup   = cfg.grade || 'talbert';
@@ -911,10 +914,10 @@ function calcVeneerPreview(cfg){
 
   preview.innerHTML = `
     ${noPricing ? `<div style="grid-column:1/-1;background:var(--warn-bg,#7c3d0020);border:1px solid var(--warn,#f59e0b);border-radius:6px;padding:6px 10px;color:var(--warn,#f59e0b);font-size:12px;font-weight:600">⚠ No ${grade} ${size} pricing found — update admin or call supplier for quote</div>` : ''}
-    <div class="calc-preview-item"><div class="calc-preview-label">Sq Ft / ${isTile?'Tile':'Panel'}</div><div class="calc-preview-val">${fmtN(qty.sqftPerPanel,2)} sqft</div></div>
+    <div class="calc-preview-item"><div class="calc-preview-label">Sq Ft / ${isTile?modeNoun:'Panel'}</div><div class="calc-preview-val">${fmtN(qty.sqftPerPanel,2)} sqft</div></div>
     ${isTile ? '' : `<div class="calc-preview-item"><div class="calc-preview-label">Panels Needed</div><div class="calc-preview-val">${fmtN(panelQty)}</div></div>`}
-    <div class="calc-preview-item"><div class="calc-preview-label">Total ${isTile?'Tiles':'Slats'}</div><div class="calc-preview-val">${fmtN(totalSlats)}</div></div>
-    <div class="calc-preview-item"><div class="calc-preview-label">${isTile?'Tiles':'Slats'} / Sheet</div><div class="calc-preview-val">${fmtN(slatsPerSheet)}</div></div>
+    <div class="calc-preview-item"><div class="calc-preview-label">Total ${isTile?modeNoun+'s':'Slats'}</div><div class="calc-preview-val">${fmtN(totalSlats)}</div></div>
+    <div class="calc-preview-item"><div class="calc-preview-label">${isTile?modeNoun+'s':'Slats'} / Sheet</div><div class="calc-preview-val">${fmtN(slatsPerSheet)}</div></div>
     <div class="calc-preview-item"><div class="calc-preview-label">Sheets Needed${cfg.wasteOn?' (+'+cfg.wasteOn+'%)':''}</div><div class="calc-preview-val">${fmtN(sheetsNeeded)} <span style="font-size:11px;color:var(--mid)">(${grade} ${size})</span></div></div>
     <div class="calc-preview-item"><div class="calc-preview-label">EB Footage</div><div class="calc-preview-val">${fmtN(ebFt,0)} ft</div></div>
     <div class="calc-preview-item"><div class="calc-preview-label">EB Rolls</div><div class="calc-preview-val">${fmtN(ebRolls)}</div></div>
@@ -1678,7 +1681,7 @@ function renderAdminModal(){
     panels:'Panel & Lam Sheets (Veneer + Lam Face/Back/Core)', edgeBand:'Edge Band Material', lumber:'Lumber Material',
     milling:'Milling / Sanding', assembly:'Assembly', ebService:'EB Service',
     cutService:'Cut Service (Veneer Cut + Lam Glue Line)', brackets:'Brackets',
-    dado:'Rabbet / Groove (Ceiling Tile)',
+    dado:'Rabbet / Groove (Ceiling/Wall Panel — Veneer + Lam)',
   };
   mg.innerHTML = Object.entries(markupLabels).map(([k,lbl]) => `
     <div>
@@ -1761,7 +1764,7 @@ function renderAdminModal(){
     ${svcField('cutFlatVeneer',     'Cut Service Flat Charge ($) — ≤ threshold', '1')}
     ${svcField('cutVeneerThreshold','Flat Charge Threshold (sheets)', '1')}
 
-    ${svcHead('Rabbet / Groove (Ceiling Tile)', 'var(--gold)')}
+    ${svcHead('Rabbet / Groove (Ceiling/Wall Panel — Veneer + Lam)', 'var(--gold)')}
     ${svcField('dadoServicePerSqft', 'Rabbet Service ($/sqft) — over threshold', '0.01')}
     ${svcField('dadoFlatCharge',     'Rabbet Flat Charge ($) — ≤ threshold', '1')}
     ${svcField('dadoThreshold',      'Flat Charge Threshold (tiles)', '1')}
@@ -1938,6 +1941,7 @@ function addLaminationConfig(){
   const last = laminationConfigs[laminationConfigs.length - 1];
   laminationConfigs.push({
     id:        laminationCounter,
+    ceilingType: last?.ceilingType || 'grille',
     face:      last?.face      || faceKeys[0] || '',
     back:      last?.back      || faceKeys[0] || '',
     core:      last?.core      || coreKeys[0] || '',
@@ -1946,7 +1950,7 @@ function addLaminationConfig(){
     ebShortSides: last ? Calc.edgeBandSides(last).shortSides : 2,
     calcMode:  last?.calcMode  || 'sqft',
     panelW:0, panelL:0, slatW:0, slatL:0,
-    slatsPerPanel:0, bracketsPerPanel:0,
+    slatsPerPanel:0, bracketsPerPanel:0, nominalSqFt:0,
     assembly:false, wasteOn:10, manualQty:0, sqft:0,
   });
   renderLaminationConfigs();
@@ -1981,8 +1985,11 @@ function renderLaminationConfigs(){
 
   laminationConfigs.forEach(cfg => {
     cfg.wasteOn = normalizeWastePct(cfg.wasteOn, 10);
-    const modeLabels = {sqft:'By Sq Ft', slats:'By Slat Count', panels:'By Panel Count'};
-    const qtyLabel   = cfg.calcMode === 'slats' ? 'Total Slats' : 'Number of Panels';
+    const isTile = cfg.ceilingType === 'tile' || cfg.ceilingType === 'wall';
+    const modeNoun = cfg.ceilingType === 'wall' ? 'Wall Panel' : 'Tile';
+    const qtyLabel = isTile
+      ? (cfg.calcMode === 'slats' ? `Total ${modeNoun}s` : '')
+      : (cfg.calcMode === 'slats' ? 'Total Slats' : 'Number of Panels');
     const div = document.createElement('div');
     div.className = 'config-card';
     div.id = 'lcfg-' + cfg.id;
@@ -1995,6 +2002,14 @@ function renderLaminationConfigs(){
       </div>
       <div class="config-body">
         <div class="config-grid">
+          <div>
+            <label class="field-label">Ceiling/Wall Type</label>
+            <select id="l2-ceilingtype-${cfg.id}" onchange="lamUpdate(${cfg.id})">
+              <option value="grille" ${!isTile?'selected':''}>Ceiling Grille</option>
+              <option value="tile"   ${cfg.ceilingType==='tile'?'selected':''}>Ceiling Tile</option>
+              <option value="wall"   ${cfg.ceilingType==='wall'?'selected':''}>Wall Panel</option>
+            </select>
+          </div>
           <div>
             <label class="field-label">Laminated Face</label>
             <select id="l2-face-${cfg.id}" onchange="lamUpdate(${cfg.id})">
@@ -2033,8 +2048,8 @@ function renderLaminationConfigs(){
             <label class="field-label">Calculate By</label>
             <select id="l2-mode-${cfg.id}" onchange="lamUpdate(${cfg.id})">
               <option value="sqft"   ${cfg.calcMode==='sqft'?'selected':''}>By Sq Ft</option>
-              <option value="slats"  ${cfg.calcMode==='slats'?'selected':''}>By Slat Count</option>
-              <option value="panels" ${cfg.calcMode==='panels'?'selected':''}>By Panel Count</option>
+              <option value="slats"  ${cfg.calcMode==='slats'?'selected':''}>By ${isTile?modeNoun:'Slat'} Count</option>
+              ${isTile ? '' : `<option value="panels" ${cfg.calcMode==='panels'?'selected':''}>By Panel Count</option>`}
             </select>
           </div>
           ${cfg.calcMode==='sqft' ? `<div>
@@ -2046,16 +2061,22 @@ function renderLaminationConfigs(){
           </div>`}
         </div>
         <hr class="config-divider">
-        <span class="section-label">Panel & Slat Dimensions (inches)</span>
+        <span class="section-label">${isTile ? `${modeNoun} Dimensions (inches)` : 'Panel & Slat Dimensions (inches)'}</span>
         <div class="config-grid">
           <div>
-            <label class="field-label">Panel Width (in)</label>
+            <label class="field-label">${isTile ? `${modeNoun} Width (in)` : 'Panel Width (in)'}</label>
             <input type="text" id="l2-panelW-${cfg.id}" value="${cfg.panelW||''}" placeholder="e.g. 12" oninput="lamUpdate(${cfg.id})">
           </div>
           <div>
-            <label class="field-label">Panel Length (in)</label>
+            <label class="field-label">${isTile ? `${modeNoun} Length (in)` : 'Panel Length (in)'}</label>
             <input type="text" id="l2-panelL-${cfg.id}" value="${cfg.panelL||''}" placeholder="e.g. 96" oninput="lamUpdate(${cfg.id})">
           </div>
+          ${isTile ? `
+          <div>
+            <label class="field-label">Nominal Sq Ft / ${modeNoun}</label>
+            <input type="number" id="l2-nominalsqft-${cfg.id}" value="${cfg.nominalSqFt||''}" step="0.01" min="0" placeholder="e.g. 4" oninput="lamUpdate(${cfg.id})">
+          </div>
+          ` : `
           <div>
             <label class="field-label">Slat Width (in)</label>
             <input type="text" id="l2-slatW-${cfg.id}" value="${cfg.slatW||''}" placeholder="e.g. 3.25 or 3-1/4" oninput="lamUpdate(${cfg.id})">
@@ -2072,13 +2093,14 @@ function renderLaminationConfigs(){
             <label class="field-label">Brackets / Panel</label>
             <input type="number" id="l2-brackets-${cfg.id}" value="${cfg.bracketsPerPanel||''}" step="1" min="0" placeholder="e.g. 8" oninput="lamUpdate(${cfg.id})">
           </div>
+          `}
           ${edgeBandSidesPickerHTML(`l2-ebsides-${cfg.id}-`, `lamUpdate(${cfg.id})`, cfg)}
         </div>
         <hr class="config-divider">
         <div style="display:flex;gap:24px;flex-wrap:wrap">
           <div class="toggle-row">
             <label class="toggle"><input type="checkbox" id="l2-assembly-${cfg.id}" ${cfg.assembly?'checked':''} onchange="lamUpdate(${cfg.id})"><span class="toggle-slider"></span></label>
-            <span class="toggle-label">Assembly included</span>
+            <span class="toggle-label">${isTile ? 'Rabbet / Groove' : 'Assembly included'}</span>
           </div>
           ${wasteToggleHTML(`l2-waste-${cfg.id}-`, `lamUpdate(${cfg.id})`, cfg.wasteOn)}
         </div>
@@ -2092,6 +2114,11 @@ function renderLaminationConfigs(){
 function lamUpdate(id){
   const cfg = laminationConfigs.find(c => c.id === id);
   if(!cfg) return;
+  const prevCeilingType = cfg.ceilingType || 'grille';
+  cfg.ceilingType = document.getElementById('l2-ceilingtype-'+id)?.value || cfg.ceilingType || 'grille';
+  const ceilingTypeChanged = cfg.ceilingType !== prevCeilingType;
+  const isTile = cfg.ceilingType === 'tile' || cfg.ceilingType === 'wall';
+
   const prevFace = cfg.face;
   cfg.face      = document.getElementById('l2-face-'+id)?.value  || cfg.face;
   cfg.back      = document.getElementById('l2-back-'+id)?.value  || cfg.back;
@@ -2099,20 +2126,29 @@ function lamUpdate(id){
   cfg.thickness = parseFloat(document.getElementById('l2-thick-'+id)?.value) || cfg.thickness || 0.75;
   cfg.panelW  = parseFraction(document.getElementById('l2-panelW-'+id)?.value) || 0;
   cfg.panelL  = parseFraction(document.getElementById('l2-panelL-'+id)?.value) || 0;
-  cfg.slatW   = parseFraction(document.getElementById('l2-slatW-'+id)?.value) || 0;
-  cfg.slatL   = parseFraction(document.getElementById('l2-slatL-'+id)?.value) || 0;
-  cfg.slatsPerPanel   = parseInt(document.getElementById('l2-slats-'+id)?.value) || 0;
-  cfg.bracketsPerPanel= parseInt(document.getElementById('l2-brackets-'+id)?.value) || 0;
+  if(isTile){
+    cfg.slatW         = cfg.panelW;
+    cfg.slatL         = cfg.panelL;
+    cfg.slatsPerPanel = 1;
+    cfg.bracketsPerPanel = 0;
+    cfg.nominalSqFt   = parseFloat(document.getElementById('l2-nominalsqft-'+id)?.value) || 0;
+  } else {
+    cfg.slatW   = parseFraction(document.getElementById('l2-slatW-'+id)?.value) || 0;
+    cfg.slatL   = parseFraction(document.getElementById('l2-slatL-'+id)?.value) || 0;
+    cfg.slatsPerPanel   = parseInt(document.getElementById('l2-slats-'+id)?.value) || 0;
+    cfg.bracketsPerPanel= parseInt(document.getElementById('l2-brackets-'+id)?.value) || 0;
+  }
   readEdgeBandSides('l2-ebsides-'+id+'-', cfg);
   cfg.assembly = document.getElementById('l2-assembly-'+id)?.checked ?? false;
   cfg.wasteOn  = readWastePct(`l2-waste-${id}-10`, `l2-waste-${id}-15`);
   const prevMode = cfg.calcMode;
   cfg.calcMode = document.getElementById('l2-mode-'+id)?.value || cfg.calcMode;
+  if(isTile && cfg.calcMode === 'panels') cfg.calcMode = 'sqft';
   cfg.sqft     = parseFloat(document.getElementById('l2-sqft-'+id)?.value) || 0;
   cfg.manualQty= parseInt(document.getElementById('l2-manualQty-'+id)?.value) || 0;
   const titleEl = document.getElementById('ltitle-'+id);
   if(titleEl) titleEl.textContent = cfg.face || 'New Configuration';
-  if(prevMode !== cfg.calcMode || prevFace !== cfg.face) renderLaminationConfigs();
+  if(prevMode !== cfg.calcMode || prevFace !== cfg.face || ceilingTypeChanged) renderLaminationConfigs();
   calcLaminationPreview(cfg);
   recalcAll();
   markDirty();
@@ -2146,7 +2182,11 @@ function calcLaminationPreview(cfg){
   const ebLong    = (cfg.slatL/12)*totalSlats*longSides;
   const ebShort   = (cfg.slatW/12)*totalSlats*shortSides;
   const ebRolls   = (longSides>0||shortSides>0)?Math.ceil((ebLong+ebShort)*EB_WASTE_FACTOR/EB_ROLL_FEET):0;
-  let rows = `<div class="preview-row"><span>${fmtN(totalSlats)} slats · ${fmtN(effectiveSqft,1)} sqft · ${fmtN(panelQty)} panels</span></div>`;
+  const isTile = cfg.ceilingType === 'tile' || cfg.ceilingType === 'wall';
+  const modeNoun = cfg.ceilingType === 'wall' ? 'Wall Panel' : 'Tile';
+  let rows = isTile
+    ? `<div class="preview-row"><span>${fmtN(totalSlats)} ${modeNoun}${totalSlats===1?'':'s'} · ${fmtN(effectiveSqft,1)} sqft</span></div>`
+    : `<div class="preview-row"><span>${fmtN(totalSlats)} slats · ${fmtN(effectiveSqft,1)} sqft · ${fmtN(panelQty)} panels</span></div>`;
   if(!combo){
     rows += `<div class="preview-row" style="color:var(--warn,#f59e0b)"><span>⚠ No sheet size fits these dimensions, or face/core pricing is missing</span></div>`;
   } else {
