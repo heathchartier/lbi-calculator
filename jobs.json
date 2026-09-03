@@ -1512,5 +1512,40 @@
     "productCart": {},
     "savedAt": "2026-09-02T21:44:49.599Z",
     "id": 1788385489866
+  },
+  {
+    "sourceId": "aps-quote-44",
+    "name": "Elevator Lobby 3rd Flr",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-09-03",
+    "notes": "Synced from APS quoting tool — Brandon synced from APS quoting tool",
+    "veneerConfigs": [],
+    "lumberConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "species": "Stain Grade Poplar",
+        "thickness": 0.75,
+        "slatW": 1.375,
+        "panelW": 12,
+        "panelL": 96,
+        "slatsPerPanel": 6,
+        "bracketsPerPanel": 8,
+        "calcMode": "count",
+        "manualQty": 57,
+        "slatL": 96,
+        "assembly": false,
+        "lumberType": "grille",
+        "orientation": "Horizontal",
+        "safetyBuffer": 10,
+        "sanding": true,
+        "cutToLength": true
+      }
+    ],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-09-03T15:48:46.493Z",
+    "id": 1788450526869
   }
 ]
