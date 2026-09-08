@@ -1,0 +1,150 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Calc Engine Regression Check</title>
+<style>
+  body{font-family:system-ui,sans-serif;max-width:900px;margin:24px auto;padding:0 16px;background:#0f1112;color:#eee}
+  h1{font-size:18px}
+  .case{padding:10px 14px;border-radius:6px;margin:8px 0;border:1px solid #333}
+  .pass{background:#0d2818;border-color:#1a5c33;color:#7fe0a0}
+  .fail{background:#2a1010;border-color:#7a2020;color:#ff9090}
+  .case b{display:block;font-size:14px;margin-bottom:4px}
+  .case span{font-size:13px;opacity:.85}
+  #summary{font-weight:700;margin-top:16px;font-size:15px}
+</style>
+</head>
+<body>
+<h1>calc-engine.js — Known-Correct Regression Cases</h1>
+<p style="opacity:.7;font-size:13px">
+  Locks in the exact hand-worked examples that were used to verify the 2026-08 sheet-dimension
+  and squaring fixes, so a future change to <code>calc-engine.js</code> can't silently reintroduce
+  the same class of bug without this page turning red. Open this file directly in a browser
+  (file:// is fine — no server needed) any time <code>calc-engine.js</code> changes.
+  Uses synthetic prices, not real admin pricing — it's checking sheet-count/yield structure,
+  not dollar amounts.
+</p>
+<div id="results"></div>
+<div id="summary"></div>
+
+<script src="calc-engine.js"></script>
+<script>
+function assertEqual(name, actual, expected, detail){
+  const pass = actual === expected;
+  return { name, pass, actual, expected, detail };
+}
+
+function run(){
+  const cases = [];
+
+  // --- Test pricing: synthetic, just enough to force deterministic sheet-size choices ---
+  const pricing = {
+    veneerSpecies: {
+      TestSpecies8: { talbert_A3_4x8_frmdf_075: 100 },              // only 4x8 priced
+      TestSpecies10: { talbert_A3_4x10_frmdf_075: 130 },             // only 4x10 priced
+      TestSpecies10big: { talbert_A3_4x10_frmdf_075: 100 },
+    },
+    laminationFaces: { TF: { price4x8:50, price4x10:65, price5x12:90, ebRoll:40 } },
+    laminationCores: { TC: { netSize:false, t0_75_4x8:30, t0_75_4x10:40, t0_75_5x10:45, t0_75_5x12:55 } },
+    markup: { panels:0, edgeBand:0, cutService:0, dado:0, assembly:0, brackets:0, ebService:0 },
+    services: {
+      ebServicePerFt:0, cutServicePerSqft:0, cutFlatVeneer:0, cutVeneerThreshold:20,
+      dadoServicePerSqft:2, dadoFlatCharge:0, dadoThreshold:20,
+      assembly:5, bracketPrice:0, glueLine:0,
+    },
+  };
+  const engine = createCalcEngine(pricing);
+
+  // --- Case 1: Heath's worked example — 8 pcs 23.75x23.75 -> exactly 1 sheet from a 4x8 ---
+  {
+    const cfg = {
+      id:1, species:'TestSpecies8', grade:'talbert', orientation:'Horizontal', core:'Fire Rated MDF',
+      thickness:'3/4"', ceilingType:'tile', panelW:23.75, panelL:23.75,
+      calcMode:'slats', manualQty:8, slatsPerPanel:1, slatW:23.75, slatL:23.75,
+      bracketsPerPanel:0, assembly:false, nominalSqFt:4, ebLongSides:0, ebShortSides:0,
+    };
+    const t = engine.computeJobTotals({ veneerConfigs:[cfg] });
+    const sheets = t.allResults[0]?.sheetsNeeded;
+    cases.push(assertEqual('8 pcs 23.75"×23.75" tile → sheets from a 4x8', sheets, 1,
+      'Heath\'s own worked example (2026-08-26 request)'));
+  }
+
+  // --- Case 2: 23.75x120, 2 pcs -> exactly 1 sheet from a 4x10 ---
+  {
+    const cfg = {
+      id:1, species:'TestSpecies10', grade:'talbert', orientation:'Horizontal', core:'Fire Rated MDF',
+      thickness:'3/4"', ceilingType:'tile', panelW:23.75, panelL:120,
+      calcMode:'slats', manualQty:2, slatsPerPanel:1, slatW:23.75, slatL:120,
+      bracketsPerPanel:0, assembly:false, nominalSqFt:20, ebLongSides:0, ebShortSides:0,
+    };
+    const t = engine.computeJobTotals({ veneerConfigs:[cfg] });
+    const sheets = t.allResults[0]?.sheetsNeeded;
+    cases.push(assertEqual('2 pcs 23.75"×120" tile → sheets from a 4x10', sheets, 1,
+      'Heath\'s own worked example (2026-08-26 request)'));
+  }
+
+  // --- Case 3: the original squaring bug report — 350 pcs 5.25"x120" from a 4x10 -> 44 sheets ---
+  {
+    const cfg = {
+      id:1, species:'TestSpecies10big', grade:'talbert', orientation:'Horizontal', core:'Fire Rated MDF',
+      thickness:'3/4"', ceilingType:'grille', panelW:60, panelL:120, slatsPerPanel:1,
+      calcMode:'slats', manualQty:350, slatW:5.25, slatL:120,
+      bracketsPerPanel:0, assembly:false, ebLongSides:0, ebShortSides:0,
+    };
+    const t = engine.computeJobTotals({ veneerConfigs:[cfg] });
+    const sheets = t.allResults[0]?.sheetsNeeded;
+    cases.push(assertEqual('350 pcs 5.25"×120" → sheets from a 4x10 (the 2026-08-13 squaring bug: was 39, should be 44)', sheets, 44,
+      'Real job Heath reported; confirms both the squaring×2 fix and the 48.5×120.5 dimension fix together'));
+  }
+
+  // --- Case 4: Wall Panel produces identical output to Ceiling Tile (pure alias check) ---
+  {
+    const base = {
+      id:1, species:'TestSpecies8', grade:'talbert', orientation:'Horizontal', core:'Fire Rated MDF',
+      thickness:'3/4"', panelW:23.75, panelL:23.75,
+      calcMode:'slats', manualQty:8, slatsPerPanel:1, slatW:23.75, slatL:23.75,
+      bracketsPerPanel:0, assembly:true, nominalSqFt:4, ebLongSides:0, ebShortSides:0,
+    };
+    const tTile = engine.computeJobTotals({ veneerConfigs:[{...base, ceilingType:'tile'}] });
+    const tWall = engine.computeJobTotals({ veneerConfigs:[{...base, ceilingType:'wall'}] });
+    const same = tTile.grandTotal === tWall.grandTotal && tTile.allResults[0].sheetsNeeded === tWall.allResults[0].sheetsNeeded;
+    cases.push(assertEqual('Wall Panel mode computes identically to Ceiling Tile mode (same inputs)', same, true,
+      `tile total=${tTile.grandTotal}, wall total=${tWall.grandTotal}`));
+  }
+
+  // --- Case 5: missing-price diagnostic gives a specific, non-generic reason ---
+  {
+    const cfg = {
+      id:1, species:'Unpriced', grade:'talbert', orientation:'Horizontal', core:'Fire Rated MDF',
+      thickness:'3/4"', ceilingType:'grille', panelW:24, panelL:96, slatW:3, slatL:96, slatsPerPanel:4,
+      calcMode:'slats', manualQty:4, bracketsPerPanel:0, assembly:false, ebLongSides:0, ebShortSides:0,
+    };
+    const p2 = JSON.parse(JSON.stringify(pricing));
+    p2.veneerSpecies.Unpriced = { talbert_A3_4x8_frmdf_075: 0, talbert_A3_4x10_frmdf_075: 0 };
+    const e2 = createCalcEngine(p2);
+    const t = e2.computeJobTotals({ veneerConfigs:[cfg] });
+    const label = Object.keys(t.allResults[0]?.lines || {})[0] || '';
+    const hasSpecificReason = label.includes('no A3 sheet price entered');
+    cases.push(assertEqual('Unpriced species gives a specific reason, not a bare "Call for pricing"', hasSpecificReason, true,
+      `label: "${label}"`));
+  }
+
+  // Render
+  const el = document.getElementById('results');
+  let passCount = 0;
+  cases.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'case ' + (c.pass ? 'pass' : 'fail');
+    div.innerHTML = `<b>${c.pass ? '✅' : '❌'} ${c.name}</b><span>expected: ${JSON.stringify(c.expected)} — got: ${JSON.stringify(c.actual)}${c.detail ? ' — ' + c.detail : ''}</span>`;
+    el.appendChild(div);
+    if(c.pass) passCount++;
+  });
+  document.getElementById('summary').textContent =
+    `${passCount} / ${cases.length} passed` + (passCount === cases.length ? ' — all good.' : ' — SOMETHING REGRESSED, do not deploy.');
+  document.getElementById('summary').style.color = passCount === cases.length ? '#7fe0a0' : '#ff9090';
+}
+
+run();
+</script>
+</body>
+</html>

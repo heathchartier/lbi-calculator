@@ -287,9 +287,19 @@ function createCalcEngine(pricing){
         sheetCost = pk.totalCost;
         sheetsNeeded = pk.totalSheets;
         const noPricing = poolInfo.noPricing || pk.unfitCount > 0;
+        // A true, specific reason instead of a bare "Call for pricing" — added 2026-09-08 so
+        // Heath can read the actual cause off the quote (missing admin price vs. a piece that's
+        // physically too big for any sheet size) instead of having to dig in himself every time
+        // Ryan/Brandon ask why a config came back blank.
+        let noPricingReason = null;
+        if(poolInfo.noPricing){
+          noPricingReason = `no ${grade} sheet price entered for this species/core/thickness — check Admin pricing`;
+        } else if(pk.unfitCount > 0){
+          noPricingReason = `${fmtN(pk.unfitCount)} piece(s) too large to fit on any available sheet size`;
+        }
         sheetLineLabel = (poolInfo.memberCount > 1
           ? `Sheet Material — pooled across ${poolInfo.memberCount} configs (${sizesDesc})`
-          : `Sheet Material (${sizesDesc})`) + (noPricing ? ' ⚠ Call for pricing' : '');
+          : `Sheet Material (${sizesDesc})`) + (noPricingReason ? ` ⚠ ${noPricingReason}` : '');
         hasMaterialPricing = !noPricing;
       } else {
         sheetCost = 0;
@@ -306,7 +316,7 @@ function createCalcEngine(pricing){
       sheetCost = cfg.species === 'Custom' && cfg.customPricePerPanel
         ? sheetsNeeded * cfg.customPricePerPanel
         : sheetsNeeded * opt.sheetPrice;
-      sheetLineLabel = `Sheet Material (${fmtN(sheetsNeeded)} x ${opt.size})` + (opt.sheetPrice ? '' : ' ⚠ Call for pricing');
+      sheetLineLabel = `Sheet Material (${fmtN(sheetsNeeded)} x ${opt.size})` + (opt.sheetPrice ? '' : ` ⚠ no ${grade} sheet price entered for this species/core/thickness — check Admin pricing`);
       hasMaterialPricing = cfg.species === 'Custom' ? !!cfg.customPricePerPanel : !!opt.sheetPrice;
     }
 
@@ -923,9 +933,52 @@ function createCalcEngine(pricing){
     }
   }
 
-  function calcLaminationCost(cfg, cutCostOverride, dadoCostOverride){
+  // Pulled out of calcLaminationCost 2026-09-08 so computeJobTotals can get sheetsNeeded (for
+  // the Cut Service flat-charge decision) without re-running the whole face/core/back combo
+  // search a second time when it calls calcLaminationCost for real down the line — previously
+  // both the flat-charge preview pass AND the real per-config cost pass each searched the combo
+  // space independently, once per recalc. Also the one place the "why is there no price" reason
+  // gets worked out, so both callers see the same diagnosis.
+  function getLamYield(cfg){
     const qty = resolveLaminationQty(cfg);
     if(!qty) return null;
+    const isCustomer = cfg.face === 'Customer Supplied';
+    const isBackCustomer = (cfg.back || cfg.face) === 'Customer Supplied';
+    const faceData   = isCustomer ? null : (pricing.laminationFaces||{})[cfg.face];
+    const backData   = isBackCustomer ? null : (pricing.laminationFaces||{})[cfg.back || cfg.face];
+    const coreData   = (pricing.laminationCores||{})[cfg.core];
+    const wasteMult  = wasteMultFromPct(cfg.wasteOn);
+    const thick = cfg.thickness || 0.75;
+
+    const faceAvail = isCustomer ? {} : getLamFacePrices(faceData);
+    const backAvail = isBackCustomer ? {} : getLamFacePrices(backData);
+    const coreAvail = getLamCoreAvailSizes(coreData, thick);
+    const coreIsNet = !!coreData?.netSize;
+    const combo = chooseLamSizes(cfg.slatW, cfg.slatL, faceAvail, coreAvail, backAvail, coreIsNet);
+    const sheetsNeeded = combo ? Math.ceil(qty.totalSlats / combo.yieldPerSheet * wasteMult) : 0;
+
+    // A true, specific reason instead of a bare "Call for pricing" — added 2026-09-08 (same
+    // motivation as veneer's version above): tells Heath whether the problem is a missing admin
+    // price on face/back/core, or slats too big to fit any priced size combo, instead of him
+    // having to go dig through Admin pricing every time Ryan/Brandon ask why a config is blank.
+    let noPricingReason = null;
+    if(!combo){
+      const missing = [];
+      if(!isCustomer && Object.keys(faceAvail).length === 0) missing.push('face');
+      if(!isBackCustomer && Object.keys(backAvail).length === 0) missing.push('back');
+      if(Object.keys(coreAvail).length === 0) missing.push('core');
+      noPricingReason = missing.length
+        ? `no price entered for ${missing.join('/')} at this thickness — check Admin pricing`
+        : 'slat dimensions exceed the largest available sheet size for this face/core/back combination';
+    }
+
+    return { qty, isCustomer, isBackCustomer, faceData, faceAvail, backAvail, coreAvail, combo, sheetsNeeded, noPricingReason };
+  }
+
+  function calcLaminationCost(cfg, cutCostOverride, dadoCostOverride, precomputedYield){
+    const y = precomputedYield || getLamYield(cfg);
+    if(!y) return null;
+    const { qty, isCustomer, isBackCustomer, faceData, combo, sheetsNeeded, noPricingReason } = y;
     const { panelQty, totalSlats, effectiveSqft } = qty;
     // Ceiling/Wall Type added 2026-09-02 (mirrors the Veneer tab's 'tile'/'wall' modes,
     // added directly to app.js's Ceiling Grille default) — same simplified per-piece
@@ -935,22 +988,6 @@ function createCalcEngine(pricing){
     const isTile = cfg.ceilingType === 'tile' || cfg.ceilingType === 'wall';
     const dadoSqft = isTile ? panelQty * (cfg.nominalSqFt || 0) : effectiveSqft;
 
-    const isCustomer = cfg.face === 'Customer Supplied';
-    const isBackCustomer = (cfg.back || cfg.face) === 'Customer Supplied';
-    const faceData   = isCustomer ? null : (pricing.laminationFaces||{})[cfg.face];
-    const backData   = isBackCustomer ? null : (pricing.laminationFaces||{})[cfg.back || cfg.face];
-    const coreData   = (pricing.laminationCores||{})[cfg.core];
-    const wasteMult  = wasteMultFromPct(cfg.wasteOn);
-
-    const thick = cfg.thickness || 0.75;
-
-    const faceAvail = isCustomer ? {} : getLamFacePrices(faceData);
-    const backAvail = isBackCustomer ? {} : getLamFacePrices(backData);
-    const coreAvail = getLamCoreAvailSizes(coreData, thick);
-    const coreIsNet = !!coreData?.netSize;
-    const combo = chooseLamSizes(cfg.slatW, cfg.slatL, faceAvail, coreAvail, backAvail, coreIsNet);
-
-    const sheetsNeeded = combo ? Math.ceil(totalSlats / combo.yieldPerSheet * wasteMult) : 0;
     const faceMat = (!isCustomer && combo) ? sheetsNeeded * combo.facePrice : 0;
     const backMat = (!isBackCustomer && combo) ? sheetsNeeded * combo.backPrice : 0;
     const coreMat = combo ? sheetsNeeded * combo.corePrice : 0;
@@ -999,7 +1036,7 @@ function createCalcEngine(pricing){
 
     const lines = {};
     if(noPricing){
-      lines['Face / Core / Back — ⚠ No sheet size fits or pricing missing, call for pricing'] = 0;
+      lines[`Face / Core / Back — ⚠ ${noPricingReason}`] = 0;
     } else {
       if(!isCustomer && faceMat > 0)       lines[`Face Sheets (${fmtN(sheetsNeeded)} × ${cfg.face} ${combo.faceSz})`] = faceMatLine;
       if(isCustomer)                       lines['Face Material (Customer Supplied)'] = 0;
@@ -1087,13 +1124,16 @@ function createCalcEngine(pricing){
     const useDadoFlat = dadoFlatCharge > 0 && totalDadoTiles > 0 && totalDadoTiles <= dadoThresh;
 
     veneerConfigs.forEach((cfg,i) => {
+      // Both overrides rounded to the cent (2026-09-08) — the proportional split is exact in
+      // real-number math but can leave a sub-cent floating-point residual on each config's share;
+      // rounding here keeps every displayed line a clean dollar amount.
       let cutOverride;
       if(useVeneerFlat && totalVeneerSqft > 0){
-        cutOverride = flatCharge * ((veneerSqfts[i] || 0) / totalVeneerSqft);
+        cutOverride = Math.round(flatCharge * ((veneerSqfts[i] || 0) / totalVeneerSqft) * 100) / 100;
       }
       let dadoOverride;
       if(useDadoFlat && totalDadoSqft > 0){
-        dadoOverride = dadoFlatCharge * ((dadoSqfts[i] || 0) / totalDadoSqft);
+        dadoOverride = Math.round(dadoFlatCharge * ((dadoSqfts[i] || 0) / totalDadoSqft) * 100) / 100;
       }
       const r = calcVeneerCost(cfg, cutOverride, poolByIdx[i], dadoOverride);
       if(r) allResults.push({...r, label:`Panel Config ${i+1} — ${r.species} (${r.orientation})`});
@@ -1104,15 +1144,19 @@ function createCalcEngine(pricing){
     });
 
     // Lamination Cut Service shares the same flat-charge/threshold settings as veneer
-    // (Cut Service Flat Charge / Flat Charge Threshold), decided independently of veneer's own count.
+    // (Cut Service Flat Charge / Flat Charge Threshold), decided independently of veneer's own
+    // count. Computed once per config via getLamYield() (2026-09-08) — previously this pass and
+    // the real cost pass below each ran the full face/core/back combo search independently,
+    // meaning every lamination config did that search twice per recalc. lamYields is reused in
+    // the final forEach below so it only ever runs once.
     let totalLamSheets = 0, totalLamSqft = 0;
-    const lamSqfts = laminationConfigs.map(cfg => {
-      const qty = resolveLaminationQty(cfg);
-      if(!qty) return 0;
-      const preview = calcLaminationCost(cfg);
-      if(preview) totalLamSheets += preview.sheetsNeeded;
-      totalLamSqft += qty.effectiveSqft;
-      return qty.effectiveSqft;
+    const lamYields = laminationConfigs.map(cfg => getLamYield(cfg));
+    const lamSqfts = laminationConfigs.map((cfg,i) => {
+      const y = lamYields[i];
+      if(!y) return 0;
+      totalLamSheets += y.sheetsNeeded;
+      totalLamSqft += y.qty.effectiveSqft;
+      return y.qty.effectiveSqft;
     });
     const useLamFlat = flatCharge > 0 && totalLamSheets > 0 && totalLamSheets <= flatThresh;
 
@@ -1120,13 +1164,13 @@ function createCalcEngine(pricing){
     // separately from veneer's (own total, same shared admin rate/threshold), mirroring how Cut
     // Service flat-charge pooling above is also decided independently per tab.
     let totalLamDadoTiles = 0, totalLamDadoSqft = 0;
-    const lamDadoSqfts = laminationConfigs.map(cfg => {
+    const lamDadoSqfts = laminationConfigs.map((cfg,i) => {
       const isTileOrWall = cfg.ceilingType === 'tile' || cfg.ceilingType === 'wall';
       if(!isTileOrWall || !cfg.assembly) return 0;
-      const qty = resolveLaminationQty(cfg);
-      if(!qty) return 0;
-      const sqft = qty.panelQty * (cfg.nominalSqFt || 0);
-      totalLamDadoTiles += qty.panelQty;
+      const y = lamYields[i];
+      if(!y) return 0;
+      const sqft = y.qty.panelQty * (cfg.nominalSqFt || 0);
+      totalLamDadoTiles += y.qty.panelQty;
       totalLamDadoSqft  += sqft;
       return sqft;
     });
@@ -1135,13 +1179,16 @@ function createCalcEngine(pricing){
     laminationConfigs.forEach((cfg,i) => {
       let cutOverride;
       if(useLamFlat && totalLamSqft > 0){
-        cutOverride = flatCharge * ((lamSqfts[i] || 0) / totalLamSqft);
+        // Rounded to the cent (2026-09-08) — the proportional split across configs is exact in
+        // real-number math but can leave a sub-cent floating-point residual; rounding here keeps
+        // every displayed line item a clean dollar amount instead of e.g. $12.339999999999998.
+        cutOverride = Math.round(flatCharge * ((lamSqfts[i] || 0) / totalLamSqft) * 100) / 100;
       }
       let dadoOverride;
       if(useLamDadoFlat && totalLamDadoSqft > 0){
-        dadoOverride = dadoFlatCharge * ((lamDadoSqfts[i] || 0) / totalLamDadoSqft);
+        dadoOverride = Math.round(dadoFlatCharge * ((lamDadoSqfts[i] || 0) / totalLamDadoSqft) * 100) / 100;
       }
-      const r = calcLaminationCost(cfg, cutOverride, dadoOverride);
+      const r = calcLaminationCost(cfg, cutOverride, dadoOverride, lamYields[i]);
       if(r) allResults.push({...r, label:`Lam Config ${i+1} — ${cfg.face||'New Config'}`, isLam:true});
     });
 
@@ -1198,7 +1245,7 @@ function createCalcEngine(pricing){
     chooseResawStock, getVGPcsPerBoard, resolveTGQty, resolveLumberQty,
     calcContinuousBF, millLumberCalc, calcLumberCost, calcJobServices,
     getLamSheetPrices, getLamFacePrices, getLamCoreAvailSizes, lamUsableDims,
-    chooseLamSizes, resolveLaminationQty, calcLaminationCost,
+    chooseLamSizes, resolveLaminationQty, getLamYield, calcLaminationCost,
     computeJobTotals,
   };
 }
