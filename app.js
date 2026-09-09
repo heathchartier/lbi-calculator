@@ -603,14 +603,21 @@ function markDirty(){ isDirty = true; }
 function getSupplier(){ return document.getElementById('jobSupplier')?.value || 'talbert'; }
 
 // --- SPECIES VISIBILITY -----------------------------------------------
-function visibleVeneerSpecies(orientation, supplier, core, thickness){
+// satinFinish param added 2026-09-09 (real bug): this always checked only the unfinished price
+// key, regardless of which finish was actually selected — satin veneer prices live under their
+// own separate `..._satin` key (see admin's Satin/Unfinished toggle and calcVeneerCost's own
+// finishSuffix), so a species priced ONLY for satin (and $0/unset for unfinished) would never
+// show up in the Species dropdown even with Satin selected. Now checks the exact key that
+// calcVeneerCost itself would use, so "priced" here always means "actually calculable."
+function visibleVeneerSpecies(orientation, supplier, core, thickness, satinFinish){
   const sup   = supplier || 'talbert';
   const grade = orientation === 'Vertical' ? 'AA' : 'A3';
   const c = coreToKey(core || 'Fire Rated MDF');
   const t = thickToKey(thickness || '3/4"');
+  const fin = satinFinish ? '_satin' : '';
   return Object.entries(pricing.veneerSpecies).filter(([name, p]) => {
     if(name === 'Custom') return true;
-    return (p[`${sup}_${grade}_4x8_${c}_${t}`]||0) > 0 || (p[`${sup}_${grade}_4x10_${c}_${t}`]||0) > 0;
+    return (p[`${sup}_${grade}_4x8_${c}_${t}${fin}`]||0) > 0 || (p[`${sup}_${grade}_4x10_${c}_${t}${fin}`]||0) > 0;
   }).map(([name]) => name);
 }
 function visibleLumberSpecies(){
@@ -662,7 +669,7 @@ function renderVeneerConfigs(){
     cfg.wasteOn = normalizeWastePct(cfg.wasteOn, 10);
     const isTile = cfg.ceilingType === 'tile' || cfg.ceilingType === 'wall';
     const modeNoun = cfg.ceilingType === 'wall' ? 'Wall Panel' : 'Tile';
-    const species = visibleVeneerSpecies(cfg.orientation, cfg.grade, cfg.core, cfg.thickness);
+    const species = visibleVeneerSpecies(cfg.orientation, cfg.grade, cfg.core, cfg.thickness, cfg.satinFinish);
     if(!cfg.species && species.length > 0) cfg.species = species[0];
 
     const qtyLabel = isTile
@@ -847,7 +854,7 @@ function vUpdate(id){
 
   // update species dropdown when orientation or grade changes — read current selection first
   const selectedSpecies = document.getElementById('v-species-'+id)?.value || cfg.species;
-  const specs = visibleVeneerSpecies(cfg.orientation, cfg.grade, cfg.core, cfg.thickness);
+  const specs = visibleVeneerSpecies(cfg.orientation, cfg.grade, cfg.core, cfg.thickness, cfg.satinFinish);
   const sel = document.getElementById('v-species-'+id);
   if(sel){
     sel.innerHTML = specs.length === 0
