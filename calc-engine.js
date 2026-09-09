@@ -42,8 +42,16 @@ function createCalcEngine(pricing){
     return { longSides, shortSides };
   }
 
-  const THICK_KEY_MAP = { '1/4"':'025','1/2"':'050','3/4"':'075','1"':'100' };
-  function thickToKey(t){ return THICK_KEY_MAP[t] || '075'; }
+  // Fallback map for the 4 built-in thicknesses, used only before pricing.veneerThicknesses
+  // has loaded — same pattern as coreToKey's CORE_KEY_FALLBACK above. Added 2026-09-09 so admin
+  // can add new veneer thicknesses (Admin → Veneer pricing → "+ Add Thickness") the same way
+  // cores are already addable; a custom thickness always resolves through the live list.
+  const THICK_KEY_FALLBACK = { '1/4"':'025','1/2"':'050','3/4"':'075','1"':'100' };
+  function thickToKey(t){
+    const found = (pricing?.veneerThicknesses||[]).find(x => x.label === t);
+    if(found) return found.key;
+    return THICK_KEY_FALLBACK[t] || '075';
+  }
 
   const CORE_KEY_FALLBACK = { 'Regular MDF':'mdf', 'Fire Rated MDF':'frmdf', 'Particle Board':'pb', 'Fire Rated PB':'frpb' };
   function coreToKey(core){

@@ -10,7 +10,19 @@ const THICK_OPTIONS = [
   { key:'075', label:'3/4"' },
   { key:'100', label:'1"'   },
 ];
-function thickToKey(t){ return { '1/4"':'025','1/2"':'050','3/4"':'075','1"':'100' }[t] || '075'; }
+// Fallback for the 4 built-ins before pricing loads — mirrors calc-engine.js's own copy of
+// this function. Once pricing is loaded, admin-added thicknesses (2026-09-09) resolve through
+// pricing.veneerThicknesses instead, same pattern as coreToKey below.
+function thickToKey(t){
+  const found = (pricing?.veneerThicknesses||[]).find(x => x.label === t);
+  if(found) return found.key;
+  return { '1/4"':'025','1/2"':'050','3/4"':'075','1"':'100' }[t] || '075';
+}
+// Every place a veneer Thickness dropdown/tab needs the current list — falls back to the 4
+// built-ins (THICK_OPTIONS) only before pricing has loaded.
+function veneerThickList(){
+  return (pricing?.veneerThicknesses && pricing.veneerThicknesses.length) ? pricing.veneerThicknesses : THICK_OPTIONS;
+}
 const KERF = 0.1875;
 // .25" trimmed off EACH edge — see calc-engine.js's SQUARING comment (2026-08-13 bug fix,
 // same fix applies here since this standalone Tile Calculator duplicates that math).
@@ -191,12 +203,16 @@ function coreToKey(core){
 
 function ensureAllCoreKeys(){
   const cores = (pricing.veneerCores||[]).map(c => c.key);
+  // Backfills across the LIVE thickness list, not just the 4 built-ins, so admin-added
+  // thicknesses (2026-09-09) get a $0 key on every existing species/core the same way a
+  // newly-added core already gets $0 keys on every existing thickness.
+  const thicks = veneerThickList();
   Object.values(pricing.veneerSpecies||{}).forEach(p => {
     if(p['eb_roll']       === undefined) p['eb_roll']       = 0;
     if(p['eb_roll_satin'] === undefined) p['eb_roll_satin'] = 0;
     ['talbert','timber'].forEach(s => {
       ['A3','AA'].forEach(g => ['4x8','4x10'].forEach(sz => cores.forEach(c => {
-        THICK_OPTIONS.forEach(({key:t}) => {
+        thicks.forEach(({key:t}) => {
           const k = `${s}_${g}_${sz}_${c}_${t}`;
           if(p[k]          === undefined) p[k]          = 0;
           if(p[k+'_satin'] === undefined) p[k+'_satin'] = 0;
@@ -282,6 +298,15 @@ const DEFAULT_PRICING = {
     { key:'mdf',   label:'Regular MDF' },
     { key:'pb',    label:'Particle Board' },
     { key:'frpb',  label:'Fire Rated PB' },
+  ],
+  // Admin-addable veneer thicknesses (2026-09-09) — same {key,label} shape and "add/remove
+  // from a list, backfill $0 keys for everything else" pattern as veneerCores above. Seeded
+  // with the 4 built-ins so nothing changes for existing data.
+  veneerThicknesses: [
+    { key:'025', label:'1/4"' },
+    { key:'050', label:'1/2"' },
+    { key:'075', label:'3/4"' },
+    { key:'100', label:'1"'   },
   ],
 };
 
@@ -726,7 +751,7 @@ function renderVeneerConfigs(){
           <div>
             <label class="field-label">Thickness</label>
             <select id="v-thick-${cfg.id}" onchange="vUpdate(${cfg.id})">
-              ${THICK_OPTIONS.map(({label})=>`<option value="${label.replace(/"/g,'&quot;')}" ${cfg.thickness===label?'selected':''}>${label}</option>`).join('')}
+              ${veneerThickList().map(({label})=>`<option value="${label.replace(/"/g,'&quot;')}" ${cfg.thickness===label?'selected':''}>${label}</option>`).join('')}
             </select>
           </div>
           <div>
@@ -2482,16 +2507,60 @@ function updateProductQty(name, qty){
 function renderVeneerThickTabs(){
   const wrap = document.getElementById('veneer-thick-tabs');
   if(!wrap) return;
-  wrap.innerHTML = THICK_OPTIONS.map(({key,label}) =>
-    `<button class="${_adminVeneerThick===key?'btn-primary':'btn-ghost'}"
-      onclick="setVeneerThick('${key}')" style="padding:5px 14px;font-size:12px">${label}</button>`
-  ).join('');
+  const thicks = veneerThickList();
+  const builtinKeys = THICK_OPTIONS.map(t => t.key);
+  wrap.innerHTML = thicks.map(({key,label}) => {
+    const isActive = key === _adminVeneerThick;
+    const canRemove = !builtinKeys.includes(key);
+    return `<span style="display:inline-flex;align-items:center;gap:2px">
+      <button id="vthick-tab-${key}" class="${isActive?'btn-primary':'btn-ghost'}"
+        onclick="setVeneerThick('${key}')" style="padding:5px 14px;font-size:12px">${label}</button>${
+      canRemove ? `<button onclick="removeVeneerThickness('${key}')" title="Remove thickness" style="background:none;border:none;color:var(--mid);cursor:pointer;padding:0 3px;font-size:13px;line-height:1">✕</button>` : ''
+    }</span>`;
+  }).join('') + `<button class="btn-ghost" onclick="addVeneerThickness()" style="padding:5px 14px;font-size:12px">+ Add Thickness</button>`;
 }
 
 function setVeneerThick(t){
   _adminVeneerThick = t;
   renderVeneerThickTabs();
   renderVeneerPricingTable();
+}
+
+// Admin-addable veneer thicknesses (2026-09-09) — same shape and behavior as addVeneerCore()/
+// removeVeneerCore() below: pushes {key,label} onto pricing.veneerThicknesses, backfills $0
+// price keys for the new thickness across every existing species/core/supplier/grade/size/
+// finish combo via ensureAllCoreKeys(), then re-renders everywhere a thickness list is used
+// (this tab strip, the pricing table itself, and every veneer config's own Thickness dropdown)
+// so the new thickness works exactly like the 4 built-ins immediately — no separate wiring.
+function addVeneerThickness(){
+  const label = prompt('New thickness (e.g. "5/8\\"" or "3/8\\""):');
+  if(!label || !label.trim()) return;
+  const l = label.trim();
+  const key = l.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'') || ('thick'+Date.now());
+  if((pricing.veneerThicknesses||[]).find(t => t.key === key || t.label === l)){
+    showToast('A thickness with that name already exists'); return;
+  }
+  if(!pricing.veneerThicknesses) pricing.veneerThicknesses = [];
+  pricing.veneerThicknesses.push({ key, label: l });
+  ensureAllCoreKeys();
+  localStorage.setItem('lbiq_pricing', JSON.stringify(pricing));
+  _adminVeneerThick = key;
+  renderVeneerThickTabs();
+  renderVeneerPricingTable();
+  renderVeneerConfigs();
+  showToast('Thickness "'+l+'" added');
+}
+
+function removeVeneerThickness(key){
+  const t = (pricing.veneerThicknesses||[]).find(x => x.key === key);
+  if(!t) return;
+  if(!confirm('Remove thickness "'+t.label+'"? Pricing data for this thickness will be kept but hidden.')) return;
+  pricing.veneerThicknesses = pricing.veneerThicknesses.filter(x => x.key !== key);
+  localStorage.setItem('lbiq_pricing', JSON.stringify(pricing));
+  if(_adminVeneerThick === key) _adminVeneerThick = (pricing.veneerThicknesses[0]||{key:'075'}).key;
+  renderVeneerThickTabs();
+  renderVeneerPricingTable();
+  renderVeneerConfigs();
 }
 
 function renderVeneerFinishTabs(){
@@ -2970,6 +3039,7 @@ async function fetchCloudPricing(){
   if(!pricing.laminationFaces)   pricing.laminationFaces = {};
   if(!pricing.laminationCores)   pricing.laminationCores = {};
   if(!pricing.veneerCores) pricing.veneerCores = deepCopy(DEFAULT_PRICING.veneerCores);
+  if(!pricing.veneerThicknesses) pricing.veneerThicknesses = deepCopy(DEFAULT_PRICING.veneerThicknesses);
   ensureAllCoreKeys();
   migrateThicknessKeys();
   Object.values(pricing.veneerSpecies).forEach(p => {
@@ -3054,8 +3124,15 @@ async function pushAdminPricingSecure(){
 // core keys) come through as real values, since those drive genuine UI/calc behavior and
 // reveal nothing about cost.
 function placeholderVeneerSpecies(avail){
-  const o = blankVeneerSpecies();
-  Object.keys(o).forEach(k => { o[k] = avail?.[k] ? 1 : 0; });
+  // Iterates the KEYS THE WORKER ACTUALLY SENT (avail), not a fixed blank template — the
+  // Worker's /pricing/options already returns every real key on the admin's own species object,
+  // so this now correctly carries through any admin-added thickness/core key too. Previously
+  // iterated blankVeneerSpecies()'s fixed key set, which meant a company/employee/partner-API
+  // login could never see availability for a custom thickness at all (real bug, found + fixed
+  // 2026-09-09 alongside adding the "+ Add Thickness" admin feature — the built-in 4 thicknesses
+  // happened to all be in the fixed template, so this never showed up before).
+  const o = {};
+  Object.keys(avail||{}).forEach(k => { o[k] = avail[k] ? 1 : 0; });
   return o;
 }
 function placeholderLamFace(sizesAvail){
@@ -3830,6 +3907,10 @@ function showToast(msg){
   // Add any built-in cores missing from saved data
   dp.veneerCores.forEach(dc => {
     if(!pricing.veneerCores.find(c => c.key === dc.key)) pricing.veneerCores.unshift(dc);
+  });
+  if(!pricing.veneerThicknesses) pricing.veneerThicknesses = deepCopy(dp.veneerThicknesses);
+  dp.veneerThicknesses.forEach(dt => {
+    if(!pricing.veneerThicknesses.find(t => t.key === dt.key)) pricing.veneerThicknesses.unshift(dt);
   });
   ensureAllCoreKeys();
   migrateThicknessKeys();
