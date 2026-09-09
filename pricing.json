@@ -1727,7 +1727,7 @@
       "talbert_A3_4x8_frmdf_025_satin": 0,
       "talbert_A3_4x8_frmdf_050": 0,
       "talbert_A3_4x8_frmdf_050_satin": 0,
-      "talbert_A3_4x8_frmdf_075": 230.16,
+      "talbert_A3_4x8_frmdf_075": 276.25,
       "talbert_A3_4x8_frmdf_075_satin": 324.24,
       "talbert_A3_4x8_frmdf_100": 0,
       "talbert_A3_4x8_frmdf_100_satin": 0,
@@ -10864,5 +10864,23 @@
       "Particle Board": "Particle Board Regular",
       "MR MDF": "MDF MR"
     }
-  }
+  },
+  "veneerThicknesses": [
+    {
+      "key": "025",
+      "label": "1/4\""
+    },
+    {
+      "key": "050",
+      "label": "1/2\""
+    },
+    {
+      "key": "075",
+      "label": "3/4\""
+    },
+    {
+      "key": "100",
+      "label": "1\""
+    }
+  ]
 }
