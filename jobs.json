@@ -1780,5 +1780,42 @@
     "productCart": {},
     "savedAt": "2026-09-14T15:44:43.174Z",
     "id": 1789397595111
+  },
+  {
+    "sourceId": "aps-quote-46",
+    "name": "Leander ES 32",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-09-14",
+    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
+    "veneerConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "orientation": "Horizontal",
+        "grade": "talbert",
+        "thickness": "3/4\"",
+        "slatW": 24,
+        "slatL": 48,
+        "panelW": 24,
+        "panelL": 48,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "ebLongSides": 0,
+        "ebShortSides": 0,
+        "wasteOn": 10,
+        "ceilingType": "grille",
+        "calcMode": "count",
+        "manualQty": 44,
+        "satinFinish": false,
+        "species": "White Oak",
+        "core": "Fire Rated MDF"
+      }
+    ],
+    "lumberConfigs": [],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-09-14T20:18:09.848Z",
+    "id": 1789417090292
   }
 ]
