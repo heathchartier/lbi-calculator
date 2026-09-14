@@ -1754,11 +1754,31 @@
         "safetyBuffer": 10,
         "sanding": true,
         "cutToLength": true
+      },
+      {
+        "id": 3,
+        "notes": "",
+        "species": "Stain Grade Poplar",
+        "thickness": 0.75,
+        "slatW": 6,
+        "panelW": 6,
+        "panelL": 96,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "calcMode": "count",
+        "manualQty": 12,
+        "slatL": 96,
+        "assembly": false,
+        "lumberType": "linear",
+        "orientation": "Horizontal",
+        "safetyBuffer": 10,
+        "sanding": true,
+        "cutToLength": true
       }
     ],
     "laminationConfigs": [],
     "productCart": {},
-    "savedAt": "2026-09-14T14:53:13.843Z",
+    "savedAt": "2026-09-14T15:43:09.854Z",
     "id": 1789397595111
   }
 ]
