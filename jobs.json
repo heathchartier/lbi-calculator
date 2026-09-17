@@ -1922,10 +1922,10 @@
         "orientation": "Horizontal",
         "grade": "talbert",
         "thickness": "3/4\"",
-        "slatW": 12,
-        "slatL": 96,
-        "panelW": 12,
-        "panelL": 96,
+        "slatW": 24,
+        "slatL": 24,
+        "panelW": 24,
+        "panelL": 24,
         "slatsPerPanel": 1,
         "bracketsPerPanel": 0,
         "ebLongSides": 0,
@@ -1933,7 +1933,7 @@
         "wasteOn": 10,
         "ceilingType": "grille",
         "calcMode": "count",
-        "manualQty": 86,
+        "manualQty": 171,
         "satinFinish": false,
         "species": "Walnut",
         "core": "Fire Rated MDF"
@@ -1942,7 +1942,7 @@
     "lumberConfigs": [],
     "laminationConfigs": [],
     "productCart": {},
-    "savedAt": "2026-09-17T18:00:01.882Z",
+    "savedAt": "2026-09-17T18:10:09.630Z",
     "id": 1789667981583
   }
 ]
