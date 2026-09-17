@@ -1817,5 +1817,42 @@
     "productCart": {},
     "savedAt": "2026-09-14T20:18:09.848Z",
     "id": 1789417090292
+  },
+  {
+    "sourceId": "aps-quote-47",
+    "name": "Pacific Life 840",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-09-17",
+    "notes": "Synced from APS quoting tool — Brandon synced from APS quoting tool",
+    "veneerConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "orientation": "Horizontal",
+        "grade": "talbert",
+        "thickness": "3/4\"",
+        "slatW": 12,
+        "slatL": 96,
+        "panelW": 12,
+        "panelL": 96,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "ebLongSides": 0,
+        "ebShortSides": 0,
+        "wasteOn": 10,
+        "ceilingType": "grille",
+        "calcMode": "count",
+        "manualQty": 86,
+        "satinFinish": false,
+        "species": "Walnut",
+        "core": "Fire Rated MDF"
+      }
+    ],
+    "lumberConfigs": [],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-09-17T17:59:41.127Z",
+    "id": 1789667981583
   }
 ]
