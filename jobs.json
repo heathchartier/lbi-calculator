@@ -1944,5 +1944,40 @@
     "productCart": {},
     "savedAt": "2026-09-17T18:10:14.844Z",
     "id": 1789667981583
+  },
+  {
+    "sourceId": "aps-quote-50",
+    "name": "Von Braun Center - Phase 1",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-09-18",
+    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
+    "veneerConfigs": [],
+    "lumberConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "species": "Stain Grade Poplar",
+        "thickness": 1,
+        "slatW": 4.25,
+        "panelW": 12,
+        "panelL": 96,
+        "slatsPerPanel": 4,
+        "bracketsPerPanel": 8,
+        "calcMode": "count",
+        "manualQty": 470,
+        "slatL": 96,
+        "assembly": false,
+        "lumberType": "grille",
+        "orientation": "Horizontal",
+        "safetyBuffer": 10,
+        "sanding": true,
+        "cutToLength": true
+      }
+    ],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-09-18T21:20:19.545Z",
+    "id": 1789766419858
   }
 ]
