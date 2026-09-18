@@ -3527,7 +3527,7 @@
       "timber_AA_4x10_fr_black_mdf_075_satin": 0,
       "timber_AA_4x10_fr_black_mdf_100": 0,
       "timber_AA_4x10_fr_black_mdf_100_satin": 0,
-      "eb_roll": 0,
+      "eb_roll": 45,
       "eb_roll_satin": 0,
       "talbert_A3_4x8_frmdf_3_8": 0,
       "talbert_A3_4x8_frmdf_3_8_satin": 0,
@@ -9748,6 +9748,15 @@
       "price5_4": 2.27,
       "price6_4": 2.93,
       "price8_4": 2.81,
+      "price2x6": 0,
+      "price2x8": 0
+    },
+    "Beech": {
+      "price": 2.94,
+      "resaw": false,
+      "price5_4": 0,
+      "price6_4": 0,
+      "price8_4": 4.09,
       "price2x6": 0,
       "price2x8": 0
     }
