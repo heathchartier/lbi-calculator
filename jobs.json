@@ -12,14 +12,14 @@
         "ceilingType": "tile",
         "orientation": "Horizontal",
         "species": "Walnut",
-        "core": "Fire Rated MDF",
+        "core": "FR Black MDF",
         "thickness": "3/4\"",
         "grade": "talbert",
         "satinFinish": false,
-        "panelW": 24,
-        "panelL": 24,
-        "slatW": 24,
-        "slatL": 24,
+        "panelW": 23.75,
+        "panelL": 23.75,
+        "slatW": 23.75,
+        "slatL": 23.75,
         "slatsPerPanel": 1,
         "bracketsPerPanel": 0,
         "ebLongSides": 0,
@@ -27,9 +27,9 @@
         "assembly": false,
         "wasteOn": 10,
         "notes": "",
-        "calcMode": "sqft",
-        "manualQty": 0,
-        "sqft": 684,
+        "calcMode": "slats",
+        "manualQty": 171,
+        "sqft": 0,
         "customPricePerPanel": 0,
         "nominalSqFt": 4,
         "customEBRollPrice": 0
@@ -87,7 +87,7 @@
       }
     ],
     "productCart": {},
-    "savedAt": "2026-09-22T13:42:23.603Z"
+    "savedAt": "2026-09-22T13:43:03.066Z"
   },
   {
     "id": 1788993653572,
