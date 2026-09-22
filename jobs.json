@@ -2014,5 +2014,40 @@
     "productCart": {},
     "savedAt": "2026-09-18T21:30:57.090Z",
     "id": 1789767057539
+  },
+  {
+    "sourceId": "aps-quote-52",
+    "name": "TAMU McAllen Health & Education",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-09-22",
+    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
+    "veneerConfigs": [],
+    "lumberConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "species": "Stain Grade Poplar",
+        "thickness": 0.5,
+        "slatW": 1.5,
+        "panelW": 24,
+        "panelL": 24,
+        "slatsPerPanel": 10,
+        "bracketsPerPanel": 2,
+        "calcMode": "count",
+        "manualQty": 277,
+        "slatL": 24,
+        "assembly": false,
+        "lumberType": "grille",
+        "orientation": "Horizontal",
+        "safetyBuffer": 10,
+        "sanding": true,
+        "cutToLength": true
+      }
+    ],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-09-22T16:52:27.127Z",
+    "id": 1790095948839
   }
 ]
