@@ -2159,5 +2159,83 @@
     "productCart": {},
     "savedAt": "2026-09-23T23:00:02.170Z",
     "id": 1790204402524
+  },
+  {
+    "sourceId": "aps-quote-55",
+    "name": "UA Dillard",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-09-25",
+    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
+    "veneerConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "orientation": "Horizontal",
+        "grade": "talbert",
+        "thickness": "3/4\"",
+        "slatW": 48,
+        "slatL": 96,
+        "panelW": 48,
+        "panelL": 96,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "ebLongSides": 0,
+        "ebShortSides": 0,
+        "wasteOn": 10,
+        "ceilingType": "grille",
+        "calcMode": "count",
+        "manualQty": 241,
+        "satinFinish": false,
+        "species": "White Oak",
+        "core": "Fire Rated MDF"
+      }
+    ],
+    "lumberConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "species": "Flat Cut White Oak",
+        "thickness": 1.3125,
+        "slatW": 5.25,
+        "panelW": 12,
+        "panelL": 96,
+        "slatsPerPanel": 3,
+        "bracketsPerPanel": 8,
+        "calcMode": "count",
+        "manualQty": 2475,
+        "slatL": 96,
+        "assembly": false,
+        "lumberType": "grille",
+        "orientation": "Horizontal",
+        "safetyBuffer": 10,
+        "sanding": true,
+        "cutToLength": true
+      },
+      {
+        "id": 2,
+        "notes": "",
+        "species": "Flat Cut White Oak",
+        "thickness": 0.75,
+        "slatW": 2.25,
+        "panelW": 12,
+        "panelL": 96,
+        "slatsPerPanel": 3,
+        "bracketsPerPanel": 8,
+        "calcMode": "count",
+        "manualQty": 900,
+        "slatL": 96,
+        "assembly": false,
+        "lumberType": "grille",
+        "orientation": "Horizontal",
+        "safetyBuffer": 10,
+        "sanding": true,
+        "cutToLength": true
+      }
+    ],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-09-25T14:03:56.803Z",
+    "id": 1790345037984
   }
 ]
