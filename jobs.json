@@ -2259,7 +2259,7 @@
         "slatsPerPanel": 1,
         "bracketsPerPanel": 0,
         "ebLongSides": 2,
-        "ebShortSides": 0,
+        "ebShortSides": 2,
         "wasteOn": 10,
         "ceilingType": "grille",
         "calcMode": "count",
@@ -3455,7 +3455,7 @@
     ],
     "laminationConfigs": [],
     "productCart": {},
-    "savedAt": "2026-09-25T18:44:55.775Z",
+    "savedAt": "2026-09-25T20:04:33.679Z",
     "id": 1790361890229
   }
 ]
