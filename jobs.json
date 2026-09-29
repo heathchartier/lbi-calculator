@@ -3317,5 +3317,60 @@
     "productCart": {},
     "savedAt": "2026-09-25T20:43:15.892Z",
     "id": 1790361890229
+  },
+  {
+    "sourceId": "aps-quote-57",
+    "name": "Venus ISD - Venus HS",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-09-29",
+    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
+    "veneerConfigs": [],
+    "lumberConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "species": "Therm Poplar",
+        "thickness": 0.75,
+        "slatW": 5.25,
+        "panelW": 5.25,
+        "panelL": 96,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "calcMode": "count",
+        "manualQty": 1780,
+        "slatL": 96,
+        "assembly": false,
+        "lumberType": "linear",
+        "orientation": "Horizontal",
+        "safetyBuffer": 10,
+        "sanding": true,
+        "cutToLength": true
+      },
+      {
+        "id": 2,
+        "notes": "",
+        "species": "Therm Poplar",
+        "thickness": 0.75,
+        "slatW": 5.25,
+        "panelW": 5.25,
+        "panelL": 96,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "calcMode": "count",
+        "manualQty": 589,
+        "slatL": 96,
+        "assembly": false,
+        "lumberType": "linear",
+        "orientation": "Horizontal",
+        "safetyBuffer": 10,
+        "sanding": true,
+        "cutToLength": true
+      }
+    ],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-09-29T14:21:53.991Z",
+    "id": 1790691714410
   }
 ]
