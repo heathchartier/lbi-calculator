@@ -3409,5 +3409,40 @@
     "productCart": {},
     "savedAt": "2026-10-01T00:57:52.306Z",
     "id": 1790807400031
+  },
+  {
+    "sourceId": "aps-quote-59",
+    "name": "Allen ISD Green ES",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-10-01",
+    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
+    "veneerConfigs": [],
+    "lumberConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "species": "Hard Maple",
+        "thickness": 0.75,
+        "slatW": 4,
+        "panelW": 4,
+        "panelL": 96,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "calcMode": "count",
+        "manualQty": 1800,
+        "slatL": 96,
+        "assembly": false,
+        "lumberType": "linear",
+        "orientation": "Horizontal",
+        "safetyBuffer": 10,
+        "sanding": true,
+        "cutToLength": true
+      }
+    ],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-10-01T17:19:18.456Z",
+    "id": 1790875158893
   }
 ]
