@@ -3444,5 +3444,42 @@
     "productCart": {},
     "savedAt": "2026-10-01T17:19:18.456Z",
     "id": 1790875158893
+  },
+  {
+    "sourceId": "aps-quote-60",
+    "name": "Red Steagall Institute",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-10-05",
+    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
+    "veneerConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "orientation": "Horizontal",
+        "grade": "talbert",
+        "thickness": "3/4\"",
+        "slatW": 8,
+        "slatL": 96,
+        "panelW": 8,
+        "panelL": 96,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "ebLongSides": 0,
+        "ebShortSides": 0,
+        "wasteOn": 10,
+        "ceilingType": "grille",
+        "calcMode": "count",
+        "manualQty": 1125,
+        "satinFinish": false,
+        "species": "White Oak",
+        "core": "Fire Rated MDF"
+      }
+    ],
+    "lumberConfigs": [],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-10-05T13:42:12.252Z",
+    "id": 1791207732651
   }
 ]
