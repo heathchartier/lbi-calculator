@@ -5762,5 +5762,40 @@
     "productCart": {},
     "savedAt": "2026-10-06T17:19:40.918Z",
     "id": 1791305120071
+  },
+  {
+    "sourceId": "aps-quote-64",
+    "name": "Glaukos Pharmaceutical",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-10-09",
+    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
+    "veneerConfigs": [],
+    "lumberConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "species": "Flat Cut White Oak",
+        "thickness": 1.5,
+        "slatW": 4,
+        "panelW": 12,
+        "panelL": 107,
+        "slatsPerPanel": 4,
+        "bracketsPerPanel": 9,
+        "calcMode": "count",
+        "manualQty": 17,
+        "slatL": 107,
+        "assembly": false,
+        "lumberType": "grille",
+        "orientation": "Horizontal",
+        "safetyBuffer": 10,
+        "sanding": true,
+        "cutToLength": true
+      }
+    ],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-10-09T20:17:35.363Z",
+    "id": 1791577055788
   }
 ]
