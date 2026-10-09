@@ -5797,5 +5797,42 @@
     "productCart": {},
     "savedAt": "2026-10-09T20:26:23.212Z",
     "id": 1791577055788
+  },
+  {
+    "sourceId": "aps-quote-65",
+    "name": "Southside Launchpad",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-10-09",
+    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
+    "veneerConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "orientation": "Horizontal",
+        "grade": "talbert",
+        "thickness": "3/4\"",
+        "slatW": 5.25,
+        "slatL": 96,
+        "panelW": 5.25,
+        "panelL": 96,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "ebLongSides": 2,
+        "ebShortSides": 2,
+        "wasteOn": 10,
+        "ceilingType": "linear",
+        "calcMode": "count",
+        "manualQty": 2250,
+        "satinFinish": false,
+        "species": "Walnut",
+        "core": "Fire Rated MDF"
+      }
+    ],
+    "lumberConfigs": [],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-10-09T20:31:44.848Z",
+    "id": 1791577905227
   }
 ]
