@@ -5861,7 +5861,7 @@
         "ceilingType": "grille",
         "calcMode": "count",
         "manualQty": 66,
-        "satinFinish": false,
+        "satinFinish": true,
         "species": "White Oak",
         "core": "Fire Rated MDF"
       }
@@ -5869,7 +5869,7 @@
     "lumberConfigs": [],
     "laminationConfigs": [],
     "productCart": {},
-    "savedAt": "2026-10-12T21:11:29.606Z",
+    "savedAt": "2026-10-12T21:13:03.421Z",
     "id": 1791839489995
   }
 ]
