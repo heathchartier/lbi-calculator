@@ -5834,5 +5834,42 @@
     "productCart": {},
     "savedAt": "2026-10-09T20:31:44.848Z",
     "id": 1791577905227
+  },
+  {
+    "sourceId": "aps-quote-66",
+    "name": "Wachter",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-10-12",
+    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
+    "veneerConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "orientation": "Horizontal",
+        "grade": "talbert",
+        "thickness": "3/4\"",
+        "slatW": 4,
+        "slatL": 102,
+        "panelW": 12,
+        "panelL": 102,
+        "slatsPerPanel": 2,
+        "bracketsPerPanel": 9,
+        "ebLongSides": 2,
+        "ebShortSides": 2,
+        "wasteOn": 10,
+        "ceilingType": "grille",
+        "calcMode": "count",
+        "manualQty": 66,
+        "satinFinish": false,
+        "species": "White Oak",
+        "core": "Fire Rated MDF"
+      }
+    ],
+    "lumberConfigs": [],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-10-12T21:11:29.606Z",
+    "id": 1791839489995
   }
 ]
