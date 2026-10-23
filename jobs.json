@@ -6367,5 +6367,40 @@
     "productCart": {},
     "savedAt": "2026-10-14T16:40:22.641Z",
     "id": 1791996023068
+  },
+  {
+    "sourceId": "aps-quote-69",
+    "name": "TAMU ALKEK",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-10-23",
+    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
+    "veneerConfigs": [],
+    "lumberConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "species": "V.G. Hemlock",
+        "thickness": 0.6875,
+        "slatW": 2.25,
+        "panelW": 12,
+        "panelL": 96,
+        "slatsPerPanel": 3,
+        "bracketsPerPanel": 8,
+        "calcMode": "count",
+        "manualQty": 125,
+        "slatL": 96,
+        "assembly": false,
+        "lumberType": "grille",
+        "orientation": "Horizontal",
+        "safetyBuffer": 10,
+        "sanding": true,
+        "cutToLength": true
+      }
+    ],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-10-23T17:45:40.026Z",
+    "id": 1792777540555
   }
 ]
