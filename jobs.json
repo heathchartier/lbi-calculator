@@ -6402,5 +6402,42 @@
     "productCart": {},
     "savedAt": "2026-10-23T18:14:05.504Z",
     "id": 1792777540555
+  },
+  {
+    "sourceId": "aps-quote-70",
+    "name": "Marion ISD Genevieve Moore ES",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-10-27",
+    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
+    "veneerConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "orientation": "Horizontal",
+        "grade": "talbert",
+        "thickness": "3/4\"",
+        "slatW": 3.25,
+        "slatL": 96,
+        "panelW": 3.25,
+        "panelL": 96,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "ebLongSides": 2,
+        "ebShortSides": 2,
+        "wasteOn": 10,
+        "ceilingType": "linear",
+        "calcMode": "count",
+        "manualQty": 1232,
+        "satinFinish": false,
+        "species": "Rift White Oak",
+        "core": "Fire Rated MDF"
+      }
+    ],
+    "lumberConfigs": [],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-10-27T13:58:06.718Z",
+    "id": 1793109487252
   }
 ]
