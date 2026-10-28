@@ -6516,5 +6516,40 @@
     "productCart": {},
     "savedAt": "2026-10-28T21:45:48.065Z",
     "id": 1793222956562
+  },
+  {
+    "sourceId": "aps-quote-72",
+    "name": "New Heights",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-10-28",
+    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
+    "veneerConfigs": [],
+    "lumberConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "species": "Stain Grade Poplar",
+        "thickness": 0.75,
+        "slatW": 2,
+        "panelW": 24,
+        "panelL": 72,
+        "slatsPerPanel": 12,
+        "bracketsPerPanel": 6,
+        "calcMode": "count",
+        "manualQty": 162,
+        "slatL": 72,
+        "assembly": false,
+        "lumberType": "grille",
+        "orientation": "Horizontal",
+        "safetyBuffer": 10,
+        "sanding": true,
+        "cutToLength": true
+      }
+    ],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-10-28T21:58:23.103Z",
+    "id": 1793224703694
   }
 ]
