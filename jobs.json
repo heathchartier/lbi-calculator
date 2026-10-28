@@ -6461,5 +6461,60 @@
     "productCart": {},
     "savedAt": "2026-10-27T14:46:30.524Z",
     "id": 1793109487252
+  },
+  {
+    "sourceId": "aps-quote-71",
+    "name": "Central House & Garden",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-10-28",
+    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
+    "veneerConfigs": [],
+    "lumberConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "species": "Stain Grade Poplar",
+        "thickness": 0.75,
+        "slatW": 2.25,
+        "panelW": 12,
+        "panelL": 96,
+        "slatsPerPanel": 4,
+        "bracketsPerPanel": 8,
+        "calcMode": "count",
+        "manualQty": 84,
+        "slatL": 96,
+        "assembly": false,
+        "lumberType": "grille",
+        "orientation": "Horizontal",
+        "safetyBuffer": 10,
+        "sanding": true,
+        "cutToLength": true
+      },
+      {
+        "id": 2,
+        "notes": "",
+        "species": "Therm Poplar",
+        "thickness": 0.75,
+        "slatW": 5,
+        "panelW": 5,
+        "panelL": 96,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "calcMode": "count",
+        "manualQty": 360,
+        "slatL": 96,
+        "assembly": false,
+        "lumberType": "linear",
+        "orientation": "Horizontal",
+        "safetyBuffer": 10,
+        "sanding": true,
+        "cutToLength": true
+      }
+    ],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-10-28T21:29:16.101Z",
+    "id": 1793222956562
   }
 ]
