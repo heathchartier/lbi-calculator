@@ -6491,6 +6491,28 @@
         "satinFinish": false,
         "species": "White Oak",
         "core": "Fire Rated MDF"
+      },
+      {
+        "id": 2,
+        "notes": "",
+        "orientation": "Horizontal",
+        "grade": "talbert",
+        "thickness": "3/4\"",
+        "slatW": 48,
+        "slatL": 48,
+        "panelW": 48,
+        "panelL": 48,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "ebLongSides": 2,
+        "ebShortSides": 2,
+        "wasteOn": 10,
+        "ceilingType": "grille",
+        "calcMode": "count",
+        "manualQty": 34,
+        "satinFinish": false,
+        "species": "White Oak",
+        "core": "Fire Rated MDF"
       }
     ],
     "lumberConfigs": [
@@ -6517,7 +6539,7 @@
     ],
     "laminationConfigs": [],
     "productCart": {},
-    "savedAt": "2026-10-29T16:34:54.226Z",
+    "savedAt": "2026-10-29T16:38:01.988Z",
     "id": 1793222956562
   },
   {
