@@ -6731,5 +6731,63 @@
     "productCart": {},
     "savedAt": "2026-10-30T16:36:29.008Z",
     "id": 1793377606196
+  },
+  {
+    "sourceId": "aps-quote-74",
+    "name": "SCUCISD Clemons HS",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-11-02",
+    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
+    "veneerConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "orientation": "Horizontal",
+        "grade": "talbert",
+        "thickness": "3/4\"",
+        "slatW": 5.25,
+        "slatL": 96,
+        "panelW": 5.25,
+        "panelL": 96,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "ebLongSides": 2,
+        "ebShortSides": 2,
+        "wasteOn": 10,
+        "ceilingType": "linear",
+        "calcMode": "count",
+        "manualQty": 264,
+        "satinFinish": false,
+        "species": "Walnut",
+        "core": "Fire Rated MDF"
+      }
+    ],
+    "lumberConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "species": "Stain Grade Poplar",
+        "thickness": 1,
+        "slatW": 2.25,
+        "panelW": 12,
+        "panelL": 96,
+        "slatsPerPanel": 4,
+        "bracketsPerPanel": 8,
+        "calcMode": "count",
+        "manualQty": 68,
+        "slatL": 96,
+        "assembly": false,
+        "lumberType": "grille",
+        "orientation": "Horizontal",
+        "safetyBuffer": 10,
+        "sanding": true,
+        "cutToLength": true
+      }
+    ],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-11-02T18:01:55.197Z",
+    "id": 1793642515665
   }
 ]
