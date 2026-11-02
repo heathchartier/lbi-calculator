@@ -1192,10 +1192,10 @@
   },
   {
     "sourceId": "aps-quote-26",
-    "name": "Ginnings ES Solid Red Oak",
+    "name": "Denton ISD - Ginnings E.S.",
     "customer": "LBI",
     "po": "",
-    "date": "2026-08-17",
+    "date": "2026-11-02",
     "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
     "veneerConfigs": [],
     "lumberConfigs": [
@@ -1322,7 +1322,7 @@
     ],
     "laminationConfigs": [],
     "productCart": {},
-    "savedAt": "2026-08-17T22:55:58.437Z",
+    "savedAt": "2026-11-02T15:09:25.852Z",
     "id": 1786649835923
   },
   {
