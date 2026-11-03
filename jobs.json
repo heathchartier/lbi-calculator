@@ -6789,5 +6789,42 @@
     "productCart": {},
     "savedAt": "2026-11-02T18:09:06.269Z",
     "id": 1793642515665
+  },
+  {
+    "sourceId": "aps-quote-75",
+    "name": "Test Project - Wood Problem?",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-11-03",
+    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
+    "veneerConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "orientation": "Horizontal",
+        "grade": "talbert",
+        "thickness": "3/4\"",
+        "slatW": 24,
+        "slatL": 48,
+        "panelW": 24,
+        "panelL": 48,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "ebLongSides": 0,
+        "ebShortSides": 0,
+        "wasteOn": 10,
+        "ceilingType": "grille",
+        "calcMode": "count",
+        "manualQty": 63,
+        "satinFinish": false,
+        "species": "Rift White Oak",
+        "core": "Fire Rated MDF"
+      }
+    ],
+    "lumberConfigs": [],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-11-03T22:04:56.460Z",
+    "id": 1793743496903
   }
 ]
