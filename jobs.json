@@ -6841,9 +6841,9 @@
         "orientation": "Horizontal",
         "grade": "talbert",
         "thickness": "3/4\"",
-        "slatW": 7.5625,
+        "slatW": 7.563,
         "slatL": 96,
-        "panelW": 7.5625,
+        "panelW": 7.563,
         "panelL": 96,
         "slatsPerPanel": 1,
         "bracketsPerPanel": 0,
@@ -6861,7 +6861,7 @@
     "lumberConfigs": [],
     "laminationConfigs": [],
     "productCart": {},
-    "savedAt": "2026-11-03T23:06:11.044Z",
+    "savedAt": "2026-11-03T23:11:18.247Z",
     "id": 1793747171341
   }
 ]
