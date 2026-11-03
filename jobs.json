@@ -6826,5 +6826,42 @@
     "productCart": {},
     "savedAt": "2026-11-03T22:04:56.460Z",
     "id": 1793743496903
+  },
+  {
+    "sourceId": "aps-quote-76",
+    "name": "Sperry's",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-11-03",
+    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
+    "veneerConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "orientation": "Horizontal",
+        "grade": "talbert",
+        "thickness": "3/4\"",
+        "slatW": 7.5625,
+        "slatL": 96,
+        "panelW": 7.5625,
+        "panelL": 96,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "ebLongSides": 0,
+        "ebShortSides": 0,
+        "wasteOn": 10,
+        "ceilingType": "linear",
+        "calcMode": "count",
+        "manualQty": 615,
+        "satinFinish": false,
+        "species": "Walnut",
+        "core": "Fire Rated MDF"
+      }
+    ],
+    "lumberConfigs": [],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-11-03T23:06:11.044Z",
+    "id": 1793747171341
   }
 ]
