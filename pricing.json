@@ -10217,6 +10217,7 @@
       "id": 48,
       "type": "panel",
       "name": "1/2 4x8 Black MDF (MR)",
+      "productCode": "MDFC12BLKI",
       "cost": 48.5,
       "markup": 15,
       "category": 8
@@ -10225,7 +10226,8 @@
       "id": 49,
       "type": "panel",
       "name": "1/2 4x10 Black MDF (FR)",
-      "cost": 111.31,
+      "productCode": "CFMDFC12410BLKFRU",
+      "cost": 71.51,
       "markup": 15,
       "category": 8
     },
@@ -10233,7 +10235,8 @@
       "id": 50,
       "type": "panel",
       "name": "3/4 4x8 Black MDF (FR)",
-      "cost": 211.7,
+      "productCode": "CFMDFC3448BLKFRU",
+      "cost": 87.51,
       "markup": 15,
       "category": 8
     },
@@ -11940,6 +11943,33 @@
       "cost": 152.4,
       "markup": 15,
       "category": 3
+    },
+    {
+      "id": 264,
+      "type": "panel",
+      "name": "1/2 4x8 Black MDF (FR)",
+      "productCode": "CFMDFC1248BLKFRU",
+      "cost": 57.53,
+      "markup": 15,
+      "category": 8
+    },
+    {
+      "id": 265,
+      "type": "panel",
+      "name": "3/4 4x8 Black MDF (MR)",
+      "productCode": "MDFC34BLKI",
+      "cost": 70.67,
+      "markup": 15,
+      "category": 8
+    },
+    {
+      "id": 266,
+      "type": "panel",
+      "name": "3/4 4x10 Black MDF (FR)",
+      "productCode": "CFMDFC34410BLKFRU",
+      "cost": 109.03,
+      "markup": 15,
+      "category": 8
     }
   ],
   "productCategories": [
