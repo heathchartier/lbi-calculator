@@ -10189,7 +10189,7 @@
       "id": 44,
       "type": "panel",
       "name": "Swiss Krono 4x9",
-      "productCode": "KSHPD4204",
+      "productCode": "KSHPD3700",
       "cost": 93.62,
       "markup": 15,
       "category": 3
@@ -10198,6 +10198,7 @@
       "id": 45,
       "type": "panel",
       "name": "Swiss Krono (300’)",
+      "productCode": "KSEBD3700",
       "cost": 43.68,
       "markup": 15,
       "category": 5
@@ -10215,6 +10216,7 @@
       "id": 47,
       "type": "panel",
       "name": "Krono Span (300’)",
+      "productCode": "EBKS1516SBO",
       "cost": 49.01,
       "markup": 15,
       "category": 5
