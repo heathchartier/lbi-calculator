@@ -9802,6 +9802,7 @@
       "id": 1,
       "type": "panel",
       "name": "Arpa - Tuet 4x10",
+      "productCode": "ARPAJ464451120",
       "cost": 220.04,
       "markup": 15,
       "category": 3
@@ -9810,6 +9811,7 @@
       "id": 2,
       "type": "panel",
       "name": "Arpa - Touch of Wood 4x10",
+      "productCode": "ARPAJ452051120",
       "cost": 105.4,
       "markup": 15,
       "category": 3
@@ -10169,6 +10171,7 @@
       "id": 42,
       "type": "panel",
       "name": "Apra - Tuet (300’)",
+      "productCode": "EBARPAJ4645CD1516",
       "cost": 51.12,
       "markup": 15,
       "category": 5
@@ -10177,6 +10180,7 @@
       "id": 43,
       "type": "panel",
       "name": "Arpa - Touch of Wood (300’)",
+      "productCode": "EBARPAJ4520RA1516",
       "cost": 51.12,
       "markup": 15,
       "category": 5
@@ -10185,6 +10189,7 @@
       "id": 44,
       "type": "panel",
       "name": "Swiss Krono 4x9",
+      "productCode": "KSHPD4204",
       "cost": 93.62,
       "markup": 15,
       "category": 3
@@ -10201,6 +10206,7 @@
       "id": 46,
       "type": "panel",
       "name": "Krono Span 4x10",
+      "productCode": "HPKSK543SN",
       "cost": 76.45,
       "markup": 15,
       "category": 3
