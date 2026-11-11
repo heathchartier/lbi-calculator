@@ -7229,5 +7229,63 @@
     "productCart": {},
     "savedAt": "2026-11-11T18:55:14.851Z",
     "id": 1794419921618
+  },
+  {
+    "sourceId": "aps-quote-82",
+    "name": "Motto Tempo",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-11-11",
+    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
+    "veneerConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "orientation": "Horizontal",
+        "grade": "talbert",
+        "thickness": "3/4\"",
+        "slatW": 24,
+        "slatL": 24,
+        "panelW": 24,
+        "panelL": 24,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "ebLongSides": 0,
+        "ebShortSides": 0,
+        "wasteOn": 10,
+        "ceilingType": "grille",
+        "calcMode": "count",
+        "manualQty": 81,
+        "satinFinish": false,
+        "species": "Beech",
+        "core": "Fire Rated MDF"
+      }
+    ],
+    "lumberConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "species": "Hard Maple",
+        "thickness": 0.75,
+        "slatW": 4,
+        "panelW": 4,
+        "panelL": 96,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "calcMode": "count",
+        "manualQty": 10,
+        "slatL": 96,
+        "assembly": false,
+        "lumberType": "linear",
+        "orientation": "Horizontal",
+        "safetyBuffer": 0,
+        "sanding": true,
+        "cutToLength": true
+      }
+    ],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-11-11T23:15:20.197Z",
+    "id": 1794438920689
   }
 ]
