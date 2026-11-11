@@ -7194,5 +7194,40 @@
     "productCart": {},
     "savedAt": "2026-11-11T17:28:31.796Z",
     "id": 1794417008172
+  },
+  {
+    "sourceId": "aps-quote-81",
+    "name": "St. Nicholas Center for Children",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-11-11",
+    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
+    "veneerConfigs": [],
+    "lumberConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "species": "Therm Poplar",
+        "thickness": 0.75,
+        "slatW": 5.25,
+        "panelW": 5.25,
+        "panelL": 96,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "calcMode": "count",
+        "manualQty": 189,
+        "slatL": 96,
+        "assembly": false,
+        "lumberType": "linear",
+        "orientation": "Horizontal",
+        "safetyBuffer": 10,
+        "sanding": true,
+        "cutToLength": true
+      }
+    ],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-11-11T17:58:41.157Z",
+    "id": 1794419921618
   }
 ]
