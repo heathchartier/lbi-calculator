@@ -7259,33 +7259,34 @@
         "satinFinish": false,
         "species": "Beech",
         "core": "Fire Rated MDF"
-      }
-    ],
-    "lumberConfigs": [
+      },
       {
-        "id": 1,
+        "id": 2,
         "notes": "",
-        "species": "Hard Maple",
-        "thickness": 0.75,
+        "orientation": "Horizontal",
+        "grade": "talbert",
+        "thickness": "3/4\"",
         "slatW": 4,
+        "slatL": 96,
         "panelW": 4,
         "panelL": 96,
         "slatsPerPanel": 1,
         "bracketsPerPanel": 0,
+        "ebLongSides": 2,
+        "ebShortSides": 2,
+        "wasteOn": 0,
+        "ceilingType": "linear",
         "calcMode": "count",
         "manualQty": 10,
-        "slatL": 96,
-        "assembly": false,
-        "lumberType": "linear",
-        "orientation": "Horizontal",
-        "safetyBuffer": 0,
-        "sanding": true,
-        "cutToLength": true
+        "satinFinish": false,
+        "species": "Maple",
+        "core": "Fire Rated MDF"
       }
     ],
+    "lumberConfigs": [],
     "laminationConfigs": [],
     "productCart": {},
-    "savedAt": "2026-11-11T23:15:20.197Z",
+    "savedAt": "2026-11-11T23:26:51.764Z",
     "id": 1794438920689
   }
 ]
