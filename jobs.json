@@ -8678,5 +8678,40 @@
     "productCart": {},
     "savedAt": "2026-11-12T19:25:03.710Z",
     "id": 1794510121987
+  },
+  {
+    "sourceId": "aps-quote-85",
+    "name": "Denton ISD Navo MS",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-11-12",
+    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
+    "veneerConfigs": [],
+    "lumberConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "species": "Stain Grade Poplar",
+        "thickness": 0.5,
+        "slatW": 1.5,
+        "panelW": 24,
+        "panelL": 48,
+        "slatsPerPanel": 10,
+        "bracketsPerPanel": 4,
+        "calcMode": "count",
+        "manualQty": 25,
+        "slatL": 48,
+        "assembly": false,
+        "lumberType": "grille",
+        "orientation": "Horizontal",
+        "safetyBuffer": 10,
+        "sanding": true,
+        "cutToLength": true
+      }
+    ],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-11-12T20:37:55.326Z",
+    "id": 1794515875785
   }
 ]
