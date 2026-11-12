@@ -7288,5 +7288,40 @@
     "productCart": {},
     "savedAt": "2026-11-11T23:26:51.764Z",
     "id": 1794438920689
+  },
+  {
+    "sourceId": "aps-quote-83",
+    "name": "GE Vernova",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-11-12",
+    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
+    "veneerConfigs": [],
+    "lumberConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "species": "Flat Cut White Oak",
+        "thickness": 0.5,
+        "slatW": 1,
+        "panelW": 1,
+        "panelL": 114,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "calcMode": "count",
+        "manualQty": 176,
+        "slatL": 114,
+        "assembly": false,
+        "lumberType": "linear",
+        "orientation": "Horizontal",
+        "safetyBuffer": 0,
+        "sanding": true,
+        "cutToLength": true
+      }
+    ],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-11-12T00:17:10.439Z",
+    "id": 1794442630863
   }
 ]
