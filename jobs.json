@@ -8713,5 +8713,40 @@
     "productCart": {},
     "savedAt": "2026-11-12T20:43:38.243Z",
     "id": 1794515875785
+  },
+  {
+    "sourceId": "aps-quote-86",
+    "name": "JLB Family Office",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-11-13",
+    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
+    "veneerConfigs": [],
+    "lumberConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "species": "Flat Cut White Oak",
+        "thickness": 0.75,
+        "slatW": 5.25,
+        "panelW": 5.25,
+        "panelL": 96,
+        "slatsPerPanel": 1,
+        "bracketsPerPanel": 0,
+        "calcMode": "count",
+        "manualQty": 173,
+        "slatL": 96,
+        "assembly": false,
+        "lumberType": "linear",
+        "orientation": "Horizontal",
+        "safetyBuffer": 10,
+        "sanding": true,
+        "cutToLength": true
+      }
+    ],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-11-13T17:46:18.468Z",
+    "id": 1794591978866
   }
 ]
