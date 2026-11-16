@@ -8748,5 +8748,42 @@
     "productCart": {},
     "savedAt": "2026-11-13T17:46:18.468Z",
     "id": 1794591978866
+  },
+  {
+    "sourceId": "aps-quote-87",
+    "name": "Terrell ISD New ES #4",
+    "customer": "LBI",
+    "po": "",
+    "date": "2026-11-16",
+    "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
+    "veneerConfigs": [
+      {
+        "id": 1,
+        "notes": "",
+        "orientation": "Vertical",
+        "grade": "talbert",
+        "thickness": "3/4\"",
+        "slatW": 1.5,
+        "slatL": 102,
+        "panelW": 12,
+        "panelL": 102,
+        "slatsPerPanel": 8,
+        "bracketsPerPanel": 9,
+        "ebLongSides": 0,
+        "ebShortSides": 0,
+        "wasteOn": 0,
+        "ceilingType": "grille",
+        "calcMode": "count",
+        "manualQty": 14,
+        "satinFinish": false,
+        "species": "White Oak",
+        "core": "FR Black MDF"
+      }
+    ],
+    "lumberConfigs": [],
+    "laminationConfigs": [],
+    "productCart": {},
+    "savedAt": "2026-11-16T18:07:49.281Z",
+    "id": 1794852469747
   }
 ]
