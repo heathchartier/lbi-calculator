@@ -8791,7 +8791,7 @@
     "name": "Lewisville City Hall Annex Remodel",
     "customer": "LBI",
     "po": "",
-    "date": "2026-11-16",
+    "date": "2026-11-17",
     "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
     "veneerConfigs": [
       {
@@ -8800,9 +8800,9 @@
         "orientation": "Horizontal",
         "grade": "talbert",
         "thickness": "3/4\"",
-        "slatW": 7.5625,
+        "slatW": 7.563,
         "slatL": 96,
-        "panelW": 7.5625,
+        "panelW": 7.563,
         "panelL": 96,
         "slatsPerPanel": 1,
         "bracketsPerPanel": 0,
@@ -8813,7 +8813,7 @@
         "calcMode": "count",
         "manualQty": 321,
         "satinFinish": false,
-        "species": "Maple",
+        "species": "Qtr Hemlock",
         "core": "Fire Rated MDF"
       },
       {
@@ -8830,12 +8830,12 @@
         "bracketsPerPanel": 0,
         "ebLongSides": 2,
         "ebShortSides": 2,
-        "wasteOn": 10,
+        "wasteOn": 0,
         "ceilingType": "grille",
         "calcMode": "count",
         "manualQty": 24,
         "satinFinish": false,
-        "species": "Maple",
+        "species": "Qtr Hemlock",
         "core": "Fire Rated MDF"
       },
       {
@@ -8852,12 +8852,12 @@
         "bracketsPerPanel": 0,
         "ebLongSides": 2,
         "ebShortSides": 2,
-        "wasteOn": 10,
+        "wasteOn": 0,
         "ceilingType": "grille",
         "calcMode": "count",
         "manualQty": 9,
         "satinFinish": false,
-        "species": "Maple",
+        "species": "Qtr Hemlock",
         "core": "Fire Rated MDF"
       }
     ],
@@ -8865,8 +8865,8 @@
       {
         "id": 1,
         "notes": "",
-        "species": "Hard Maple",
-        "thickness": 0.75,
+        "species": "V.G. Hemlock",
+        "thickness": 1.5,
         "slatW": 2.5,
         "panelW": 12,
         "panelL": 102,
@@ -8878,14 +8878,14 @@
         "assembly": false,
         "lumberType": "grille",
         "orientation": "Horizontal",
-        "safetyBuffer": 10,
+        "safetyBuffer": 15,
         "sanding": true,
         "cutToLength": true
       }
     ],
     "laminationConfigs": [],
     "productCart": {},
-    "savedAt": "2026-11-16T23:05:42.712Z",
+    "savedAt": "2026-11-17T20:28:49.007Z",
     "id": 1794870343229
   },
   {
