@@ -8791,7 +8791,7 @@
     "name": "Lewisville City Hall Annex Remodel",
     "customer": "LBI",
     "po": "",
-    "date": "2026-11-17",
+    "date": "2026-11-18",
     "notes": "Synced from APS quoting tool — Ryan synced from APS quoting tool",
     "veneerConfigs": [
       {
@@ -8811,35 +8811,13 @@
         "wasteOn": 0,
         "ceilingType": "linear",
         "calcMode": "count",
-        "manualQty": 321,
+        "manualQty": 260,
         "satinFinish": false,
         "species": "Qtr Hemlock",
         "core": "Fire Rated MDF"
       },
       {
         "id": 2,
-        "notes": "",
-        "orientation": "Horizontal",
-        "grade": "talbert",
-        "thickness": "3/4\"",
-        "slatW": 48,
-        "slatL": 96,
-        "panelW": 48,
-        "panelL": 96,
-        "slatsPerPanel": 1,
-        "bracketsPerPanel": 0,
-        "ebLongSides": 2,
-        "ebShortSides": 2,
-        "wasteOn": 0,
-        "ceilingType": "grille",
-        "calcMode": "count",
-        "manualQty": 24,
-        "satinFinish": false,
-        "species": "Qtr Hemlock",
-        "core": "Fire Rated MDF"
-      },
-      {
-        "id": 3,
         "notes": "",
         "orientation": "Horizontal",
         "grade": "talbert",
@@ -8885,7 +8863,7 @@
     ],
     "laminationConfigs": [],
     "productCart": {},
-    "savedAt": "2026-11-17T20:28:49.007Z",
+    "savedAt": "2026-11-18T21:15:10.898Z",
     "id": 1794870343229
   },
   {
